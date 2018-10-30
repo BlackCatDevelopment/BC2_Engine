@@ -12,6 +12,8 @@ composer install
 
 from inside the ```vendor``` folder to get all the dependencies.
 
+Please note that you will need additional modules and templates to do something useful with the engine.
+
 
 
 

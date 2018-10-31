@@ -52,7 +52,7 @@ spl_autoload_register(function($class)
     }
     else                                       // BC components
     {
-        $file = '/'.str_replace('_', '/', $class);
+        $file = '/'.str_replace(array('_','\\'), '/', $class);
         $file = CAT_ENGINE_PATH.'/'.$file.'.php';
         if(class_exists('\CAT\Helper\Directory',false) && $class!='\CAT\Helper\Directory')
             $file = \CAT\Helper\Directory::sanitizePath($file);
@@ -81,13 +81,13 @@ if (defined('ENABLED_ASP') && ENABLED_ASP && !isset($_SESSION['session_started']
 // Register jQuery / JavaScripts base path
 //******************************************************************************
 Registry::register(
-    'CAT_JQUERY_PATH',
+    'CAT_JS_PATH',
     Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/lib_javascript/'),
     true
 );
 Registry::register(
     'CAT_JS_PLUGINS_PATH',
-    CAT_JQUERY_PATH.'/plugins/',
+    CAT_JS_PATH.'/plugins/',
     true
 );
 

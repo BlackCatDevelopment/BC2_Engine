@@ -39,7 +39,7 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
         /**
          * @inheritdoc
          **/
-        public static function view($section)
+        public static function view(array $section)
         {
             parent::view($section);
 
@@ -76,13 +76,13 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
         {
 
             $curr_data = self::getContent($section_id);
+            $errors = 0;
 
             // ----- contents -----
             if(null!=($contents=\CAT\Helper\Validate::sanitizePost('contents')))
             {
                 if(is_array($contents))
                 {
-                    $errors = 0;
                     $c      = self::db()->conn();
                     foreach($contents as $item)
                     {

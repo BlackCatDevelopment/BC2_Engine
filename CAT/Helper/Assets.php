@@ -227,6 +227,9 @@ if(!class_exists('Assets'))
                     foreach($incfiles as $file) {
                         if(file_exists($file)) {
                             try {
+                                self::log()->addDebug(sprintf(
+                                    'reading file [%s]', $file
+                                ));
                                 require $file;
                                 $array =& ${'mod_'.$pos.'s'};
                                 // CSS
@@ -509,7 +512,7 @@ if(!class_exists('Assets'))
                 }
             }
 
-            self::log()->addDebug(sprintf('type [%s], number of files [%d]', $type, count($files)).print_r($files,1));
+            self::log()->addDebug(sprintf('type [%s], number of files [%d]', $type, count($files)).' '.print_r($files,1));
 
             // add assets
             $assets  = $factory->createAsset(
@@ -544,7 +547,7 @@ if(!class_exists('Assets'))
          **/
         private static function findJQueryPlugin($item)
         {
-            $plugin_path = CAT_JQUERY_PATH.'/plugins';
+            $plugin_path = CAT_JS_PATH.'/plugins';
             // check suffix
             if(pathinfo($item,PATHINFO_EXTENSION) != 'js')
                 $item .= '.js';

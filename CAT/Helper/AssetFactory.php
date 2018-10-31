@@ -282,9 +282,9 @@ if(!class_exists('AssetFactory'))
         {
             $output = array();
             if($this->ui)
-                array_unshift($this->js['header'],'modules/lib_javascript/jquery-ui/ui/jquery-ui.min.js');
+                array_unshift($this->js['header'],'CAT/vendor/components/jqueryui/jquery-ui.min.js');
             if($this->ui || $this->jq)
-                array_unshift($this->js['header'],'modules/lib_javascript/jquery-core/jquery-core.min.js');
+                array_unshift($this->js['header'],'CAT/vendor/components/jquery/jquery.min.js');
 
             if($pos=='header')
             {

@@ -28,7 +28,7 @@ if(!class_exists('DB'))
 {
     class DB extends \PDO
     {
-        public  static $exc_trace = true;
+        public  static $exc_trace   = true;
 
         private static $instance    = NULL;
         private static $conn        = NULL;
@@ -453,6 +453,7 @@ if(!class_exists('DB'))
         public function reorder(string $table, int $id, int $newpos, string $order_field='position', string $id_field='id', string $parent_field='parent') : bool
         {
             $tablename = sprintf('%s%s',self::$prefix,$table);
+
             // get original position
             $qb = self::qb()
                 ->select('*')
@@ -465,6 +466,7 @@ if(!class_exists('DB'))
             if(is_array($data) && count($data))
             {
                 $pos = $data[$order_field];
+
                 // save new position
                 self::query(
                     sprintf(
@@ -473,18 +475,20 @@ if(!class_exists('DB'))
                     ),
                     array($newpos,$id)
                 );
+
                 // calculate positions for previous items
                 self::query(
                     sprintf(
-                        "UPDATE `%s` SET `%s`=`%s`-1 WHERE `%s`=? AND `%s`<=? AND `%s`<>?",
+                        "UPDATE `%s` SET `%s`=`%s`-1 WHERE `%s`=? AND `%s`<? AND `%s`<>?",
                         $tablename, $order_field, $order_field, $parent_field, $order_field, $id_field
                     ),
                     array($data[$parent_field],$newpos,$id)
                 );
+
                 // calculate positions for next items
                 self::query(
                     sprintf(
-                        "UPDATE `%s` SET `%s`=`%s`+1 WHERE `%s`=? AND `%s`>? AND `%s`<>?",
+                        "UPDATE `%s` SET `%s`=`%s`+1 WHERE `%s`=? AND `%s`>=? AND `%s`<>?",
                         $tablename, $order_field, $order_field, $parent_field, $order_field, $id_field
                     ),
                     array($data[$parent_field],$newpos,$id)

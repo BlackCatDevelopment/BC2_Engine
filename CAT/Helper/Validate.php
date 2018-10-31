@@ -87,6 +87,7 @@ if (!class_exists('Validate'))
          * @param  string  $key     - name of the key/var to get
          * @param  string  $require - value type (scalar, numeric, array)
          * @param  boolean $escape  - wether to use add_slashes(), default false
+         * @param  string  $global  - name of the superglobal (f.e. _REQUEST)
          * @return mixed
          **/
         public static function get(string $key, string $require=NULL, bool $escape=false, string $global=null )

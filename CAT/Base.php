@@ -138,7 +138,7 @@ if(!class_exists('Base',false))
                 || !is_object(Base::$objects['getid3'])
                 || !Base::$objects['getid3'] instanceof \getID3
             ) {
-                require_once CAT_ENGINE_PATH.'/modules/lib_getid3/getid3/getid3.php';
+                require_once CAT_ENGINE_PATH.'/vendor/james-heinrich/getid3/getid3/getid3.php';
         	    Base::$objects['getid3'] = new \getID3;
             }
             return Base::$objects['getid3'];
@@ -181,7 +181,7 @@ if(!class_exists('Base',false))
          * @access public
          * @return object - instanceof \wblib\wbLang
          **/
-        public static function lang() : object
+        public static function lang() : \wblib\wbLang
         {
             if(
                    !isset(Base::$objects['lang'])

@@ -32,7 +32,7 @@ abstract class Tool extends Module implements IAddon
 	/**
 	 * @inheritDoc
 	 */
-	public static function save($section_id)
+	public static function save(int $section_id)
 	{
 		// TODO: implement here
 	}

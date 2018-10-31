@@ -149,7 +149,7 @@ if (!class_exists('Page'))
         }   // end function add()
 
         /**
-         * returns the pages list, sorted by parent -> children -> position
+         * returns the pages list, sorted by parent -> children -> ordering
          *
          * @access public
          * @return
@@ -257,6 +257,7 @@ if (!class_exists('Page'))
                                     $form->lang()->addPath($module_path.'/templates/'.$variant.'/languages/');
                                 }
                                 $form->getElement('section_id')->setValue($section_id);
+                                $form->getElement('page_id')->setValue($page_id);
                                 if(isset($section['options']))
                                     $form->setData($section['options']);
                                 $options_form = $form->render(1);
@@ -418,48 +419,6 @@ if (!class_exists('Page'))
                 )
             );
 
-/*
-Array
-(
-    [css] => Array
-        (
-            [screen,projection] => Array
-                (
-                    [0] => /modules/lib_bootstrap/vendor/css/font-awesome.min.css
-                    [1] => /modules/lib_bootstrap/vendor/v4/css/cerulean/bootstrap.min.css
-                    [2] => /modules/lib_javascript/plugins/tippy/1.4.1/tippy.css
-                    [3] => /modules/lib_javascript/jquery-ui/themes/base/jquery-ui.css
-                    [4] => /templates/backstrap/js/datetimepicker/jquery.datetimepicker.min.css
-                    [5] => /modules/lib_javascript/plugins/jquery.datatables/css/dataTables.bootstrap.min.css
-                    [6] => /templates/backstrap/css/default/theme.css
-                )
-
-        )
-
-    [js] => Array
-        (
-            [0] => /modules/lib_javascript/jquery-core/jquery-core.min.js
-            [1] => /modules/lib_javascript/jquery-ui/ui/i18n/jquery-ui-i18n.min.js
-            [2] => /modules/lib_javascript/jquery-ui/ui/jquery-ui.min.js
-            [3] => P:/BlackCat2/cat_engine/modules/lib_javascript/plugins/jquery.cattranslate/jquery.cattranslate.js
-            [4] => P:/BlackCat2/cat_engine/modules/lib_javascript/plugins/jquery.mark/jquery.mark.min.js
-            [5] => /modules/lib_javascript/plugins/jquery.columns/jquery.columns.js
-            [6] => /modules/lib_javascript/plugins/jquery.datatables/js/jquery.dataTables.min.js
-            [7] => /modules/lib_javascript/plugins/jquery.datatables/js/dataTables.mark.min.js
-            [8] => /modules/lib_javascript/plugins/jquery.datatables/js/dataTables.bootstrap.min.js
-            [9] => /modules/lib_javascript/plugins/jquery.fieldset_to_tabs/jquery.fieldset_to_tabs.js
-            [10] => /CAT/Backend/js/session.js
-            [11] => /templates/backstrap/js/datetimepicker/jquery.datetimepicker.full.js
-            [12] => CONDITIONAL lt IE 9 START
-            [13] => https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js
-            [14] => https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js
-            [15] => CONDITIONAL lt IE 9 END
-            [16] => /templates/backstrap/js/backend.js
-        )
-
-)
-
-*/
             // find css files in template directory
             $tplcss = Directory::findFiles(
                 CAT_ENGINE_PATH.'/templates/'.HPage::getPageTemplate($pageID),
@@ -598,28 +557,60 @@ Array
             if(!self::user()->hasPerm('pages_settings') || !self::user()->hasPagePerm($pageID,'pages_settings'))
                 Base::printFatalError('You are not allowed for the requested action!');
 
-            $parent = Validate::get('_REQUEST','parent');
-            $pos    = Validate::get('_REQUEST','position');
+            $parent = Validate::get('parent');
+            $pos    = Validate::get('position');
             $page   = HPage::properties($pageID);
 
             // new parent
             if($parent != $page['parent'])
             {
+echo "NEW PARENT! pos = $pos\n";
+                if(!empty($parent)) {
+                    $parent_properties = HPage::properties($parent);
+                } else {
+                    // empty parent = root level
+                    $parent_properties = array(
+                        'level' => 0,
+                        'route' => '',
+                        'ordering' => (($pos*10)+5)
+                    );
+                    $parent = 0;
+                }
                 self::db()->query(
-                    'UPDATE `:prefix:pages` SET `parent`=?, `position`=0 WHERE `page_id`=?',
-                    array($parent,$pageID)
+                      'UPDATE `:prefix:pages` '
+                    . 'SET `parent`=?, `level`=?, `route`=?, `ordering`=? '
+                    . 'WHERE `page_id`=?',
+                    array(
+                        $parent,
+                        $parent_properties['level']+1,
+                        $parent_properties['route'].'/'.$page['menu_title'],
+                        $parent_properties['ordering']+5,
+                        $pageID
+                    )
                 );
             }
 
-            if(true===self::db()->reorder('pages',(int)$pageID,(int)$pos,'position','page_id'))
-            {
-                if(self::asJSON())
-                {
-                    echo Json::printSuccess('Success');
-                } else {
-                    echo Json::printError('Failed');
-                }
-            }
+            // reorder
+            self::db()->query(
+                  'SET @new_ordering = 0; '
+                . 'SET @ordering_inc = 10; '
+                . 'UPDATE `:prefix:pages` '
+                . 'SET `ordering` = (@new_ordering := @new_ordering + @ordering_inc) '
+                . 'WHERE `parent`=? '
+                . 'ORDER BY `ordering` ASC',
+                array($parent)
+            );
+print_r(self::db()->getLastStatement());
+
+#            if(true===self::db()->reorder('pages',(int)$pageID,(int)$pos,'ordering','page_id'))
+#            {
+#                if(self::asJSON())
+#                {
+#                    echo Json::printSuccess('Success');
+#                } else {
+#                    echo Json::printError('Failed');
+#                }
+#            }
         }   // end function reorder()
         
 
@@ -719,70 +710,18 @@ Array
                 {
                     // save data
                     $data = $form->getData();
-/*
----form data---
-Array
-(
-    [page_id] => 30
-    [page_parent] => 30
-    [page_visibility] => 1
-    [page_menu] => 1
-    [page_template] =>
-    [template_variant] =>
-    [page_title] => Homepage
-    [menu_title] => Homepage
-    [page_description] => asdfasdf
-    [page_language] => DE
-)
-
-CREATE TABLE `cat_pages` (
-	`page_id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-	`vis_id` INT(2) UNSIGNED NOT NULL DEFAULT '7',
-	`parent` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-	`root_parent` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-	`level` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-	`link` TEXT NOT NULL,
-	`page_title` VARCHAR(255) NOT NULL DEFAULT '',
-	`menu_title` VARCHAR(255) NOT NULL DEFAULT '',
-	`description` TEXT NOT NULL,
-	`page_trail` TEXT NOT NULL,
-	`template` VARCHAR(255) NOT NULL DEFAULT '',
-	`position` INT(11) NOT NULL DEFAULT '1',
-	`menu` INT(11) NOT NULL DEFAULT '1',
-	`language` VARCHAR(5) NOT NULL DEFAULT '',
-	`searching` INT(11) NOT NULL DEFAULT '1',
-	`created_by` INT(11) UNSIGNED NOT NULL DEFAULT '1',
-	`modified_by` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-	`modified_when` INT(11) NOT NULL DEFAULT '0',
-	PRIMARY KEY (`page_id`),
-	INDEX `FK_cat_pages_cat_visibility` (`vis_id`),
-	INDEX `FK_cat_pages_cat_rbac_users` (`created_by`),
-	INDEX `FK_cat_pages_cat_rbac_users_2` (`modified_by`),
-	CONSTRAINT `FK_cat_pages_cat_rbac_users` FOREIGN KEY (`created_by`) REFERENCES `cat_rbac_users` (`user_id`),
-	CONSTRAINT `FK_cat_pages_cat_rbac_users_2` FOREIGN KEY (`modified_by`) REFERENCES `cat_rbac_users` (`user_id`),
-	CONSTRAINT `FK_cat_pages_cat_visibility` FOREIGN KEY (`vis_id`) REFERENCES `cat_visibility` (`vis_id`) ON UPDATE NO ACTION ON DELETE NO ACTION
-)
-COLLATE='utf8_general_ci'
-ENGINE=InnoDB
-AUTO_INCREMENT=47
-;
-
-*/
-echo "FUNC ",__FUNCTION__," LINE ",__LINE__,"<br /><textarea style=\"width:100%;height:200px;color:#000;background-color:#fff;\">";
-print_r($page);
-echo "</textarea>";
-                    if(is_array($data) && count($data))
+                   if(is_array($data) && count($data))
                     {
                         // get old data
                         $old_parent       = intval($page['parent']);
-                        $old_position     = intval($page['position']);
+                        $old_position     = intval($page['ordering']);
                         $old_link         = $page['link'];
 
                         // new parent?
                         if(isset($data['page_parent']) && $old_parent!=intval($data['page_parent']))
                         {
                             // new position (add to end)
-                            $page['position'] = self::db()->getNext(
+                            $page['ordering'] = self::db()->getNext(
                                 'pages',
                                 intval($data['page_parent'])
                             );

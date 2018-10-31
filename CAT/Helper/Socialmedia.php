@@ -52,12 +52,13 @@ if(!class_exists('\CAT\Helper\Socialmedia'))
             if(!self::$global_enabled || !isset(self::$global_enabled[$what]))
             {
                 $data = self::db()->query(
-                      'SELECT `t1`.`name`, ifnull(`t2`.`'.$what.'_url`,`t1`.`'.$what.'_url`) as `url` '
+                      'SELECT `t1`.`name`, ifnull(`t2`.`'.$what.'_url`,`t1`.`'.$what.'_url`) as `url`, `t2`.`account` '
                     . 'FROM `:prefix:socialmedia` as `t1` '
                     . 'LEFT JOIN `:prefix:socialmedia_site` as `t2` '
                     . 'ON `t1`.`id`=`t2`.`id` '
                     . 'WHERE (`t2`.`'.$what.'_disabled` IS NULL OR `t2`.`'.$what.'_disabled` != "Y" ) '
                     . 'AND `t1`.`'.$what.'_url` IS NOT NULL '
+                    . 'AND `t2`.`account` IS NOT NULL '
                     . 'ORDER BY `name`'
                 );
                 if($data)
@@ -143,6 +144,7 @@ if(!class_exists('\CAT\Helper\Socialmedia'))
                     new \Dwoo\Template\Str($item['url']),
                     array(
                         'NAME'        => $item['name'],
+                        'ACCOUNT'     => $item['account'],
                         'PAGE_URL'    => $url,
                         'PAGE_TITLE'  => urlencode(\CAT\Helper\Page::properties($pageID,'page_title')),
                         'DESCRIPTION' => urlencode(\CAT\Helper\Page::properties($pageID,'description')),

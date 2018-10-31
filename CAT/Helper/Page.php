@@ -141,7 +141,7 @@ if (!class_exists('Page'))
             // for all pages with level 0...
             $root    = array();
             $now     = time();
-            $ordered = HArray::sort(self::$pages,'position');
+            $ordered = HArray::sort(self::$pages,'ordering');
 
             foreach($ordered as $page)
             {
@@ -185,7 +185,7 @@ if (!class_exists('Page'))
                   . 'INNER JOIN `cat_pages_copy` AS `u` '
                   . 'ON (u.page_id = c.descendant) '
                   . 'WHERE `site_id`=? AND c.ancestor = ? AND c.depth >= 1 '
-                  . 'ORDER BY `parent` ASC, `position` ASC',
+                  . 'ORDER BY `parent` ASC, `ordering` ASC',
                   array(CAT_SITE_ID,CAT_PAGE_ID)
             );
             $data = $stmt->fetchAll();
@@ -749,8 +749,8 @@ if (!class_exists('Page'))
                     . 'JOIN `'.self::$visibility_table.'` AS `t2` '
                     . 'ON `t1`.`vis_id`=`t2`.`vis_id` '
                     . 'WHERE `site_id`=? '
-                    //. 'ORDER BY `level` ASC, `position` ASC',
-                    . 'ORDER BY `parent` ASC, `position` ASC',
+                    //. 'ORDER BY `level` ASC, `ordering` ASC',
+                    . 'ORDER BY `parent` ASC, `ordering` ASC',
                     array(CAT_SITE_ID)
                 );
 
@@ -761,7 +761,7 @@ if (!class_exists('Page'))
                      . 'INNER JOIN `cat_pages_copy` AS `u` '
                      . 'ON (u.page_id = c.descendant) '
                      . 'WHERE `site_id`=? AND c.ancestor = 1 AND c.depth >= 1 '
-                     . 'ORDER BY `parent` ASC, `position` ASC',
+                     . 'ORDER BY `parent` ASC, `ordering` ASC',
                      array(CAT_SITE_ID)
                 );
 

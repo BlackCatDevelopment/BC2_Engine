@@ -4,13 +4,15 @@ BlackCat CMS is an Open Source PHP Content Management System built with PHP 7 an
 
 ## Installation
 
-At the moment, there is no installable release of BlackCat CMS v2.x. If you'd like to install the engine anyway, please download the current master ZIP, extract it to any directory you like, and run
+Currently there is no installable version of BlackCat CMS v2.x available. If you want to install the engine anyway, please download the current master.zip, unzip it to any directory and run
 
 ```
 composer install
 ```
 
-inside the vendor folder to get all the dependencies.
+from inside the ```vendor``` folder to get all the dependencies.
+
+Please note that you will need additional modules and templates to do something useful with the engine.
 
 
 

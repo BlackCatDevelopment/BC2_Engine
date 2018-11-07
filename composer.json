@@ -1,0 +1,23 @@
+{
+    "name": "BlackCatDevelopment/BC2_Engine",
+    "type": "application",
+    "description": "cat:ion",
+    "homepage": "https://blackcat-cms.de",
+    "authors": [
+        {
+            "name": "BlackCat Development",
+            "email": "info@blackcat-cms.de",
+            "homepage": "https://blackcat-cms.de",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^7.2"
+    },
+    "repositories": [
+		{
+			"type": "vcs",
+			"url": "https://github.com/BlackCatDevelopment/BC2_Engine"
+		}
+	]
+}

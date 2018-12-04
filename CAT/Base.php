@@ -377,11 +377,15 @@ if (!class_exists('Base', false)) {
         public static function site()
         {
             if (!Base::$site || !is_array(Base::$site) || !count(Base::$site)>0) {
-                $stmt = self::db()->query(
-                    'SELECT * FROM `:prefix:sites` WHERE `site_id`=?',
-                    array(CAT_SITE_ID)
-                );
-                Base::$site = $stmt->fetch();
+                if(defined('CAT_SITE_ID')) {
+                    $stmt = self::db()->query(
+                        'SELECT * FROM `:prefix:sites` WHERE `site_id`=?',
+                        array(CAT_SITE_ID)
+                    );
+                    Base::$site = $stmt->fetch();
+                } else {
+                    Base::$site = array();
+                }
             }
             return Base::$site;
         }   // end function site()

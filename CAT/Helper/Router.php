@@ -52,6 +52,9 @@ if (!class_exists('Router', false)) {
         private static $assets = array(
             'css','js','eot','svg','ttf','woff','woff2','map','jpg','jpeg','gif','png'
         );
+        private static $asset_subdirs = array(
+            'modules','templates'
+        );
 
         public static function getInstance()
         {
@@ -443,9 +446,6 @@ if (!class_exists('Router', false)) {
                 list($route, $ignore) = explode('?', $route, 2);
             }
 
-            // remove site subfolder
-            $route = preg_replace('~^\/'.self::site()['site_folder'].'\/?~i', '', $route);
-
             // remove index.php
             $route = str_ireplace('index.php', '', $route);
 
@@ -472,9 +472,35 @@ if (!class_exists('Router', false)) {
                 $route = substr($route, 1, strlen($route));
             }
 
+            // remove site subfolder; this may not work for asset files as the
+            // config.php of the site is not loaded
+            $site_folder = self::site()['site_folder'];
+            if(strlen($site_folder)==0) {
+                // try to extract the site subfolder from the path
+                $preg = implode('|',self::$asset_subdirs);
+                preg_match('~\/('.$preg.')\/~i', $route, $m);
+                if(count($m)>0) {
+                    $parts = explode('/',$route);
+                    $temp = array();
+                    foreach($parts as $part) {
+                        if($part != $m[1]) {
+                            $temp[] = $part;
+                        } else {
+                            break;
+                        }
+                    }
+                    if(count($temp)>0) {
+                        $site_folder = implode('/',$temp);
+                    }
+                }
+            }
+            self::log()->addDebug(sprintf('site folder [%s]',$site_folder));
+            $route = preg_replace('~^\/?'.$site_folder.'\/?~i', '', $route);
+
             if ($route) {
                 $this->parts = explode('/', str_replace('\\', '/', $route));
                 $this->route = $route;
+
                 $backend_route = defined('BACKEND_PATH')
                     ? BACKEND_PATH
                     : 'backend';
@@ -483,7 +509,6 @@ if (!class_exists('Router', false)) {
                     $this->protected = true;
                     array_shift($this->parts); // remove backend/ from route
                     $this->route     = implode("/", $this->parts);
-                    
                 }
             }
 

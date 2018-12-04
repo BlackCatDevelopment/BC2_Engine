@@ -92,8 +92,9 @@ if(!class_exists('\CAT\Backend\Socialmedia'))
         public static function edit()
         {
             // check permissions
-            if(!self::user()->hasPerm('socialmedia_edit'))
+            if(!self::user()->hasPerm('socialmedia_edit')) {
                 self::printFatalError('You are not allowed for the requested action!');
+            }
 
             // field name
             $field = \CAT\Helper\Validate::get('name','string');

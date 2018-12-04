@@ -16,16 +16,18 @@
 */
 
 namespace CAT\Helper;
+
 use \CAT\Base as Base;
 use \CAT\Registry as Registry;
 use \CAT\Helper\Directory as Directory;
 
-if (!class_exists('\CAT\Helper\Media'))
-{
+if (!class_exists('\CAT\Helper\Media')) {
     class Media extends Base
     {
-        private static $instance;
-        private static $tag_map = array(
+        protected static $loglevel  = \Monolog\Logger::EMERGENCY;
+        protected static $instance;
+        protected static $mimetypes;
+        protected static $tag_map = array(
             'basedata' => array(
                 'mime_type',
                 'filesize',
@@ -59,8 +61,9 @@ if (!class_exists('\CAT\Helper\Media'))
 
         public static function getInstance()
         {
-            if (!self::$instance)
+            if (!self::$instance) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -81,15 +84,13 @@ if (!class_exists('\CAT\Helper\Media'))
             );
             $data = $sth->fetchAll();
 
-            if(is_array($data) && count($data))
-            {
-                foreach($data as $item)
-                {
+            if (is_array($data) && count($data)) {
+                foreach ($data as $item) {
                     $attr[$item['attribute']] = $item['value'];
                 }
                 $attr['hfilesize'] = Directory::humanize($attr['filesize']);
                 $attr['filename']  = $data[0]['filename'];
-                $attr['is_image']  = (substr($attr['mime_type'],0,6) == 'image/')
+                $attr['is_image']  = (substr($attr['mime_type'], 0, 6) == 'image/')
                                    ? true
                                    : false;
                 #$attr['url']       = \CAT\Helper\Validate::path2uri($attr['path'].'/'.$attr['filename']);
@@ -97,6 +98,23 @@ if (!class_exists('\CAT\Helper\Media'))
             return $attr;
         }   // end function getAttributes()
 
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function getContentType($suffix)
+        {
+            if(!is_array(self::$mimetypes)) {
+                self::getMimeTypes();
+            }
+            if(!isset(self::$mimetypes[$suffix]) || ! is_array(self::$mimetypes[$suffix]) || !count(self::$mimetypes[$suffix])>0) {
+                return 'application/octet-stream';
+            } else {
+                return self::$mimetypes[$suffix][0];
+            }
+        }   // end function getContentType()
+        
         /**
          *
          * @access public
@@ -116,10 +134,10 @@ if (!class_exists('\CAT\Helper\Media'))
          * @access public
          * @return
          **/
-        public static function getFiles($dir,$skip_deleted=false)
+        public static function getFiles($dir, $skip_deleted=false)
         {
             $id  = self::getFolderID($dir);
-            if($id) {
+            if ($id) {
                 $sth = self::db()->query(
                       'SELECT * FROM `:prefix:media_files` AS `t1` '
                     . 'WHERE `t1`.`site_id`=? AND `t1`.`dir_id`=? '
@@ -128,11 +146,11 @@ if (!class_exists('\CAT\Helper\Media'))
                     array(CAT_SITE_ID,$id)
                 );
                 $files = $sth->fetchAll();
-                foreach($files as $i => $f) {
+                foreach ($files as $i => $f) {
                     $attr      = self::getAttributes($f['media_id']);
-                    $files[$i] = array_merge($files[$i],$attr);
+                    $files[$i] = array_merge($files[$i], $attr);
                     $files[$i]['filename'] = Directory::getName($f['filename']);
-                    $files[$i]['isImage']  = substr_count($attr['mime_type'],'image/');
+                    $files[$i]['isImage']  = substr_count($attr['mime_type'], 'image/');
                 }
                 return $files;
             }
@@ -152,7 +170,9 @@ if (!class_exists('\CAT\Helper\Media'))
                 array($id,CAT_SITE_ID)
             );
             $data = $sth->fetch();
-            if(is_array($data) && isset($data['path'])) return $data['path'];
+            if (is_array($data) && isset($data['path'])) {
+                return $data['path'];
+            }
             return '';
         }   // end function getFolderByID()
 
@@ -163,15 +183,17 @@ if (!class_exists('\CAT\Helper\Media'))
          **/
         public static function getFolderID($dir)
         {
-            $path = str_ireplace(CAT_PATH.'/'.\CAT\Registry::get('media_directory').'/','',$dir);
+            $path = str_ireplace(CAT_PATH.'/'.\CAT\Registry::get('media_directory').'/', '', $dir);
             #if(empty($path)) $path = '[root]';
             $sth  = self::db()->query(
                   'SELECT `dir_id` FROM `:prefix:media_dirs` AS `t1` '
                 . 'WHERE `path`=? AND `site_id`=?',
-                array(ltrim($path,'/'),CAT_SITE_ID)
+                array(ltrim($path, '/'),CAT_SITE_ID)
             );
             $data = $sth->fetch();
-            if(is_array($data) && isset($data['dir_id'])) return $data['dir_id'];
+            if (is_array($data) && isset($data['dir_id'])) {
+                return $data['dir_id'];
+            }
             return null;
         }   // end function getFolderID()
 
@@ -198,10 +220,63 @@ if (!class_exists('\CAT\Helper\Media'))
          * @access public
          * @return
          **/
-        public static function getMediaFromDir($dir,$filter=NULL)
+        public static function getMediaFromDir($dir, $filter=null)
         {
-            self::updateFiles($dir,$filter); // will call updateFolderData()
+            self::updateFiles($dir, $filter); // will call updateFolderData()
         }   // end function getMediaFromDir()
+
+        /**
+         * retrieve known Mime types from the DB; only entries with registered
+         * suffixes and labels are considered
+         *
+         * @access public
+         * @return array
+         **/
+        public static function getMimeTypes()
+        {
+            if (!is_array(self::$mimetypes)) {
+                self::log()->logDebug('getting known mimetypes from DB');
+                $res = self::db()->query(
+                    'SELECT * FROM `:prefix:mimetypes` WHERE `mime_suffixes` IS NOT NULL AND `mime_label` IS NOT NULL'
+                );
+                if ($res) {
+                    while (false!==($row=$res->fetch())) {
+                        $suffixes = explode('|', $row['mime_suffixes']);
+                        foreach ($suffixes as $suffix) {
+                            if ($suffix == '') {
+                                continue;
+                            }
+                            if (! isset(self::$mimetypes[$suffix])) {
+                                self::$mimetypes[$suffix] = array();
+                            }
+                            self::$mimetypes[$suffix][] = $row['mime_type'];
+                        }
+                    }
+                }
+                self::log()->logDebug('registered mime types', self::$mimetypes);
+            }
+            return self::$mimetypes;
+        }   // end function getMimeTypes()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function isImage($filename)
+        {
+            $types = self::getMimeTypes();
+            $type  = self::$mimetypes[pathinfo($filename,PATHINFO_EXTENSION)];
+            if(!is_array($type)) {
+                $type = array($type);
+            }
+            foreach($type as $t) {
+                if(substr_compare($t,'image/',0,6)==0) {
+                    return true;
+                }
+            }
+            return false;
+        }   // end function isImage()
 
         /**
          *
@@ -212,13 +287,13 @@ if (!class_exists('\CAT\Helper\Media'))
         {
             $fulldir = CAT_PATH.'/'.Registry::get('media_directory').'/'.$dir;
             // the folder may no longer exists, just the entry in the db
-            if(is_dir($fulldir)) {
-// !!!!! TODO: Derzeit wird das Ergebnis der Loeschen-Operation ignoriert !!!!!!
+            if (is_dir($fulldir)) {
+                // !!!!! TODO: Derzeit wird das Ergebnis der Loeschen-Operation ignoriert !!!!!!
                 $result = Directory::removeDirectory($fulldir);
             } else {
                 $result = true;
             }
-            if($id && $result) {
+            if ($id && $result) {
                 $sth = self::db()->query(
                     'DELETE FROM `:prefix:media_dirs` WHERE `dir_id`=?',
                     array($id)
@@ -232,11 +307,13 @@ if (!class_exists('\CAT\Helper\Media'))
          * @access public
          * @return
          **/
-        public static function updateFiles($dir,$filter=NULL,$recurse=false)
+        public static function updateFiles($dir, $filter=null, $recurse=false)
         {
             // first, make sure the directory exists, and is already present in
             // the database
-            if(!is_dir($dir)) return false;
+            if (!is_dir($dir)) {
+                return false;
+            }
 
             self::updateFolderData($dir);
 
@@ -244,19 +321,22 @@ if (!class_exists('\CAT\Helper\Media'))
             $id       = self::getFolderID($dir);
 
             // no ID?
-            if(!$id) return false;
+            if (!$id) {
+                return false;
+            }
 
             $data     = array();
             $suffixes = array();
 
-            if($filter)
-            {
+            if ($filter) {
                 $suffixes = \CAT\Helper\Mime::getAllowedFileSuffixes($filter);
-                if(!count($suffixes))
+                if (!count($suffixes)) {
                     return false;
+                }
             }
             $files = Directory::findFiles(
-                $dir,array('extension'=>$suffixes,'recurse'=>$recurse)
+                $dir,
+                array('extension'=>$suffixes,'recurse'=>$recurse)
             );
 
             // load file data from database
@@ -267,40 +347,32 @@ if (!class_exists('\CAT\Helper\Media'))
             );
             $dbdata  = $sth->fetchAll();
             $dbfiles = array();
-            if(is_array($dbdata) && count($dbdata))
-            {
-                foreach($dbdata as $index => $item)
-                {
+            if (is_array($dbdata) && count($dbdata)) {
+                foreach ($dbdata as $index => $item) {
                     $dbfiles[$item['filename']] = $item;
                 }
             }
 
             // add missing files
-            if(is_array($files) && count($files)>0)
-            {
-                foreach($files as $file)
-                {
-                    $decoded_filename = Directory::getName(pathinfo($file,PATHINFO_BASENAME));
-                    if(!array_key_exists($decoded_filename,$dbfiles))
-                    {
+            if (is_array($files) && count($files)>0) {
+                foreach ($files as $file) {
+                    $decoded_filename = Directory::getName(pathinfo($file, PATHINFO_BASENAME));
+                    if (!array_key_exists($decoded_filename, $dbfiles)) {
                         self::db()->query(
                               'INSERT INTO `:prefix:media_files` ( `site_id`, `dir_id`, `filename`, `checksum` ) '
                             . 'VALUES (?, ?, ?, ? )',
                             array(CAT_SITE_ID, $id, $decoded_filename, sha1_file($file))
                         );
                         $fid = self::db()->lastInsertId();
-                        self::analyzeFile($fid,$file);
+                        self::analyzeFile($fid, $file);
                     }
                 }
             }
 
             // mark missing files
-            if(is_array($dbfiles) && count($dbfiles)>0)
-            {
-                foreach($dbfiles as $item)
-                {
-                    if(!in_array($dir.$item['filename'],$files))
-                    {
+            if (is_array($dbfiles) && count($dbfiles)>0) {
+                foreach ($dbfiles as $item) {
+                    if (!in_array($dir.$item['filename'], $files)) {
                         self::db()->query(
                               'UPDATE `:prefix:media_files` '
                             . 'SET `deleted`=1 WHERE `filename`=?',
@@ -309,7 +381,6 @@ if (!class_exists('\CAT\Helper\Media'))
                     }
                 }
             }
-
         }   // end function updateFiles()
         
         /**
@@ -328,27 +399,25 @@ if (!class_exists('\CAT\Helper\Media'))
             );
             // get subfolders
             $subfolders = Directory::findDirectories(
-                $dir, array('recurse'=>true,'remove_prefix'=>CAT_PATH.'/'.Registry::get('media_directory').'/')
+                $dir,
+                array('recurse'=>true,'remove_prefix'=>CAT_PATH.'/'.Registry::get('media_directory').'/')
             );
             // add the dir itself to the folders to check
-            array_unshift($subfolders,self::getDirname($dir));
+            array_unshift($subfolders, self::getDirname($dir));
             // get folders already in DB
             $dbfolders = self::getFolders();
             // check real folders against DB
-            if(is_array($subfolders) && count($subfolders)>0)
-            {
+            if (is_array($subfolders) && count($subfolders)>0) {
                 $lookup1 = array_flip($subfolders);
                 $lookup2 = array();
-                if(is_array($dbfolders) && count($dbfolders)>0) {
-                    foreach($dbfolders as $item) {
+                if (is_array($dbfolders) && count($dbfolders)>0) {
+                    foreach ($dbfolders as $item) {
                         $lookup2[$item['path']] = 1;
                     }
                 }
                 // add folders to db
-                foreach($subfolders as $folder)
-                {
-                    if(!array_key_exists(Directory::getName(ltrim($folder,'/')),$lookup2))
-                    {
+                foreach ($subfolders as $folder) {
+                    if (!array_key_exists(Directory::getName(ltrim($folder, '/')), $lookup2)) {
                         self::db()->query(
                             'INSERT INTO `:prefix:media_dirs` (`site_id`,`path`) VALUES (?,?)',
                             array(CAT_SITE_ID,$folder)
@@ -356,9 +425,9 @@ if (!class_exists('\CAT\Helper\Media'))
                     }
                 }
                 // mark deleted folders
-                if(is_array($dbfolders) && count($dbfolders)>0) {
-                    foreach($dbfolders as $item) {
-                        if($item['path']!='' && !array_key_exists($item['path'],$lookup1)) {
+                if (is_array($dbfolders) && count($dbfolders)>0) {
+                    foreach ($dbfolders as $item) {
+                        if ($item['path']!='' && !array_key_exists($item['path'], $lookup1)) {
                             self::db()->query(
                                 'UPDATE `:prefix:media_dirs` SET `deleted`=1 WHERE `path`=?',
                                 array($item['path'])
@@ -375,29 +444,26 @@ if (!class_exists('\CAT\Helper\Media'))
          * @access protected
          * @return
          **/
-        protected static function analyzeFile($id,$filename)
+        protected static function analyzeFile($id, $filename)
         {
             $self = self::getInstance();
             $info = $self->fileinfo()->analyze($filename);
             $data = array();
 
             // base data
-            foreach(array_values(self::$tag_map['basedata']) as $attr)
-            {
+            foreach (array_values(self::$tag_map['basedata']) as $attr) {
                 $data[$attr]
-                    = isset($info[$attr]) ? $info[$attr] : NULL;
+                    = isset($info[$attr]) ? $info[$attr] : null;
 
-                if(!$data[$attr])
-                {
-                    foreach(array_values(array('video')) as $key)
-                    {
-                        if(isset($info[$key][$attr]))
+                if (!$data[$attr]) {
+                    foreach (array_values(array('video')) as $key) {
+                        if (isset($info[$key][$attr])) {
                             $data[$attr] = $info[$key][$attr];
+                        }
                     }
                 }
 
-                if($attr!='warning' && $data[$attr] && isset($data[$attr]) && $data[$attr]!='?')
-                {
+                if ($attr!='warning' && $data[$attr] && isset($data[$attr]) && $data[$attr]!='?') {
                     self::db()->query(
                           'INSERT INTO `:prefix:media_data` ( `media_id`, `attribute`, `value` ) '
                         . 'VALUES(?, ?, ?)',
@@ -407,8 +473,7 @@ if (!class_exists('\CAT\Helper\Media'))
             }
 
             // file size
-            if(isset($data['filesize']) && $data['filesize'] != 'n/a')
-            {
+            if (isset($data['filesize']) && $data['filesize'] != 'n/a') {
                 $data['hfilesize'] = Directory::humanize($data['filesize']);
                 self::db()->query(
                       'INSERT INTO `:prefix:media_data` ( `media_id`, `attribute`, `value` ) '
@@ -425,32 +490,28 @@ if (!class_exists('\CAT\Helper\Media'))
                 array($id, 'moddate', $data['moddate'])
             );
 
-            if(isset($info['mime_type']))
-            {
+            if (isset($info['mime_type'])) {
                 $tmp = array();
-                list($group,$type) = explode('/',$info['mime_type']);
-                switch($group)
-                {
+                list($group, $type) = explode('/', $info['mime_type']);
+                switch ($group) {
                     case 'video':
                         $data['video']    = true;
                         break;
                     case 'image':
-                        if($type == 'jpeg') $type = 'jpg';
+                        if ($type == 'jpeg') {
+                            $type = 'jpg';
+                        }
                         $data['image']    = true;
                         $data['url']      = \CAT\Helper\Validate::path2uri($filename);
                         break;
                 }
 
-                if(isset($info[$type]) && isset($info[$type]['exif']))
-                {
-                    foreach(self::$tag_map as $key => $attrs)
-                    {
-                        if(isset($info[$type]['exif'][$key]))
-                        {
+                if (isset($info[$type]) && isset($info[$type]['exif'])) {
+                    foreach (self::$tag_map as $key => $attrs) {
+                        if (isset($info[$type]['exif'][$key])) {
                             $arr = $info[$type]['exif'][$key];
-                            foreach($attrs as $attr)
-                            {
-                                $tmp[$attr] = ( isset($arr[$attr]) ? $arr[$attr] : '?' );
+                            foreach ($attrs as $attr) {
+                                $tmp[$attr] = (isset($arr[$attr]) ? $arr[$attr] : '?');
                                 self::db()->query(
                                       'INSERT INTO `:prefix:media_data` ( `media_id`, `attribute`, `value` ) '
                                     . 'VALUES(?, ?, ?)',
@@ -462,7 +523,7 @@ if (!class_exists('\CAT\Helper\Media'))
                     $data['exif'] = $tmp;
                 }
 
-                if(
+                if (
                        isset($info['tags'])
                     && isset($info['tags']['iptc'])
                     && isset($info['tags']['iptc']['IPTCApplication'])
@@ -482,8 +543,5 @@ if (!class_exists('\CAT\Helper\Media'))
 
             return $data;
         }   // end function analyzeFile()
-        
-        
-
     }   // ----- class \CAT\Helper\Media -----
 }

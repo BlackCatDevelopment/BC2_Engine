@@ -118,7 +118,7 @@ if (!class_exists('Page'))
             else
             {
                 $sth = self::db()->query(
-                    "SELECT `page_id` FROM `'.self::$pages_table.'` WHERE `route`=:link",
+                    "SELECT `page_id` FROM `".self::$pages_table."` WHERE `route`=:link",
                     array('link'=>$id)
                 );
                 if ($sth->rowCount() > 0)
@@ -466,19 +466,6 @@ if (!class_exists('Page'))
         }   // end function getPagesForMenu()
 
         /**
-         * returns the template for the given page
-         *
-         * @access public
-         * @param  integer  $page_id
-         * @return string
-         **/
-        public static function getPageTemplate($page_id)
-        {
-            $tpl = self::properties($page_id,'template');
-            return ( $tpl != '' ) ? $tpl : Registry::get('DEFAULT_TEMPLATE');
-        }   // end function getPageTemplate()
-
-        /**
          * get the path of the given page
          *
          * @access public
@@ -602,7 +589,7 @@ if (!class_exists('Page'))
         public static function isDeleted($page_id)
         {
             $page    = self::properties($page_id);
-            if($page['vis_id']==5)
+            if($page['page_visibility']==5)
                 return true;
             return false;
         } // end function isDeleted()
@@ -635,7 +622,7 @@ if (!class_exists('Page'))
             $show_it = false;
             $page    = self::properties($page_id);
 
-            switch ($page['vis_id'])
+            switch ($page['page_visibility'])
             {
                 // public - always visible
                 case 1:
@@ -654,7 +641,7 @@ if (!class_exists('Page'))
                 // private, registered - shown if user is allowed
                 case 2:
                 case 6:
-                    if (\CAT\User::getInstance()->is_authenticated() == true)
+                    if (self::user()->isAuthenticated() == true)
                     {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: ANPASSEN FUER NEUES BERECHTIGUNGSZEUGS
@@ -665,7 +652,7 @@ if (!class_exists('Page'))
                         $show_it = (
                                \CAT\Users::is_group_match(\CAT\Users::get_groups_id(), $page['viewing_groups'])
                             || \CAT\Users::is_group_match(\CAT\Users::get_user_id(), $page['viewing_users'])
-                            || \CAT\Users::is_root()
+                            || \CAT\Users::isRoot()
                         );
 */
                     }
@@ -744,10 +731,12 @@ if (!class_exists('Page'))
             if(count(self::$pages)==0 || $force)
             {
                 $result = self::db()->query(
-                      'SELECT `t1`.*, `t2`.`vis_name` AS `visibility` '
+                      'SELECT `t1`.*, `t2`.`vis_name` AS `visibility`, `t3`.`variant` '
                     . 'FROM `'.self::$pages_table.'` AS `t1` '
                     . 'JOIN `'.self::$visibility_table.'` AS `t2` '
-                    . 'ON `t1`.`vis_id`=`t2`.`vis_id` '
+                    . 'ON `t1`.`page_visibility`=`t2`.`vis_id` '
+                    . 'LEFT JOIN `:prefix:pages_template` AS `t3` '
+                    . 'ON `t1`.`page_id`=`t3`.`page_id` '
                     . 'WHERE `site_id`=? '
                     //. 'ORDER BY `level` ASC, `ordering` ASC',
                     . 'ORDER BY `parent` ASC, `ordering` ASC',

@@ -16,6 +16,7 @@
 */
 
 namespace CAT;
+
 use \CAT\Base as Base;
 use \CAT\Registry as Registry;
 use \CAT\Helper\HArray as HArray;
@@ -23,24 +24,23 @@ use \CAT\Helper\Validate as Validate;
 use \CAT\Helper\FormBuilder as FormBuilder;
 use \CAT\Helper\Json as Json;
 
-if (!class_exists('Backend', false))
-{
+if (!class_exists('Backend', false)) {
     class Backend extends Base
     {
         #protected static $loglevel = \Monolog\Logger::EMERGENCY;
         protected static $loglevel = \Monolog\Logger::DEBUG;
 
-        private   static $instance    = array();
-        private   static $form        = NULL;
-        private   static $route       = NULL;
-        private   static $params      = NULL;
-        private   static $menu        = NULL;
-        private   static $breadcrumb  = null;
-        private   static $tplpath     = NULL;
-        private   static $tplfallback = NULL;
+        private static $instance    = array();
+        private static $form        = null;
+        private static $route       = null;
+        private static $params      = null;
+        private static $menu        = null;
+        private static $breadcrumb  = null;
+        private static $tplpath     = null;
+        private static $tplfallback = null;
 
         // public routes (do not check for authentication)
-        private   static $public   = array(
+        private static $public   = array(
             'languages','login','authenticate','logout','qr','tfa'
         );
 
@@ -61,9 +61,11 @@ if (!class_exists('Backend', false))
         {
             $route = self::router()->getRoute();
             // example route: backend/page/edit/1
-            $parts = explode('/',$route);
-            if($parts[0]==CAT_BACKEND_PATH) array_shift($parts);
-            if($getID) {
+            $parts = explode('/', $route);
+            if ($parts[0]==CAT_BACKEND_PATH) {
+                array_shift($parts);
+            }
+            if ($getID) {
                 $stmt = self::db()->query(
                     'SELECT `id` FROM `:prefix:backend_areas` WHERE `name`=?',
                     array($parts[0])
@@ -89,25 +91,25 @@ if (!class_exists('Backend', false))
             $last   = null;
             $level  = 1;
 
-            foreach(array_values($parts) as $item) {
-                for($i=0;$i<count($menu);$i++) {
-                    if($menu[$i]['name']==$item) {
+            foreach (array_values($parts) as $item) {
+                for ($i=0;$i<count($menu);$i++) {
+                    if ($menu[$i]['name']==$item) {
                         $menu[$i]['id'] = $item;
                         $menu[$i]['parent'] = $last;
-                        array_push($bread,$menu[$i]);
+                        array_push($bread, $menu[$i]);
                         $seen[$item] = 1;
                         $last = $item;
                         $level = (isset($menu[$i]['level']) ? $menu[$i]['level'] : 1);
                         continue;
                     }
                 }
-                if(!isset($seen[$item])) {
-                    array_push($bread,array(
+                if (!isset($seen[$item])) {
+                    array_push($bread, array(
                         'id'          => $item,
                         'name'        => $item,
                         'parent'      => $last,
                         'title'       => self::lang()->t(self::humanize($item)),
-                        'href'        => CAT_ADMIN_URL."/".implode("/", array_slice($parts,0,($level+1))),
+                        'href'        => CAT_ADMIN_URL."/".implode("/", array_slice($parts, 0, ($level+1))),
                         'level'       => ++$level,
                         'is_current' => true,
                     ));
@@ -125,55 +127,61 @@ if (!class_exists('Backend', false))
          * @access public
          * @return array
          **/
-        public static function getMainMenu($parent=NULL)
+        public static function getMainMenu($parent=null)
         {
-            if(!self::$menu)
-            {
+            if (!self::$menu) {
                 // get backend areas
                 $r = self::db()->query('SELECT * FROM `:prefix:backend_areas` ORDER BY `level` ASC, `parent` ASC, `position` ASC');
                 self::$menu = $r->fetchAll(\PDO::FETCH_ASSOC);
-                self::log()->addDebug('main menu items from DB: '.print_r(self::$menu,1));
+                self::log()->addDebug('main menu items from DB: '.print_r(self::$menu, 1));
 
-                foreach(self::$menu as $i => $item)
-                {
+                // remove menu items not accessible to current user
+                for($i=count(self::$menu)-1;$i>=0;$i--) {
+                    if(!self::user()->hasPerm(self::$menu[$i]['name'])) {
+                        unset(self::$menu[$i]);
+                    }
+                }
+
+                foreach (self::$menu as $i => $item) {
                     self::$menu[$i]['title'] = self::lang()->t(ucfirst($item['name']));
-                    if($item['controller'] != '') # find controller
-                    {
+                    if ($item['controller'] != '') { # find controller
                         self::$menu[$i]['href']
                             = CAT_ADMIN_URL.'/'
-                            . ( strlen($item['controller']) ? $item['controller'].'/' : '' )
+                            . (strlen($item['controller']) ? $item['controller'].'/' : '')
                             . $item['name'];
-                    }
-                    else
-                    {
+                    } else {
                         self::$menu[$i]['href'] = CAT_ADMIN_URL.'/'.$item['name'];
                     }
-                    self::$menu[$i]['controller'] = ( !empty($item['controller']) ? $item['controller'] : '\CAT\Backend\\'.ucfirst($item['name']) );
+                    self::$menu[$i]['controller'] = (!empty($item['controller']) ? $item['controller'] : '\CAT\Backend\\'.ucfirst($item['name']));
                 }
 
                 // get available settings categories / regions
                 $r       = self::db()->query('SELECT `region` FROM `:prefix:settings` GROUP BY `region`');
                 $regions = $r->fetchAll();
-                $path    = HArray::search('settings',self::$menu,'name');
-                $id      = 1000;
-                $set_parent = self::$menu[$path[0]];
-                foreach($regions as $region)
-                {
-                    self::$menu[] = array(
-                        'id'          => $id,
-                        'name'        => $region['region'],
-                        'parent'      => $set_parent['id'],
-                        'title'       => self::humanize($region['region']),
-                        'href'        => CAT_ADMIN_URL.'/settings/'.$region['region'],
-                    );
-                    $id++;
+                $path    = HArray::search('settings', self::$menu, 'name');
+
+                // if parent is not visible, don't show child
+                if(isset($path[0])) {
+                    $id      = 1000;
+                    $set_parent = self::$menu[$path[0]];
+                    foreach ($regions as $region) {
+                        if(self::user()->hasPerm($region['region'])) {
+                            self::$menu[] = array(
+                                'id'          => $id,
+                                'name'        => $region['region'],
+                                'parent'      => $set_parent['id'],
+                                'title'       => self::humanize($region['region']),
+                                'href'        => CAT_ADMIN_URL.'/settings/'.$region['region'],
+                            );
+                            $id++;
+                        }
+                    }
                 }
             }
 
-            if($parent)
-            {
+            if ($parent) {
                 $menu = self::$menu;
-                $menu = HArray::filter($menu,'parent',$parent);
+                $menu = HArray::filter($menu, 'parent', $parent);
                 return $menu;
             }
 
@@ -185,7 +193,7 @@ if (!class_exists('Backend', false))
          **/
         public static function getPublicRoutes()
         {
-             return self::$public;
+            return self::$public;
         }    // end function getPublicRoutes()
 
         /**
@@ -206,8 +214,7 @@ if (!class_exists('Backend', false))
          **/
         public static function initialize()
         {
-            if(self::user()->is_authenticated())
-            {
+            if (self::user()->isAuthenticated()) {
                 $username_fieldname = Validate::createFieldname('username_');
                 $add_form   = FormBuilder::generateForm('be_page_add');
                 $add_form->getElement('page_type')->setValue("page");
@@ -219,6 +226,11 @@ if (!class_exists('Backend', false))
                     'USERNAME_FIELDNAME'    => $username_fieldname,
                     'PASSWORD_FIELDNAME'    => Validate::createFieldname('password_'),
                 ));
+                if (!self::asJSON() && self::user()->hasPerm('pages_list')) {
+                    self::tpl()->setGlobals('pages', \CAT\Backend\Page::tree());
+                    self::tpl()->setGlobals('pagelist', \CAT\Helper\Page::getPages(1));
+                    self::tpl()->setGlobals('sections', Sections::getSections());
+                }
             }
         }   // end function initialize()
         
@@ -231,9 +243,6 @@ if (!class_exists('Backend', false))
          **/
         public static function initForm()
         {
-#            \wblib\wbFormsJQuery::set('enabled',false);
-#            \wblib\wbFormsJQuery::set('load_ui_theme',false);
-#            \wblib\wbFormsJQuery::set('disable_tooltips',true);
         }   // end function initForm()
 
         /**
@@ -244,31 +253,29 @@ if (!class_exists('Backend', false))
          **/
         public static function initPaths()
         {
-            if(!self::$tplpath || !file_exists(self::$tplpath))
-            {
-                $theme   = Registry::get('default_theme',null,'backstrap');
+            if (!self::$tplpath || !file_exists(self::$tplpath)) {
+                $theme   = Registry::get('default_theme', null, 'backstrap');
                 $variant = Registry::get('default_theme_variant');
-                if(!$variant || !strlen($variant)) $variant = 'default';
+                if (!$variant || !strlen($variant)) {
+                    $variant = 'default';
+                }
                 $paths = array( // search paths
                     CAT_ENGINE_PATH.'/templates/'.$theme.'/templates/'.$variant,
                     CAT_ENGINE_PATH.'/templates/'.$theme.'/templates/default',
                     CAT_ENGINE_PATH.'/templates/'.$theme.'/templates',
                 );
-                foreach($paths as $path)
-                {
-                    if(file_exists($path))
-                    {
+                foreach ($paths as $path) {
+                    if (file_exists($path)) {
                         self::$tplpath = $path;
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: Check if default subdir exists
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        // TODO: Check if default subdir exists
+                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                         self::$tplfallback = CAT_ENGINE_PATH.'/templates/'.$theme.'/templates/default';
                     }
                 }
             }
-            self::tpl()->setPath(self::$tplpath,'backend');
-            self::tpl()->setFallbackPath(self::$tplfallback,'backend');
-
+            self::tpl()->setPath(self::$tplpath, 'backend');
+            self::tpl()->setFallbackPath(self::$tplfallback, 'backend');
         }   // end function initPaths()
 
         /**
@@ -282,9 +289,9 @@ if (!class_exists('Backend', false))
             return self::router()->isBackend();
         }   // end function isBackend()
 
-// =============================================================================
-//     Route handler
-// =============================================================================
+        // =============================================================================
+        //     Route handler
+        // =============================================================================
 
         /**
          * handle user authentication
@@ -294,41 +301,45 @@ if (!class_exists('Backend', false))
          **/
         public static function authenticate()
         {
-            if(false!==self::user()->login())
-            {
+            $token = self::user()->login();
+            if (false!==$token) {
                 self::log()->addDebug(sprintf(
                     'Authentication succeeded, username [%s], id [%s]',
-                    self::user()->get('username'), self::user()->get('user_id')
+                    self::user()->get('username'),
+                    self::user()->get('user_id')
                 ));
 
+                self::log()->addDebug('starting session');
+                #self::session()->start();
+                #self::session()->set('USER_ID',self::user()->get('user_id'));
+
                 // forward
-                if(self::asJSON())
-                {
+                if (self::asJSON()) {
                     self::log()->addDebug(sprintf(
                         'sending json result, forward to URL [%s]',
                         CAT_ADMIN_URL.'/dashboard'
                     ));
                     Json::printData(array(
                         'success' => true,
-                        'url'     => CAT_ADMIN_URL.'/dashboard'
+                        'url'     => CAT_ADMIN_URL.'/dashboard',
+                        'token'   => urlencode($token),
+                        'cookie'  => self::getCookieName(),
                     ));
-                }
-                else
-                {
+                } else {
                     self::log()->addDebug(sprintf(
                         'forwarding to URL [%s]',
                         CAT_ADMIN_URL.'/dashboard'
                     ));
+                    header('Authorization: Bearer '.$token);
                     header('Location: '.CAT_ADMIN_URL.'/dashboard');
                 }
-            }
-            else
-            {
+            } else {
                 self::log()->addDebug('Authentication failed!');
-                if(self::asJSON())
+                if (self::asJSON()) {
                     Json::printError('Authentication failed!');
-                else
+                } else {
                     self::printFatalError('Authentication failed!');
+                }
             }
             exit;
         }   // end function authenticate()
@@ -343,14 +354,13 @@ if (!class_exists('Backend', false))
             $self  = self::getInstance();
             $langs = self::getLanguages(1);
 
-            if(($parm = self::router()->getRoutePart(-1)) !== false)
-            {
-                switch($parm)
-                {
+            if (($parm = self::router()->getRoutePart(-1)) !== false) {
+                switch ($parm) {
                     case 'select':
                         $langselect = array(''=>'[Please select]');
-                        foreach(array_values($langs) as $l)
+                        foreach (array_values($langs) as $l) {
                             $langselect[$l] = $l;
+                        }
                         Json::printSuccess($langselect);
                         break;
                     case 'form':
@@ -377,7 +387,7 @@ if (!class_exists('Backend', false))
             self::initPaths();
             // we need this twice, so we use a var here
             $username_fieldname = Validate::createFieldname('username_');
-			$tpl_data = array(
+            $tpl_data = array(
                 'USERNAME_FIELDNAME'    => $username_fieldname,
                 'PASSWORD_FIELDNAME'    => Validate::createFieldname('password_'),
                 'TOKEN_FIELDNAME'       => Validate::createFieldname('token_'),
@@ -386,7 +396,7 @@ if (!class_exists('Backend', false))
                 'error_message'         => ($msg ? self::lang()->translate($msg) : null),
             );
             self::log()->addDebug('printing login page');
-            self::tpl()->output('login',$tpl_data);
+            self::tpl()->output('login', $tpl_data);
         }   // end function login()
 
         /**
@@ -416,10 +426,10 @@ if (!class_exists('Backend', false))
             // the original list, ordered by parent -> children (if the
             // templates renders the HTML output)
             $lb = Base::lb();
-            $lb->set('id','id');
-            $lb->set('title','title');
+            $lb->set('id', 'id');
+            $lb->set('title', 'title');
 
-            $tpl_data['MAIN_MENU'] = $lb->sort($menu,0);
+            $tpl_data['MAIN_MENU'] = $lb->sort($menu, 0);
 
             // recursive list
             $tpl_data['MAIN_MENU_RECURSIVE'] = $lb->buildRecursion($menu);
@@ -434,7 +444,7 @@ if (!class_exists('Backend', false))
             $tpl_data['MAIN_MENU_UL'] = $lb->buildList($menu);
 
             // set the page title
-            $controller = explode('\\',self::router()->getController());
+            $controller = explode('\\', self::router()->getController());
             \CAT\Helper\Page::setTitle(sprintf(
                 'BlackCat CMS Backend / %s',
                 self::lang()->translate($controller[count($controller)-1])
@@ -444,8 +454,8 @@ if (!class_exists('Backend', false))
             self::tpl()->output('header', $tpl_data);
 
             // reset listbuilder
-            $lb->set('id','page_id');
-            $lb->set('title','menu_title');
+            $lb->set('id', 'page_id');
+            $lb->set('title', 'menu_title');
         }   // end function printHeader()
 
         /**
@@ -459,23 +469,21 @@ if (!class_exists('Backend', false))
             self::initPaths();
 
             $t = ini_get('session.gc_maxlifetime');
-            $data['SESSION_TIME'] = sprintf('%02d:%02d:%02d', ($t/3600),($t/60%60), $t%60);
+            $data['SESSION_TIME'] = sprintf('%02d:%02d:%02d', ($t/3600), ($t/60%60), $t%60);
 
             // =================================================================
             // ! Try to get the actual version of the backend-theme
             // =================================================================
             $backend_theme_version = '-';
             $theme                 = Registry::get('DEFAULT_THEME');
-            if($theme)
-            {
+            if ($theme) {
                 $classname = '\CAT\Addon\Template\\'.$theme;
                 $filename  = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.$theme.'/inc/class.'.$theme.'.php');
-                if(file_exists($filename)) {
+                if (file_exists($filename)) {
                     $handler = $filename;
                     include_once $handler;
                     $data['THEME_INFO'] = $classname::getInfo();
                 }
-                
             }
             $data['WEBSITE_TITLE'] = Registry::get('website_title');
 
@@ -487,11 +495,11 @@ if (!class_exists('Backend', false))
                 ),
                 array(
                     'name'      => self::lang()->translate('Memory usage'),
-                    'status'    => '~ ' . sprintf('%0.2f',( (memory_get_usage() - $_be_mem) / (1024 * 1024) )) . ' MB'
+                    'status'    => '~ ' . sprintf('%0.2f', ((memory_get_usage() - $_be_mem) / (1024 * 1024))) . ' MB'
                 ),
                 array(
                     'name'      => self::lang()->translate('Script run time'),
-                    'status'    => '~ ' . sprintf('%0.2f',( microtime(TRUE) - $_be_time )) . ' sec'
+                    'status'    => '~ ' . sprintf('%0.2f', (microtime(true) - $_be_time)) . ' sec'
                 ),
             );
 
@@ -500,10 +508,11 @@ if (!class_exists('Backend', false))
             // ======================================
             // ! make sure to flush the output buffer
             // ======================================
-            if(ob_get_level()>1)
-                while (ob_get_level() > 0)
+            if (ob_get_level()>1) {
+                while (ob_get_level() > 0) {
                     ob_end_flush();
-
+                }
+            }
         }   // end function printFooter()
 
         /**
@@ -514,9 +523,8 @@ if (!class_exists('Backend', false))
          **/
         public static function tfa()
         {
-            $user = new User(Validate::sanitizePost('user'));
+            $user = new \CAT\Objects\User(Validate::sanitizePost('user'));
             echo Json::printSuccess($user->tfa_enabled());
         }   // end function tfa()
-
     }   // end class Backend
 }

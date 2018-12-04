@@ -24,12 +24,11 @@ use \CAT\Helper\Addons as Addons;
 use \CAT\Helper\Directory as Directory;
 use \CAT\Helper\Validate as Validate;
 
-if (!class_exists('Backend\Admintools'))
-{
+if (!class_exists('Backend\Admintools')) {
     class Admintools extends Base
     {
         // array to store config options
-        protected static $instance = NULL;
+        protected static $instance = null;
         protected static $loglevel = \Monolog\Logger::EMERGENCY;
         //protected static $loglevel = \Monolog\Logger::DEBUG;
         protected static $debug    = false;
@@ -41,8 +40,9 @@ if (!class_exists('Backend\Admintools'))
          **/
         public static function getInstance()
         {
-            if(!is_object(self::$instance))
+            if (!is_object(self::$instance)) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
         
@@ -55,9 +55,8 @@ if (!class_exists('Backend\Admintools'))
         {
             $d = self::list();
             Backend::printHeader();
-            self::tpl()->output('backend_dashboard',array('id'=>0,'dashboard'=>$d));
+            self::tpl()->output('backend_dashboard', array('id'=>0,'dashboard'=>$d));
             Backend::printFooter();
-
         }   // end function index()
 
         /**
@@ -68,31 +67,28 @@ if (!class_exists('Backend\Admintools'))
          **/
         public static function list($as_array=false)
         {
-            if(!self::user()->hasPerm('tools_list'))
+            if (!self::user()->hasPerm('tools_list')) {
                 self::printError('You are not allowed for the requested action!');
+            }
 
             $d = \CAT\Helper\Dashboard::getDashboardConfig('backend/admintools');
             // no configuration yet
-            if(!isset($d['widgets']) || !is_array($d['widgets']) || !count($d['widgets']))
-            {
-                $tools = Addons::getAddons('tool','name',false);
+            if (!isset($d['widgets']) || !is_array($d['widgets']) || !count($d['widgets'])) {
+                $tools = Addons::getAddons('tool', 'name', false);
 
-                if(!$as_array && self::asJSON())
-                {
+                if (!$as_array && self::asJSON()) {
                     echo header('Content-Type: application/json');
-                    echo json_encode($tools,true);
+                    echo json_encode($tools, true);
                     return;
                 }
 
                 $col          = 1; // init column
-                $d['columns'] = ( isset($d['columns']) ? $d['columns'] : 2 ); // init col number
-                if(count($tools))
-                {
+                $d['columns'] = (isset($d['columns']) ? $d['columns'] : 2); // init col number
+                if (count($tools)) {
                     // order tools by name
-                    $tools = \CAT\Helper\HArray::sort($tools,'name','asc',true);
+                    $tools = \CAT\Helper\HArray::sort($tools, 'name', 'asc', true);
                     $count = count($tools);
-                    foreach($tools as $tool)
-                    {
+                    foreach ($tools as $tool) {
                         Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/languages/');
                         // init widget
                         $d['widgets'][] = array(
@@ -104,7 +100,9 @@ if (!class_exists('Backend\Admintools'))
                             'open'          => true,
                         );
                         $col++;
-                        if($col > $d['columns']) $col = 1;
+                        if ($col > $d['columns']) {
+                            $col = 1;
+                        }
                     }
                     //\CAT\Helper\Dashboard::saveDashboardConfig($d,'global','admintools');
                     //$d = \CAT\Helper\Dashboard::getDashboard('backend/admintools');
@@ -121,41 +119,40 @@ if (!class_exists('Backend\Admintools'))
          **/
         public static function tool()
         {
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: tool perm
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            if(!self::user()->hasPerm('tools_list'))
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // TODO: tool perm
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if (!self::user()->hasPerm('tools_list')) {
                 self::printFatalError('You are not allowed for the requested action!');
+            }
             $tool    = self::getTool();
 
             // kind of dirty hack...
-            if(!$tool || $tool=='admintools') {
+            if (!$tool || $tool=='admintools') {
                 self::router()->reroute(CAT_BACKEND_PATH.'/admintools');
                 return;
             }
-            $name    = Addons::getDetails($tool,'name');
-            $handler = NULL;
-            foreach(array_values(array(str_replace(' ','',$name),$tool)) as $classname) {
-                foreach(array_values(array(
+            $name    = Addons::getDetails($tool, 'name');
+            $handler = null;
+            foreach (array_values(array(str_replace(' ', '', $name),$tool)) as $classname) {
+                foreach (array_values(array(
                     Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$tool.'/inc/class.'.$classname.'.php'),
                     Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/tool_'.$tool.'/inc/class.'.$classname.'.php'),
-                )) as $filename )
-                {
-                    if(file_exists($filename)) {
+                )) as $filename) {
+                    if (file_exists($filename)) {
                         $handler = $filename;
                     }
                 }
             }
 
             $tpl_data = array('content'=>'Ooops, no content');
-            if ($handler)
-            {
-                self::log()->addDebug(sprintf('found class file [%s]',$handler));
+            if ($handler) {
+                self::log()->addDebug(sprintf('found class file [%s]', $handler));
                 self::addLangFile(CAT_ENGINE_PATH.'/modules/'.$tool.'/languages/');
                 self::addLangFile(CAT_ENGINE_PATH.'/modules/tool_'.$tool.'/languages/');
                 self::setTemplatePaths($tool);
                 include_once $handler;
-                if(!class_exists($classname)) {
+                if (!class_exists($classname)) {
                     $classname = '\CAT\Addon\\'.$classname;
                 }
 
@@ -163,31 +160,25 @@ if (!class_exists('Backend\Admintools'))
                 $init = Directory::sanitizePath(
                     CAT_ENGINE_PATH.'/modules/'.$tool.'/forms.init.php'
                 );
-                if(file_exists($init))
-                {
+                if (file_exists($init)) {
                     Backend::initForm();
                     require $init;
                 }
-                if(is_callable(array($classname,'initialize')))
-                {
+                if (is_callable(array($classname,'initialize'))) {
                     $classname::initialize(array());
                 }
 
                 // check for function call in route
                 $func = self::router()->getRoutePart(-1);
-                if(is_callable(array($classname,$func)))
-                {
+                if (is_callable(array($classname,$func))) {
                     $tpl_data['content'] = $classname::$func();
-                }
-                elseif(is_callable(array($classname,'tool')))
-                {
+                } elseif (is_callable(array($classname,'tool'))) {
                     $tpl_data['content'] = $classname::tool();
                 }
             }
 
-            if(self::asJSON())
-            {
-                echo json_encode($tpl_data,1);
+            if (self::asJSON()) {
+                echo json_encode($tpl_data, 1);
                 exit;
             }
 
@@ -210,21 +201,21 @@ if (!class_exists('Backend\Admintools'))
          **/
         public static function getTool()
         {
-            $tool  = Validate::sanitizePost('tool','scalar');
+            $tool  = Validate::sanitizePost('tool', 'scalar');
 
-            if(!$tool)
-                $tool  = Validate::sanitizeGet('tool','scalar');
-            if(!$tool)
+            if (!$tool) {
+                $tool  = Validate::sanitizeGet('tool', 'scalar');
+            }
+            if (!$tool) {
                 $tool = self::router()->getParam(-1);
-            if(!$tool) {
+            }
+            if (!$tool) {
                 $route = self::router()->getRoute();
-                $route = str_ireplace('admintools/tool/','',$route);
-                $tool  = explode('/',$route)[0];
+                $route = str_ireplace('admintools/tool/', '', $route);
+                $tool  = explode('/', $route)[0];
             }
 
             return $tool;
         }   // end function getTool()
-
     } // class \CAT\Helper\Admintools
-
 } // if class_exists()

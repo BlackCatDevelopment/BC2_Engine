@@ -16,6 +16,7 @@
 */
 
 namespace CAT\Helper;
+
 use \CAT\Base as Base;
 use \CAT\Backend as Backend;
 use \CAT\Registry as Registry;
@@ -23,14 +24,13 @@ use \CAT\Sections as Sections;
 use \CAT\Helper\AssetFactory as AssetFactory;
 use \CAT\Helper\Directory as Directory;
 
-if(!class_exists('Assets'))
-{
-	class Assets extends Base
-	{
+if (!class_exists('Assets')) {
+    class Assets extends Base
+    {
         // set debug level
         protected static $loglevel  = \Monolog\Logger::EMERGENCY;
         #protected static $loglevel  = \Monolog\Logger::DEBUG;
-        protected static $instance  = NULL;
+        protected static $instance  = null;
         // map type to content-type
         protected static $mime_map  = array(
             'css'   => 'text/css',
@@ -39,12 +39,14 @@ if(!class_exists('Assets'))
             'svg'   => 'image/svg+xml',
         );
         //
-        protected static $includes  = array();
+        protected static $includes   = array();
+        public static $sourcemaps = array();
 
         public static function getInstance()
         {
-            if (!self::$instance)
+            if (!self::$instance) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -61,17 +63,20 @@ if(!class_exists('Assets'))
          * @param  string  $position  header|footer (optional)
          * @return void
          **/
-        public static function addInclude($file,$pos=NULL)
+        public static function addInclude($file, $pos=null)
         {
-            if(!$pos)
-            {
-                preg_match('~^(.*)s\.inc\.php$~i',pathinfo($file,PATHINFO_BASENAME),$m);
-                $pos = ( isset($m[1]) ? $m[1] : 'header' );
+            if (!$pos) {
+                preg_match('~^(.*)s\.inc\.php$~i', pathinfo($file, PATHINFO_BASENAME), $m);
+                $pos = (isset($m[1]) ? $m[1] : 'header');
             }
             self::log()->addDebug(sprintf(
-                'addInclude file [%s] position [%s]', $file, $pos
+                'addInclude file [%s] position [%s]',
+                $file,
+                $pos
             ));
-            if(!isset(self::$includes[$pos])) self::$includes[$pos] = array();
+            if (!isset(self::$includes[$pos])) {
+                self::$includes[$pos] = array();
+            }
             self::$includes[$pos][] = Directory::sanitizePath($file);
         }   // end function addInclude()
 
@@ -83,13 +88,12 @@ if(!class_exists('Assets'))
         public static function analyzeID($id)
         {
             self::log()->addDebug(sprintf(
-                'analyzeID [%s]', $id
+                'analyzeID [%s]',
+                $id
             ));
 
-            if(!$id)
-            {
-                if(Backend::isBackend())
-                {
+            if (!$id) {
+                if (Backend::isBackend()) {
                     $id     = 'backend_'.Backend::getArea();
                     $filter = 'backend';
                     $for    = 'backend';
@@ -101,7 +105,7 @@ if(!class_exists('Assets'))
             }
             return array(
                 $id,
-                ( substr($id,0,7)=='backend' ? 'backend' : 'frontend' )
+                (substr($id, 0, 7)=='backend' ? 'backend' : 'frontend')
             );
         }   // end function analyzeID()
 
@@ -119,83 +123,89 @@ if(!class_exists('Assets'))
         {
             self::log()->addDebug('getAssets()');
 
-            list($id,$for) = self::analyzeID($id);
+            list($id, $for) = self::analyzeID($id);
 
             self::log()->addDebug(sprintf(
                 '[%s] pos [%s] id [%s] for [%s] ignore includes [%s]',
-                __FUNCTION__, $pos, $id, $for, $ignore_inc
+                __FUNCTION__,
+                $pos,
+                $id,
+                $for,
+                $ignore_inc
             ));
 
             $am = AssetFactory::getInstance($id);
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: Das muss anders gehen!
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            if($id=='backend_login')
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // TODO: Das muss anders gehen!
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if ($id=='backend_login') {
                 return $am;
+            }
 
             // paths to scan
-            list($paths,$incpaths,$filter) = self::getPaths($id,$pos);
+            list($paths, $incpaths, $filter) = self::getPaths($id, $pos);
 
             $page_id = false;
-            if(is_numeric($id) && $id>0)
+            if (is_numeric($id) && $id>0) {
                 $page_id = $id;
-            if(Backend::isBackend() && Backend::getArea()=='page')
+            }
+            if (Backend::isBackend() && Backend::getArea()=='page') {
                 $page_id = \CAT\Backend\Page::getPageID();
+            }
 
             // if it's a frontend page, add scan paths for modules
-            if(is_numeric($page_id) && $page_id>0)
-            {
+            if (is_numeric($page_id) && $page_id>0) {
                 $sections = Sections::getSections($page_id);
-                if(is_array($sections) && count($sections)>0)
-                {
-                    foreach($sections as $block => $items)
-                    {
-                        foreach($items as $item)
-                        {
-                            array_push($paths,Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module'].'/css'));
-                            array_push($paths,Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module'].'/js'));
-                            array_push($incpaths,Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module']));
-                            if(strtolower($item['module'])=='wysiwyg') $wysiwyg = true;
+                if (is_array($sections) && count($sections)>0) {
+                    foreach ($sections as $block => $items) {
+                        foreach ($items as $item) {
+                            array_push($paths, Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module'].'/css'));
+                            array_push($paths, Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module'].'/js'));
+                            array_push($incpaths, Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module']));
+                            if (strtolower($item['module'])=='wysiwyg') {
+                                $wysiwyg = true;
+                            }
 
-                            if($item['variant']!='')
-                            {
+                            if ($item['variant']!='') {
                                 $variant_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module'].'/templates/'.$item['variant'].'/css');
-                                if(is_dir($variant_path))
-                                    array_push($paths,$variant_path);
+                                if (is_dir($variant_path)) {
+                                    array_push($paths, $variant_path);
+                                }
                             }
                         }
                     }
-                    if(isset($wysiwyg) && $wysiwyg) $am->addJS(\CAT\Addon\WYSIWYG::getJS());
+                    if (isset($wysiwyg) && $wysiwyg) {
+                        $am->addJS(\CAT\Addon\WYSIWYG::getJS());
+                    }
                 }
             }
 
-            if(Backend::isBackend())
-            {
+            if (Backend::isBackend()) {
                 $area = Backend::getArea();
                 self::log()->addDebug(sprintf(
                     'looking for area specific js/css, current area: [%s]',
                     $area
                 ));
                 $filter .= '|'.$area;
-                if($pos=='footer') $filter .= '_body';
-                self::log()->addDebug(sprintf('filter: [%s]',$filter));
+                self::log()->addDebug(sprintf('filter: [%s]', $filter));
             }
 
+            if ($pos=='footer') {
+                $filter .= '_body';
+            }
             self::log()->addDebug('>>> scan paths');
-            self::log()->addDebug('    $paths    : ' . var_export($paths,1));
-            self::log()->addDebug(' $incpaths    : ' . var_export($incpaths,1));
+            self::log()->addDebug('    $paths    : ' . var_export($paths, 1));
+            self::log()->addDebug(' $incpaths    : ' . var_export($incpaths, 1));
             self::log()->addDebug('   filter     : ' . $filter);
 
             // -----------------------------------------------------------------
             // analyze headers/footers.inc
             // -----------------------------------------------------------------
-            if(!$ignore_inc)
-            {
+            if (!$ignore_inc) {
                 $filename = $pos.'s.inc';
                 $incfiles = array();
-                foreach($incpaths as $path)
-                {
+                foreach ($incpaths as $path) {
                     $temp = Directory::findFiles(
                         $path,
                         array(
@@ -205,8 +215,7 @@ if(!class_exists('Assets'))
                             'max_depth'  => 3
                         )
                     );
-                    if(is_array($temp) && count($temp)>0)
-                    {
+                    if (is_array($temp) && count($temp)>0) {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: Wenn mehrere Dateien vorhanden sind, darf pro Stammverzeichnis
 //       (Modul oder Template) nur eine davon geladen werden
@@ -216,84 +225,77 @@ if(!class_exists('Assets'))
                     }
                 }
 
-                if(isset(self::$includes[$pos]) && is_array(self::$includes[$pos]))
-                    $incfiles = array_merge($incfiles,self::$includes[$pos]);
+                if (isset(self::$includes[$pos]) && is_array(self::$includes[$pos])) {
+                    $incfiles = array_merge($incfiles, self::$includes[$pos]);
+                }
 
-                if(is_array($incfiles) && count($incfiles)>0) {
+                if (is_array($incfiles) && count($incfiles)>0) {
                     self::log()->addDebug(sprintf(
                         'Found [%d] include files for position [%s]',
-                        count($incfiles),$pos
+                        count($incfiles),
+                        $pos
                     ));
-                    foreach($incfiles as $file) {
-                        if(file_exists($file)) {
+                    foreach ($incfiles as $file) {
+                        if (file_exists($file)) {
                             try {
                                 self::log()->addDebug(sprintf(
-                                    'reading file [%s]', $file
+                                    'reading file [%s]',
+                                    $file
                                 ));
                                 require $file;
                                 $array =& ${'mod_'.$pos.'s'};
                                 // CSS
-                                if(array_key_exists('css',$array[$for]) && count($array[$for]['css'])>0)
-                                {
-                                    foreach($array[$for]['css'] as $item)
-                                    {
-                                        if(isset($item['condition']))
-                                        {
-                                            foreach($item['files'] as $f)
-                                            {
-                                                $am->addCSS($f,(isset($item['media']) ? $item['media'] : NULL));
-                                                $am->addCondition($f,$item['condition']);
+                                if (array_key_exists('css', $array[$for]) && count($array[$for]['css'])>0) {
+                                    foreach ($array[$for]['css'] as $item) {
+                                        if (isset($item['condition'])) {
+                                            foreach ($item['files'] as $f) {
+                                                $am->addCSS($f, (isset($item['media']) ? $item['media'] : null));
+                                                $am->addCondition($f, $item['condition']);
                                             }
                                         } else {
                                             $am->addCSS(
                                                 $item['file'],
-                                                (isset($item['media']) ? $item['media'] : NULL)
+                                                (isset($item['media']) ? $item['media'] : null)
                                             );
                                         }
                                     }
                                 }
                                 // JS
-                                if(array_key_exists('js',$array[$for]) && count($array[$for]['js'])>0)
-                                {
-                                    foreach($array[$for]['js'] as $item)
-                                    {
-                                        if(is_array($item))
-                                        {
+                                if (array_key_exists('js', $array[$for]) && count($array[$for]['js'])>0) {
+                                    foreach ($array[$for]['js'] as $item) {
+                                        if (is_array($item)) {
                                             // if it's an array there _must_ be a conditional
-                                            if(!isset($item['condition'])) continue;
-                                            foreach($item['files'] as $f)
-                                            {
-                                                $am->addJS($f,$pos);
-                                                $am->addCondition($f,$item['condition']);
+                                            if (!isset($item['condition'])) {
+                                                continue;
+                                            }
+                                            foreach ($item['files'] as $f) {
+                                                $am->addJS($f, $pos);
+                                                $am->addCondition($f, $item['condition']);
                                             }
                                         } else {
-                                            $am->addJS($item,$pos);
+                                            $am->addJS($item, $pos);
                                         }
                                     }
                                 }
                                 // jQuery
-                                if(array_key_exists('jquery',$array[$for]))
-                                {
-                                    if(isset($array[$for]['jquery']['core']) && $array[$for]['jquery']['core'])
+                                if (array_key_exists('jquery', $array[$for])) {
+                                    if (isset($array[$for]['jquery']['core']) && $array[$for]['jquery']['core']) {
                                         $am->enableJQuery();
-                                    if(isset($array[$for]['jquery']['ui']) && $array[$for]['jquery']['ui'])
+                                    }
+                                    if (isset($array[$for]['jquery']['ui']) && $array[$for]['jquery']['ui']) {
                                         $am->enableJQueryUI();
-                                    if(isset($array[$for]['jquery']['plugins']) && $array[$for]['jquery']['plugins'])
-                                    {
-                                        foreach($array[$for]['jquery']['plugins'] as $item)
-                                        {
-                                            if(false!==($file=self::findJQueryPlugin($item)))
-                                            {
-                                                $am->addJS($file,$pos);
+                                    }
+                                    if (isset($array[$for]['jquery']['plugins']) && $array[$for]['jquery']['plugins']) {
+                                        foreach ($array[$for]['jquery']['plugins'] as $item) {
+                                            if (false!==($file=self::findJQueryPlugin($item))) {
+                                                $am->addJS($file, $pos);
                                             }
                                         }
                                     }
                                 }
                                 // META
-                                if(array_key_exists('meta',$array[$for]))
-                                {
-                                    foreach($array[$for]['meta'] as $item)
-                                    {
+                                if (array_key_exists('meta', $array[$for])) {
+                                    foreach ($array[$for]['meta'] as $item) {
                                         $am->addMeta($item);
                                     }
                                 }
@@ -309,8 +311,7 @@ if(!class_exists('Assets'))
             // -----------------------------------------------------------------
             $files    = array();
             $ext      = array('css','js');
-            foreach($paths as $path)
-            {
+            foreach ($paths as $path) {
                 $temp = Directory::findFiles(
                     $path,
                     array(
@@ -320,27 +321,31 @@ if(!class_exists('Assets'))
                         'filter'     => "($filter)"
                     )
                 );
-                $files = array_merge($files,$temp);
+                $files = array_merge($files, $temp);
             }
 
             self::log()->addDebug(sprintf(
                 'Found [%d] files for filter [%s]',
-                count($files),$filter
+                count($files),
+                $filter
             ));
 
-            if($as_array) return $files;
+            if ($as_array) {
+                return $files;
+            }
 
-            if(is_array($files) && count($files)>0) {
-                foreach($files as $file) {
+            if (is_array($files) && count($files)>0) {
+                foreach ($files as $file) {
                     self::log()->addDebug(sprintf(
-                        ' --- adding file [%s] to pos [%s]',$file,$pos
+                        ' --- adding file [%s] to pos [%s]',
+                        $file,
+                        $pos
                     ));
-                    $am->addAsset($file,$pos); // default CSS have always media 'all'
+                    $am->addAsset($file, $pos); // default CSS have always media 'all'
                 }
             }
 
             return $am;
-
         }   // end function getAssets()
 
         /**
@@ -348,46 +353,49 @@ if(!class_exists('Assets'))
          * @access public
          * @return
          **/
-        public static function getPaths($id,$pos)
+        public static function getPaths($id, $pos)
         {
             self::log()->addDebug('getPaths()');
 
-            list($id,$for) = self::analyzeID($id); // sanitize ID
+            list($id, $for) = self::analyzeID($id); // sanitize ID
 
             $paths    = array();
             $incpaths = array();
             $filter   = null;
 
-            switch($for)
-            {
+            switch ($for) {
             // -----------------------------------------------------------------
             // ----- FRONTEND --------------------------------------------------
             // -----------------------------------------------------------------
                 case 'frontend':
                     $filter = 'frontend';
+                    $page_id = \CAT\Page::getID();
+                    $tplpath = \CAT\Helper\Template::getPath($page_id,false);
                     // CSS
-                    array_push($paths,Directory::sanitizePath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/css/'.Registry::get('default_template_variant')));
-                    array_push($paths,Directory::sanitizePath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/css'));
+                    array_push($paths, Directory::sanitizePath($tplpath.'/css/'.Registry::get('default_template_variant')));
+                    array_push($paths, Directory::sanitizePath($tplpath.'/css'));
                     // JS
-                    array_push($paths,Directory::sanitizePath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/js/'.Registry::get('default_template_variant')));
-                    array_push($paths,Directory::sanitizePath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/js'));
+                    array_push($paths, Directory::sanitizePath($tplpath.'/js/'.Registry::get('default_template_variant')));
+                    array_push($paths, Directory::sanitizePath($tplpath.'/js'));
                     // *.inc.php - fallback sorting; search will stop on first occurance
-                    array_push($incpaths,Directory::sanitizePath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/'.Registry::get('default_template_variant')));
-                    array_push($incpaths,Directory::sanitizePath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/default'));
-                    array_push($incpaths,Directory::sanitizePath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates'));
-                    array_push($incpaths,Directory::sanitizePath(\CAT\Registry::get('CAT_TEMPLATE_DIR')));
+                    array_push($incpaths, Directory::sanitizePath($tplpath.'/templates/'.Registry::get('default_template_variant')));
+                    array_push($incpaths, Directory::sanitizePath($tplpath.'/templates/default'));
+                    array_push($incpaths, Directory::sanitizePath($tplpath.'/templates'));
+                    array_push($incpaths, Directory::sanitizePath($tplpath));
                     break;
                 case 'backend':
                     $filter = 'backend|theme';
-                    if($pos=='footer') $filter = 'backend_body|theme_body';
+                    if ($pos=='footer') {
+                        $filter = 'backend_body|theme_body';
+                    }
 
-                    array_push($paths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css/'.Registry::get('default_theme_variant')));
-                    array_push($paths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css/default'));
-                    array_push($paths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css'));
+                    array_push($paths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css/'.Registry::get('default_theme_variant')));
+                    array_push($paths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css/default'));
+                    array_push($paths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css'));
 
-                    array_push($paths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates/'.Registry::get('default_theme_variant')));
-                    array_push($paths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/js/'.Registry::get('default_theme_variant')));
-                    array_push($paths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/js'));
+                    array_push($paths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates/'.Registry::get('default_theme_variant')));
+                    array_push($paths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/js/'.Registry::get('default_theme_variant')));
+                    array_push($paths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/js'));
 
                     #$area = CAT_Backend::getArea();
                     #self::log()->addDebug(sprintf(
@@ -396,26 +404,25 @@ if(!class_exists('Assets'))
                     #));
 
                     // admin tool
-                    if(self::router()->match('~\/tool\/~i'))
-                    {
+                    if (self::router()->match('~\/tool\/~i')) {
                         $tool = \CAT\Backend\Admintools::getTool();
-                        foreach(
+                        foreach (
                             array_values(array(
                                 Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$tool.'/css'),
                                 Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$tool.'/js')
                             )) as $p
                         ) {
-                            if(is_dir($p)) {
-                                array_push($paths,$p);
-                                array_push($incpaths,$p);
+                            if (is_dir($p)) {
+                                array_push($paths, $p);
+                                array_push($incpaths, $p);
                             }
                         }
                     }
 
                     // fallback sorting; search will stop on first occurance
-                    array_push($incpaths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates/'.Registry::get('default_theme_variant')));
-                    array_push($incpaths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates'));
-                    array_push($incpaths,Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme')));
+                    array_push($incpaths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates/'.Registry::get('default_theme_variant')));
+                    array_push($incpaths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates'));
+                    array_push($incpaths, Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme')));
                     break;
             }
 
@@ -429,10 +436,11 @@ if(!class_exists('Assets'))
          **/
         public static function isValid($file)
         {
-            self::log()->addDebug(sprintf('isValid file [%s]',$file));
-            $type = pathinfo($file,PATHINFO_EXTENSION);
-            if(!strlen($type) || !array_key_exists($type,self::$mime_map))
+            self::log()->addDebug(sprintf('isValid file [%s]', $file));
+            $type = pathinfo($file, PATHINFO_EXTENSION);
+            if (!strlen($type) || !array_key_exists($type, self::$mime_map)) {
                 return false;
+            }
             return true;
         }   // end function isValid()
 
@@ -444,10 +452,9 @@ if(!class_exists('Assets'))
         public static function renderAssets($pos, $id=null, $ignore_inc=false, $print=true)
         {
             self::log()->addDebug('renderAssets()');
-            $am = self::getAssets($pos,$id,$ignore_inc);
+            $am = self::getAssets($pos, $id, $ignore_inc);
             $output = null;
-            switch($pos)
-            {
+            switch ($pos) {
                 case 'header':
                     $output = $am->renderMeta()
                             . $am->renderCSS()
@@ -457,7 +464,14 @@ if(!class_exists('Assets'))
                     $output = $am->renderJS('footer');
                     break;
             }
-
+            if (is_array(self::$sourcemaps) && count(self::$sourcemaps)>0) {
+                foreach (self::$sourcemaps as $file) {
+                    $file = CAT_ENGINE_PATH.'/'.$file;
+                    if (file_exists($file)) {
+                        copy($file, CAT_PATH.'/assets/'.basename($file));
+                    }
+                }
+            }
             return $output;
         }   // end function renderAssets
         
@@ -466,30 +480,47 @@ if(!class_exists('Assets'))
          * @access public
          * @return
          **/
-        public static function serve($type,$files,$print=false)
+        public static function serve($type, $files, $print=false)
         {
-            self::log()->addDebug('serve()');
-            if(!is_array($files) || !count($files)>0) return false;
-            if($type=='images'||$type=='svg')
-            {
+            self::log()->addDebug(sprintf(
+                'serve() %s, %s',
+                $type, print_r($files,1)
+            ));
+            if (!is_array($files) || !count($files)>0) {
+                self::log()->addWarning('no files');
+                return false;
+            }
+            if ($type=='map') {
+                header('Content-Type: text/plain');
+                readfile(CAT_PATH.'/assets/'.pathinfo($files[0], PATHINFO_BASENAME));
+                return;
+            }
+
+            if(count($files)==1 && \CAT\Helper\Media::isImage($files[0])) {
                 self::log()->addDebug('serving image');
-                foreach($files as $file)
-                {
-                    if(file_exists(CAT_ENGINE_PATH.'/'.$file))
-                    {
+                copy(CAT_ENGINE_PATH.'/'.$files[0], CAT_PATH.'/assets/'.pathinfo($files[0], PATHINFO_BASENAME));
+                // the content-type defaults to 'application/octet-stream' if the suffix is not present in the mime table
+                header('Content-Type: '.Media::getContentType(pathinfo($files[0], PATHINFO_EXTENSION)));
+                readfile(CAT_PATH.'/assets/'.pathinfo($files[0], PATHINFO_BASENAME));
+                return;
+            }
+
+            if ($type=='images'||$type=='svg') {
+                self::log()->addDebug('serving image');
+                foreach ($files as $file) {
+                    if (file_exists(CAT_ENGINE_PATH.'/'.$file)) {
                         self::log()->addDebug(sprintf(
                             'copying file [%s] to path [%s]',
                             CAT_ENGINE_PATH.'/'.$file,
-                            CAT_PATH.'/assets/'.pathinfo($file,PATHINFO_BASENAME)
+                            CAT_PATH.'/assets/'.pathinfo($file, PATHINFO_BASENAME)
                         ));
-                        copy(CAT_ENGINE_PATH.'/'.$file,CAT_PATH.'/assets/'.pathinfo($file,PATHINFO_BASENAME));
-                        if(isset(self::$mime_map[strtolower(pathinfo($file,PATHINFO_EXTENSION))]))
-                        {
-                            header('Content-Type: '.self::$mime_map[strtolower(pathinfo($file,PATHINFO_EXTENSION))]);
-                            readfile(CAT_PATH.'/assets/'.pathinfo($file,PATHINFO_BASENAME));
+                        copy(CAT_ENGINE_PATH.'/'.$file, CAT_PATH.'/assets/'.pathinfo($file, PATHINFO_BASENAME));
+                        if (isset(self::$mime_map[strtolower(pathinfo($file, PATHINFO_EXTENSION))])) {
+                            header('Content-Type: '.self::$mime_map[strtolower(pathinfo($file, PATHINFO_EXTENSION))]);
+                            readfile(CAT_PATH.'/assets/'.pathinfo($file, PATHINFO_BASENAME));
                             return;
                         }
-                        echo CAT_SITE_URL.'/assets/'.pathinfo($file,PATHINFO_BASENAME);
+                        echo CAT_SITE_URL.'/assets/'.pathinfo($file, PATHINFO_BASENAME);
                     }
                 }
             }
@@ -499,20 +530,24 @@ if(!class_exists('Assets'))
             $fm      = new \Assetic\FilterManager();
             $factory->setFilterManager($fm);
             $factory->setDefaultOutput('assets/*');
-            $factory->setProxy(Registry::get('PROXY'),Registry::get('PROXY_PORT'));
+            $factory->setProxy(Registry::get('PROXY'), Registry::get('PROXY_PORT'));
 
             $filters = array();
-            if($type=='css')
-            {
-                foreach(array('CssImportFilter','CATCssRewriteFilter','MinifyCssCompressorFilter','CssCacheBustingFilter') as $filter)
-                {
+            if ($type=='css') {
+                foreach (array('CssImportFilter','CATCssRewriteFilter','CATSourcemapFilter','MinifyCssCompressorFilter','CssCacheBustingFilter') as $filter) {
                     $filterclass = '\Assetic\Filter\\'.$filter;
-                    $fm->set($filter,new $filterclass());
+                    $fm->set($filter, new $filterclass());
+                    $filters[] = $filter;
+                }
+            } elseif ($type=='js') {
+                foreach (array('CATSourcemapFilter','JSMinFilter') as $filter) {
+                    $filterclass = '\Assetic\Filter\\'.$filter;
+                    $fm->set($filter, new $filterclass());
                     $filters[] = $filter;
                 }
             }
 
-            self::log()->addDebug(sprintf('type [%s], number of files [%d]', $type, count($files)).' '.print_r($files,1));
+            self::log()->addDebug(sprintf('type [%s], number of files [%d]', $type, count($files)).' '.print_r($files, 1));
 
             // add assets
             $assets  = $factory->createAsset(
@@ -527,8 +562,8 @@ if(!class_exists('Assets'))
             $writer = new \Assetic\AssetWriter(Directory::sanitizePath(CAT_PATH));
             $writer->writeManagerAssets($am);
 
-            if($print) {
-                return self::printAsset($assets->getTargetPath(),$assets);
+            if ($print) {
+                return self::printAsset($assets->getTargetPath(), $assets);
             }
 
             return CAT_SITE_URL.'/'.$assets->getTargetPath();
@@ -547,30 +582,29 @@ if(!class_exists('Assets'))
          **/
         private static function findJQueryPlugin($item)
         {
-            $plugin_path = CAT_JS_PATH.'/plugins';
+            $plugin_path = CAT_ENGINE_PATH.'/'.CAT_JS_PATH.'/plugins/'.$item;
+
             // check suffix
-            if(pathinfo($item,PATHINFO_EXTENSION) != 'js')
+            if (pathinfo($item, PATHINFO_EXTENSION) != 'js') {
                 $item .= '.js';
+            }
 
             // prefer minimized
-            $minitem = pathinfo($item,PATHINFO_FILENAME).'.min.js';
+            $minitem = pathinfo($item, PATHINFO_FILENAME).'.min.js';
             $file    = Directory::sanitizePath($plugin_path.'/'.$minitem);
 
-            // just there?
-            if (!file_exists($file))
-            {
+            // just there? --> minimized
+            if (!file_exists($file)) {
+                // without .min.
                 $file = Directory::sanitizePath($plugin_path.'/'.$item);
-                if (!file_exists($file))
-                {
-                    $dir = pathinfo($item,PATHINFO_FILENAME);
+                if (!file_exists($file)) {
+                    $dir = pathinfo($item, PATHINFO_FILENAME);
                     // prefer minimized
-                    $minitem = pathinfo($item,PATHINFO_FILENAME).'.min.js';
+                    $minitem = pathinfo($item, PATHINFO_FILENAME).'.min.js';
                     $file    = Directory::sanitizePath($plugin_path.'/'.$dir.'/'.$minitem);
-                    if(!file_exists($file))
-                    {
+                    if (!file_exists($file)) {
                         $file = Directory::sanitizePath($plugin_path.'/'.$dir.'/'.$item);
-                        if(!file_exists($file))
-                        {
+                        if (!file_exists($file)) {
                             // give up
                             return false;
                         }
@@ -578,7 +612,7 @@ if(!class_exists('Assets'))
                 }
             }
 
-            return $file;
+            return str_ireplace(CAT_ENGINE_PATH, '', $file);
         }   // end function findJQueryPlugin()
 
         /**
@@ -586,10 +620,12 @@ if(!class_exists('Assets'))
          * @access public
          * @return
          **/
-        protected static function printAsset($file,$asset)
+        protected static function printAsset($file, $asset)
         {
-            if(!self::isValid($file)) exit;
-            $type = pathinfo($file,PATHINFO_EXTENSION);
+            if (!self::isValid($file)) {
+                exit;
+            }
+            $type = pathinfo($file, PATHINFO_EXTENSION);
             header('Content-Type: '.self::$mime_map[$type]);
             echo $asset->dump();
         }   // end function printAsset()

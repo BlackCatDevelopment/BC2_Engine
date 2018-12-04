@@ -130,7 +130,7 @@ Array
             }
 
             // root is allowed all
-            if(!self::user()->is_root())
+            if(!self::user()->isRoot())
             {
                 // get the user's groups
                 $groups = self::user()->getGroups(1);

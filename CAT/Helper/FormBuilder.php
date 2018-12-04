@@ -45,7 +45,10 @@ if (!class_exists('FormBuilder'))
                     if(isset($item['fieldset']) && $lastlabel != $item['fieldset'])
                     {
                         $form->addElement(new \wblib\wbForms\Element\Fieldset(
-                            self::lang()->translate(self::humanize($item['fieldset']))
+                            strtolower(str_replace(' ','_',$item['fieldset'])),
+                            array(
+                                'label' => self::lang()->translate(self::humanize($item['fieldset']))
+                            )
                         ));
                     }
 

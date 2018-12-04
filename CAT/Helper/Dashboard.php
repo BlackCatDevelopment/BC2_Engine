@@ -129,6 +129,9 @@ if (!class_exists('Dashboard'))
                  $sql, array(self::user()->get('user_id'),$path)
             );
             $config = $sth->fetch();
+            if(!is_array($config)) {
+                $config = array();
+            }
             return $config;
         }   // end function getDashboardConfig()
 

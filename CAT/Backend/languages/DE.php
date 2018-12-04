@@ -67,6 +67,7 @@ $LANG = array_merge($LANG,array(
     'Add Template CSS'  => 'Template CSS hinzufügen',
     'Actions'           => 'Aktionen',
     'Block number'      => 'Blocknr.',
+    'Bootswatch theme'  => 'Bootswatch Theme',
     'Collapse all'      => 'Alle einklappen',
     'Date from'         => 'Datum von',
     'Date until'        => 'Datum bis',
@@ -85,6 +86,7 @@ $LANG = array_merge($LANG,array(
     'no name'           => 'kein Name',
     'No pages yet'      => 'Noch keine Seiten',
     'none'              => 'keine',
+    'Page deleted'      => 'Seite gelöscht',
     'Page language'     => 'Seitensprache',
     'Page parent'       => 'Übergeordnete Seite',
     'Page title'        => 'Seitentitel',
@@ -95,6 +97,7 @@ $LANG = array_merge($LANG,array(
     'public'            => 'öffentlich',
     'registered'        => 'registriert',
     'Relations'         => 'Beziehungen',
+    'Template options'  => 'Template-Optionen',
     'Time of day'       => 'Uhrzeit',
     'Time from'         => 'Uhrzeit von',
     'Time until'        => 'Uhrzeit bis',
@@ -102,12 +105,15 @@ $LANG = array_merge($LANG,array(
     'Use jQuery UI'     => 'jQuery UI verwenden',
     'Variant'           => 'Variante',
     'Visibility'        => 'Sichtbarkeit',
+    'A permalink or permanent link is a URL that is intended to remain unchanged for many years into the future, yielding a hyperlink that is less susceptible to link rot.'
+        => 'Ein Permalink ist ein dauerhafter Identifikator in Form einer URL. Bei der Einrichtung eines Permalinks wird angestrebt, die einmal über ihn referenzierten Inhalte dauerhaft und primär über diese URL verfügbar zu machen.',
     'About module variants' => 'Über Modul-Varianten',
     'Add jQuery Plugin' => 'jQuery Plugin hinzufügen',
     'Add explicit Javascript file' => 'Ein bestimmtes Javascript hinzufügen',
     'Add explicit CSS file' => 'Eine bestimmte CSS Datei hinzufügen',
     'Change visibility' => 'Sichtbarkeit ändern',
     'Currently, no extra files are defined for this page.' => 'Zur Zeit sind keine zusätzlichen Dateien für diese Seite konfiguriert.',
+    'Do you really want to delete this page?' => 'Soll diese Seite wirklich gelöscht werden?',
     'Do you really want to delete this section?' => 'Soll dieser Abschnitt wirklich <strong>gelöscht</strong> werden?',
     'Do you really want to recover this section?' => 'Soll dieser Abschnitt wirklich wiederhergestellt werden?',
     'Do you really want to unlink the selected page?' => 'Soll diese Seitenbeziehung wirklich entfernt werden?',
@@ -174,9 +180,15 @@ $LANG = array_merge($LANG,array(
     'Modules'           => 'Erweiterungen',
     'Notinstalled'      => '(Noch) nicht installiert',
     'Page modules'      => 'Seitenmodule',
+    'Up to date'        => 'Aktuell',
     'Upgraded'          => 'Aktualisiert',
+    'Use Bootstrap'     => 'Bootstrap verwenden',
     'Not (yet) installed' => '(Noch) nicht installiert',
+    'The module was created.' => 'Die Erweiterung wurde erstellt.',
     'Type to filter by text...' => 'Zum Filtern tippen...',
+    'Update the catalog' => 'Katalog aktualisieren',
+    'You cannot uninstall this module as it is protected' => 'Modul ist vor Deinstallation geschützt',
+    'Your catalog version' => 'Katalog Version',
 
 
     // --------------- Backend -> Roles ---------------
@@ -310,8 +322,9 @@ $LANG = array_merge($LANG,array(
     'View social media links' => 'Social Media Links sehen',
 
     // --------------- Backend -> Settings ----------
-    'Common'            => 'Allgemein',
     'Cookie name'       => 'Cookie-Name',
+    'Contact email'     => 'Kontakt Mailadresse',
+    'Contact phone'     => 'Kontakt Telefonnummer',
     'Default charset'   => 'Standard Encoding / Charset',
     'Default language'  => 'Standard-Sprache',
     'Default template'  => 'Standard-Template',
@@ -330,6 +343,9 @@ $LANG = array_merge($LANG,array(
         => 'Eingeschaltet: Seiten und Sektionen können wiederhergestellt werden',
     "If your server is placed behind a proxy (i.e. if you're using BC for an Intranet), set the name here."
         => 'Wenn sich der Server hinter einem Proxy befindet (z.B. wenn BC für ein Intranet verwendet wird), hier den Namen eintragen.',
+    'Use encrypted sessions' => 'Verschlüsselte Sessions verwenden',
+    'The default template is used for every page that does not have a different setting.'
+        => 'Das Standard-Template wird für alle Seiten verwendet, die keine abweichende Einstellung haben.',
 
     // ---------- Backend -> Settings -> Favicons ----------
     'android'           => 'Android',
@@ -361,18 +377,28 @@ $LANG = array_merge($LANG,array(
     // ---------- Backend -> Sites ----------
     'A site with the same name already exists!' => 'Es existiert bereits eine Präsenz mit diesem Namen!',
     'A site with the same folder name already exists!' => 'Es existiert bereits eine Präsenz mit diesem Unterverzeichnis!',
+    'Base URL of the site' => 'Basis-URL der Präsenz',
     'Basedir' => 'Basisverzeichnis',
-    'New site' => 'Neue Site',
+    'Create site' => 'Webpräsenz erstellen',
+    'Edit site' => 'Webpräsenz bearbeiten',
+    'New site' => 'Neue Präsenz',
     'No such folder!' => 'Verzeichnis nicht gefunden!',
     'Owner' => 'Besitzer',
+    'Please note: You cannot change the folder settings here. This is by design.' => 'Bitte beachten: Die Verzeichnis-Einstellungen können nicht bearbeitet werden.',
     'Site name' => 'Site-Name',
+    'Site url' => 'Site-URL',
     'Sites' => 'Präsenzen',
-    'Create site' => 'Webpräsenz erstellen',
     'Subfolder' => 'Unterverzeichnis',
-    'The basedir of the site' => 'Das Basisverzeichnis der Site',
+    'The basedir of the site' => 'Das Basisverzeichnis der Präsenz',
     'The folder [{{folder}}] already exists!' => 'Das Verzeichnis [{{folder}}] existiert bereits!',
-    'The name of the subfolder inside Basedir' => 'Der Name der Unterverzeichnisses unterhalb des Basisverzeichnisses',
+    'The name of the subfolder inside Basedir' => 'Der Name des Unterverzeichnisses unterhalb des Basisverzeichnisses',
     'The owner of a site will have admin privileges by default' => 'Der Besitzer einer Site erhält automatisch Adminrechte',
-    'The site name may help you to distinguish your sites' => 'Der Site-Name hilft dabei, Sites voneinander zu unterscheiden'
+    'The site name may help you to distinguish your sites' => 'Der Site-Name hilft dabei, Sites voneinander zu unterscheiden',
 
+    // ---------- Backend -> Menus ----------
+    'Menus of this type' => 'Menüs dieses Typs',
+    'Shows "path" to current page' => 'Zeigt den "Pfad" zur aktuellen Seite',
+    'Shows all pages that are visible for the current user' => 'Zeigt alle Seiten, die für den aktuellen Besucher sichtbar sind',
+    'Shows links to current page in other languages' => 'Zeigt Links zur gleichen Seite in anderen Sprachen',
+    'Shows all pages that are visible for the current user and on the same level as the current page' => 'Zeigt alle Seiten, die für den aktuellen Besucher sichtbar und "Nachbarn" (=auf dem gleichen Level) der aktuellen Seite sind',
 ));

@@ -17,44 +17,45 @@
 
 
 namespace CAT;
+
 use \CAT\Base as Base;
 use \CAT\Helper\HArray as HArray;
 
-if ( ! class_exists( 'Sections', false ) ) {
-
-	class Sections extends Base
-	{
+if (! class_exists('Sections', false)) {
+    class Sections extends Base
+    {
         /**
          * log level
          **/
-        public    static $loglevel   = \Monolog\Logger::EMERGENCY;
+        public static $loglevel   = \Monolog\Logger::EMERGENCY;
         /**
          * list of all sections
          **/
-        private   static $sections   = array();
+        private static $sections   = array();
         /**
          * maps sections to array index
          **/
-        private   static $index_map  = array();
+        private static $index_map  = array();
         /**
          * list of active sections
          **/
-        private   static $active     = array();
+        private static $active     = array();
         /**
          * instance
          **/
-        private   static $instance   = NULL;
+        private static $instance   = null;
 
-	    /**
+        /**
          * constructor
-	     *
+         *
          * @access private
          * @return void
          **/
         public static function getInstance()
         {
-            if (!self::$instance)
+            if (!self::$instance) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -63,13 +64,15 @@ if ( ! class_exists( 'Sections', false ) ) {
          **/
         public function __call($method, $args)
         {
-            if ( ! isset($this) || ! is_object($this) )
+            if (! isset($this) || ! is_object($this)) {
                 return false;
-            if ( method_exists( $this, $method ) )
+            }
+            if (method_exists($this, $method)) {
                 return call_user_func_array(array($this, $method), $args);
+            }
         }   // end function __call()
 
-	    /**
+        /**
          *
          * @access public
          * @param  integer  $pageID
@@ -77,9 +80,9 @@ if ( ! class_exists( 'Sections', false ) ) {
          * @param  integer  $block
          * @return
          **/
-        public static function addSection($pageID,$module,$block=1)
+        public static function addSection($pageID, $module, $block=1)
         {
-        	self::db()->query(
+            self::db()->query(
                   'INSERT INTO `:prefix:sections` SET '
                 . '`site_id`=:site, '
                 . '`module_id`=:module, '
@@ -87,9 +90,8 @@ if ( ! class_exists( 'Sections', false ) ) {
                 . '`modified_by`=:user',
                 array('site'=>CAT_SITE_ID,'module'=>$module,'user'=>self::user()->getID(),'time'=>time())
             );
-        	if(!self::db()->isError())
-            {
-        		$sectionID = self::db()->lastInsertId(); // Get the section id
+            if (!self::db()->isError()) {
+                $sectionID = self::db()->lastInsertId(); // Get the section id
                 $sth = self::db()->query(
                     'SELECT MAX(`position`) FROM `:prefix:pages_sections` WHERE `page_id`=:id',
                     array('id'=>$pageID)
@@ -103,13 +105,10 @@ if ( ! class_exists( 'Sections', false ) ) {
                     . '`position`=:pos ',
                     array('section'=>$sectionID,'page'=>$pageID,'block'=>$block,'pos'=>($pos+1))
                 );
-                if(self::db()->isError())
-                {
+                if (self::db()->isError()) {
                     return false;
                 }
-            }
-            else
-            {
+            } else {
                 return false;
             }
             return true;
@@ -127,17 +126,16 @@ if ( ! class_exists( 'Sections', false ) ) {
          **/
         public static function updateSection($section_id, $options, $table='pages_sections')
         {
-            $sql    = sprintf('UPDATE `:prefix:%s` SET ',$table);
+            $sql    = sprintf('UPDATE `:prefix:%s` SET ', $table);
             $params = array('id'=>$section_id);
-            foreach($options as $key => $value)
-            {
+            foreach ($options as $key => $value) {
                 $sql .= $key.' = :'.$key.', ';
                 $params[$key] = $value;
             }
-            $sql  = preg_replace('~,\s*$~','',$sql);
+            $sql  = preg_replace('~,\s*$~', '', $sql);
             $sql .= ' WHERE section_id = :id LIMIT 1';
 
-		    self::db()->query(
+            self::db()->query(
                 $sql,
                 $params
             );
@@ -155,15 +153,13 @@ if ( ! class_exists( 'Sections', false ) ) {
         public static function deleteSection($section_id)
         {
             // delete section
-            if(self::exists($section_id))
-            {
-                if(self::getSetting('trash_enabled')!==true || self::isDeletable($section_id))
-                {
+            if (self::exists($section_id)) {
+                if (self::getSetting('trash_enabled')!==true || self::isDeletable($section_id)) {
                     self::db()->query(
                         'DELETE FROM `:prefix:pages_sections` WHERE `section_id`=:id',
                         array('id'=>$section_id)
                     );
-                	self::db()->query(
+                    self::db()->query(
                         'DELETE FROM `:prefix:sections` WHERE `section_id`=:id',
                         array('id'=>$section_id)
                     );
@@ -173,8 +169,8 @@ if ( ! class_exists( 'Sections', false ) ) {
                         array(self::getStateID('deleted'), $section_id)
                     );
                 }
-            	return ( self::db()->isError() ? false : true );
-                // note: we do not clean the position (order) here as it's no
+                return (self::db()->isError() ? false : true);
+            // note: we do not clean the position (order) here as it's no
                 // problem to have a gap
             } else {
                 return false;
@@ -190,20 +186,21 @@ if ( ! class_exists( 'Sections', false ) ) {
         public static function exists(int $section_id)
         {
             $data = self::getSection($section_id);
-            if(!$data || !is_array($data) || !count($data)) return false;
+            if (!$data || !is_array($data) || !count($data)) {
+                return false;
+            }
             return true;
         }   // end function exists()
-	    
-	    /**
+        
+        /**
          *
          * @access public
          * @return
          **/
-        public static function getSection(int $section_id,bool $details=false)
+        public static function getSection(int $section_id, bool $details=false)
         {
             $q    = 'SELECT * FROM `:prefix:sections` WHERE `section_id` = :id';
-            if($details)
-            {
+            if ($details) {
                 $q = 'SELECT '
                    . '    `t1`.`section_id`, `t1`.`modified_when`, `t1`.`modified_by`, '
                    . '    `t2`.`page_id`, `t2`.`position`, `t2`.`block`, '
@@ -221,13 +218,14 @@ if ( ! class_exists( 'Sections', false ) ) {
                    . 'ON `t1`.`module_id`=`t5`.`addon_id` '
                    . 'WHERE `t1`.`section_id`=:id ';
             }
-        	$sec = self::db()->query(
+            $sec = self::db()->query(
                 $q,
                 array('id'=>$section_id)
             );
-        	if($sec->rowCount() == 0)
+            if ($sec->rowCount() == 0) {
                 return false;
-        	return $sec->fetch();
+            }
+            return $sec->fetch();
         }   // end function getSection()
 
         /**
@@ -246,11 +244,10 @@ if ( ! class_exists( 'Sections', false ) ) {
          * @param  boolean  $active_only Only active sections
          * @return array
          **/
-        public static function getSections(int $page_id=NULL,int $block_id=NULL,bool $active_only=true,bool $with_options=true)
+        public static function getSections(int $page_id=null, int $block_id=null, bool $active_only=true, bool $with_options=true)
         {
             // cache data
-	        if (!self::$sections)
-	        {
+            if (!self::$sections) {
                 $q = 'SELECT '
                    . '    `t1`.`section_id`, `t1`.`modified_when`, `t1`.`modified_by`, '
                    . '    `t2`.`page_id`, `t2`.`position`, `t2`.`block`, '
@@ -271,26 +268,23 @@ if ( ! class_exists( 'Sections', false ) ) {
                    . 'WHERE `t1`.`site_id`=? '
                    . 'ORDER BY `block`, `t2`.`position`';
 
-                $sec = self::db()->query($q,array(CAT_SITE_ID));
-	            if($sec->rowCount() == 0) return NULL;
+                $sec = self::db()->query($q, array(CAT_SITE_ID));
+                if ($sec->rowCount() == 0) {
+                    return null;
+                }
 
                 $data = $sec->fetchAll();
 
-                if(is_array($data) && count($data)>0)
-                {
-                    foreach($data as $i => $section)
-                    {
-                        if($with_options)
-                        {
+                if (is_array($data) && count($data)>0) {
+                    foreach ($data as $i => $section) {
+                        if ($with_options) {
                             // additional options
                             $q   = 'SELECT * FROM `:prefix:section_options` WHERE `page_id`=? AND `section_id`=?';
-                            $opt = self::db()->query($q,array($section['page_id'],$section['section_id']));
-                            if($opt->rowCount()>0)
-                            {
+                            $opt = self::db()->query($q, array($section['page_id'],$section['section_id']));
+                            if ($opt->rowCount()>0) {
                                 $options = $opt->fetchAll();
                                 $section['options'] = array();
-                                foreach($options as $i => $line)
-                                {
+                                foreach ($options as $i => $line) {
                                     $section['options'][$line['option']] = $line['value'];
                                 }
                             }
@@ -301,24 +295,20 @@ if ( ! class_exists( 'Sections', false ) ) {
                 }
 
                 // mark expired and inactive sections
-                foreach(self::$sections as $pageID => $items)
-                {
-                    foreach($items as $blockID => $sections)
-                    {
-                        foreach($sections as $index => $section)
-                        {
+                foreach (self::$sections as $pageID => $items) {
+                    foreach ($items as $blockID => $sections) {
+                        foreach ($sections as $index => $section) {
                             self::$index_map[$section['section_id']] = array(
                                 'blockID' => $blockID,
                                 'pageID' => $pageID,
                                 'index' => $index
                             );
                             self::$sections[$pageID][$blockID][$index]['expired'] = false;
-                            self::$sections[$pageID][$blockID][$index]['active']  = self::isActive($section['section_id'],$pageID);
+                            self::$sections[$pageID][$blockID][$index]['active']  = self::isActive($section['section_id'], $pageID);
                             // skip this section if it is out of publication-date
-                            if($section['publ_start']!='' || $section['publ_end']!='')
-                            {
-            	                $now = time();
-            	                if (!(
+                            if ($section['publ_start']!='' || $section['publ_end']!='') {
+                                $now = time();
+                                if (!(
                                        ($now <= $section['publ_end']   || $section['publ_end']   == 0)
                                     && ($now >= $section['publ_start'] || $section['publ_start'] == 0)
                                 )) {
@@ -326,20 +316,18 @@ if ( ! class_exists( 'Sections', false ) ) {
                                         'mark section [%d] as expired by publication date',
                                         $section['section_id']
                                     ));
-            	                    self::$sections[$pageID][$blockID][$index]['expired'] = true;
+                                    self::$sections[$pageID][$blockID][$index]['expired'] = true;
                                 }
                             }
-                            if($section['publ_by_time_start'] || $section['publ_by_time_end'] )
-                            {
+                            if ($section['publ_by_time_start'] || $section['publ_by_time_end']) {
                                 $now   = new DateTime();
                                 $start = new DateTime();
                                 $end   = new DateTime();
 
-                                $start->setTime(date("H",$section['publ_by_time_start']),date("i",$section['publ_by_time_start']));
-                                $end->setTime(date("H",$section['publ_by_time_end']),date("i",$section['publ_by_time_end']));
+                                $start->setTime(date("H", $section['publ_by_time_start']), date("i", $section['publ_by_time_start']));
+                                $end->setTime(date("H", $section['publ_by_time_end']), date("i", $section['publ_by_time_end']));
 
-                                if(!($now >= $start && $now <= $end))
-                                {
+                                if (!($now >= $start && $now <= $end)) {
                                     self::log()->addDebug(sprintf(
                                         'mark section [%d] as expired by publication time',
                                         $section['section_id']
@@ -347,27 +335,27 @@ if ( ! class_exists( 'Sections', false ) ) {
                                     self::$sections[$pageID][$blockID][$index]['expired'] = true;
                                 }
                             }
-                            if($section['variant'] == '')
+                            if ($section['variant'] == '') {
                                 self::$sections[$pageID][$blockID][$index]['variant'] = 'default';
+                            }
                         }
                     }
                 }   // end foreach(self::$sections as $pageID => $items)
 
                 // this will remove non-active sections from self::$sections
-                self::$active = HArray::filter(self::$sections,'expired',true);
+                self::$active = HArray::filter(self::$sections, 'expired', true);
             }
 
             $ref =& self::$sections;
 
             // only active sections
-            if($active_only)
+            if ($active_only) {
                 $ref =& self::$active;
+            }
 
-            if($page_id)
-            {
-                if(isset($ref[$page_id]))
-                {
-                    if($block_id) {
+            if ($page_id) {
+                if (isset($ref[$page_id])) {
+                    if ($block_id) {
                         return (
                               isset($ref[$page_id][$block_id])
                             ? $ref[$page_id][$block_id]
@@ -376,17 +364,15 @@ if ( ! class_exists( 'Sections', false ) ) {
                     } else {
                         return $ref[$page_id];
                     }
-                }
-                else
-                {
-                    return NULL;
+                } else {
+                    return null;
                 }
             }
 
             return $ref;
         }   // end function getSections()
         
-	    /**
+        /**
          * gets all sections of given type; if a page_id is given, for that
          * page only, all sections of this type otherwise
           *
@@ -397,16 +383,15 @@ if ( ! class_exists( 'Sections', false ) ) {
          * @param  boolean  $all     (default false) skip sections out of pub time
          * @return array
           **/
-        public static function getSectionsByType($page_id=NULL,string $type='wysiwyg',int $limit=1,bool $all=false)
+        public static function getSectionsByType($page_id=null, string $type='wysiwyg', int $limit=1, bool $all=false)
         {
-            $limit  = ( isset($limit) && $limit && is_int($limit) )
+            $limit  = (isset($limit) && $limit && is_int($limit))
                     ? $limit
                     : 1;
-            $pub_sql = NULL;
-            $result  = NULL;
+            $pub_sql = null;
+            $result  = null;
             $params  = array();
-            if(!$all)
-            {
+            if (!$all) {
                 $now     = time();
                 $pub_sql = '(( :time1 BETWEEN `publ_start` AND `publ_end`) OR '
                          . '( :time2 > `publ_start` AND `publ_end`=0)) '
@@ -416,17 +401,19 @@ if ( ! class_exists( 'Sections', false ) ) {
             $self   = self::getInstance();
             $SQL    = "SELECT `section_id`, `page_id` FROM `:prefix:sections` "
                     . "WHERE "
-                    . ( $page_id ? "`page_id` = :page_id  AND " : '' )
+                    . ($page_id ? "`page_id` = :page_id  AND " : '')
                     . "`module` = :module AND `section_id`>0 "
-                    . ( $pub_sql ? ' AND '.$pub_sql : '' )
+                    . ($pub_sql ? ' AND '.$pub_sql : '')
                     . "ORDER BY `position` ASC LIMIT " . $limit;
             $params['module'] = $type;
-            if($page_id) $params['page_id'] = $page_id;
-            $result = self::db()->query($SQL,$params);
+            if ($page_id) {
+                $params['page_id'] = $page_id;
+            }
+            $result = self::db()->query($SQL, $params);
             return $result->rowCount()
                 ?  $result->fetchAll()
                 :  false;
-         }   // end function getSectionsByType()
+        }   // end function getSectionsByType()
 
         /**
          * gets the first section for given $page_id that has a module of type $type
@@ -437,13 +424,14 @@ if ( ! class_exists( 'Sections', false ) ) {
          * @return mixed    result array containing the section_id on success,
          *                  false otherwise (no such section)
          **/
-        public static function getSectionForPage(int $page_id,string $type)
+        public static function getSectionForPage(int $page_id, string $type)
         {
             $opt = array('page_id'=>$page_id, 'module'=>$type);
             $sql = 'SELECT `section_id` FROM `:prefix:sections` WHERE `page_id`=:page_id AND `module`=:module';
-            $sec = self::db()->query($sql,$opt);
-            if($sec->rowCount())
+            $sec = self::db()->query($sql, $opt);
+            if ($sec->rowCount()) {
                 return $sec->fetch();
+            }
             return false;
         }   // end function getSectionForPage()
 
@@ -463,8 +451,7 @@ if ( ! class_exists( 'Sections', false ) ) {
                 'SELECT `page_id` FROM `:prefix:pages_sections` WHERE `section_id`=:id',
                 array('id'=>$section_id)
             );
-            if($sec->rowCount())
-            {
+            if ($sec->rowCount()) {
                 $result = $sec->fetch();
                 return $result['page_id'];
             }
@@ -481,8 +468,7 @@ if ( ! class_exists( 'Sections', false ) ) {
                 'SELECT `variant` FROM `:prefix:pages_sections` WHERE `section_id` = :id',
                 array('id'=>$section_id)
             );
-            if($data->rowCount())
-            {
+            if ($data->rowCount()) {
                 $result = $data->fetch();
                 return (
                     $result['variant']
@@ -500,14 +486,14 @@ if ( ! class_exists( 'Sections', false ) ) {
         public static function hasRevisions(int $section_id)
         {
             // get section details
-            $section = Sections::getSection($section_id,true);
+            $section = Sections::getSection($section_id, true);
             // default table name for revisions
             $table   = 'mod_'.$section['module'].'_revisions';
-            if(self::db()->tableExists($table))
-            {
+            if (self::db()->tableExists($table)) {
                 $q = 'SELECT count(`section_id`) FROM `:prefix:%s` WHERE `section_id`=%d LIMIT 1';
-                if(self::db()->get_one(sprintf($q,$table,$section_id)))
+                if (self::db()->get_one(sprintf($q, $table, $section_id))) {
                     return true;
+                }
             }
             return false;
         }   // end function hasRevisions()
@@ -521,12 +507,15 @@ if ( ! class_exists( 'Sections', false ) ) {
          **/
         public static function isActive(int $section_id)
         {
-            if(!self::$sections) { self::getSections(); }
+            if (!self::$sections) {
+                self::getSections();
+            }
             $s = self::$index_map[$section_id];
             $section = self::$sections[$s['pageID']][$s['blockID']][$s['index']];
-            if(!isset($section) || !isset($section['state_id']))
+            if (!isset($section) || !isset($section['state_id'])) {
                 return false;
-            switch($section['state_id']) {
+            }
+            switch ($section['state_id']) {
                 case 2:
                     return false;
                     break;
@@ -535,7 +524,7 @@ if ( ! class_exists( 'Sections', false ) ) {
                     break;
             }
             return false; // should never be reached
-	    }   // end function isActive()
+        }   // end function isActive()
 
         /**
          *
@@ -544,13 +533,17 @@ if ( ! class_exists( 'Sections', false ) ) {
          **/
         public static function isDeletable(int $section_id) : bool
         {
-            if(!self::$sections) { self::getSections(); }
+            if (!self::$sections) {
+                self::getSections();
+            }
             $s = self::$index_map[$section_id];
             $section = self::$sections[$s['pageID']][$s['blockID']][$s['index']];
-            if(!isset($section) || !isset($section['state_id']))
+            if (!isset($section) || !isset($section['state_id'])) {
                 return false;
-            if(self::getSetting('trash_enabled')!==true || $section['state']=='deleted')
+            }
+            if (self::getSetting('trash_enabled')!==true || $section['state']=='deleted') {
                 return true;
+            }
             return false;
         }   // end function isDeletable()
 
@@ -561,13 +554,12 @@ if ( ! class_exists( 'Sections', false ) ) {
          **/
         public static function recoverSection(int $section_id)
         {
-            if(self::exists($section_id))
-            {
+            if (self::exists($section_id)) {
                 self::db()->query(
                     'UPDATE `:prefix:sections` SET `state_id`=? WHERE `section_id`=?',
                     array(self::getStateID('default'), $section_id)
                 );
-                return ( self::db()->isError() ? false : true );
+                return (self::db()->isError() ? false : true);
             } else {
                 self::log()->addError('attempt to recover non-existing section');
                 return false; // silently fail
@@ -579,14 +571,15 @@ if ( ! class_exists( 'Sections', false ) ) {
          * @access public
          * @return
          **/
-        public static function setVariant(int $section_id,string $variant)
+        public static function setVariant(int $section_id, string $variant)
         {
             // get the addons directory
-            $section = self::getSection($section_id,true);
-            if(!is_array($section) || !count($section)==1) return false;
+            $section = self::getSection($section_id, true);
+            if (!is_array($section) || !count($section)==1) {
+                return false;
+            }
             // only save if variant exists
-            if(\CAT\Helper\Addons::hasVariant($section['module'],$variant))
-            {
+            if (\CAT\Helper\Addons::hasVariant($section['module'], $variant)) {
                 self::db()->query(
                     'UPDATE `:prefix:pages_sections` SET `variant`=:v WHERE `section_id` = :id',
                     array('v'=>$variant,'id'=>$section_id)
@@ -609,13 +602,14 @@ if ( ! class_exists( 'Sections', false ) ) {
          * @param  string   $type (module)
          * @return boolean
          **/
-        public static function hasType($section_id,$type)
+        public static function hasType($section_id, $type)
         {
             $opt = array('id'=>$section_id, 'mod'=>$type );
             $sql = 'SELECT * FROM `:prefix:sections` WHERE `section_id`=:id AND `module`=:mod';
-            $sec = self::db()->query($sql,$opt);
-            if($sec->rowCount())
+            $sec = self::db()->query($sql, $opt);
+            if ($sec->rowCount()) {
                 return true;
+            }
             return false;
         }   // end function hasType()
 
@@ -628,19 +622,18 @@ if ( ! class_exists( 'Sections', false ) ) {
          **/
         public static function isMenuLink($page_id)
         {
-            if(!self::$instance)
+            if (!self::$instance) {
                 self::getInstance();
+            }
             $res = self::$instance->db()->query(
                   'SELECT `module` FROM `:prefix:sections` '
                 . 'WHERE `page_id` = :id AND `module` = "menu_link"',
                 array('id'=>$page_id)
             );
-            if($res && $res->rowCount())
+            if ($res && $res->rowCount()) {
                 return true;
+            }
             return false;
         }   // end function isMenuLink()
-
-	}
+    }
 }
-
-?>

@@ -38,7 +38,7 @@ if (!class_exists('\CAT\Helper\Groups'))
          **/
         public static function addGroup($name,$description)
         {
-            if(!self::user()->is_authenticated() || !self::user()->hasPerm('groups_add'))
+            if(!self::user()->isAuthenticated() || !self::user()->hasPerm('groups_add'))
                 return false;
             $sth = self::db()->query(
                   'INSERT INTO `:prefix:rbac_groups` ( `group_title`, `group_description` ) '
@@ -137,7 +137,7 @@ exit;
          **/
         public static function removeGroup($id)
         {
-            if(!self::user()->is_authenticated() || self::user()->hasPerm('groups_delete'))
+            if(!self::user()->isAuthenticated() || self::user()->hasPerm('groups_delete'))
                 return false;
             $sth = self::db()->query(
                 'DELETE FROM `:prefix:rbac_groups` WHERE `group_id`=:id',
@@ -154,7 +154,7 @@ exit;
          **/
         public static function set($field,$value,$id)
         {
-            if(!self::user()->is_authenticated() || self::user()->hasPerm('groups_modify'))
+            if(!self::user()->isAuthenticated() || self::user()->hasPerm('groups_modify'))
                 return false;
             $sth = self::db()->query(
                 'UPDATE `:prefix:rbac_groups` SET `:fieldname:`=:value WHERE `group_id`=:id',

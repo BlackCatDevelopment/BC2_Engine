@@ -24,40 +24,40 @@ use \CAT\Backend\Page as BPage;
 use \CAT\Helper\Page as HPage;
 use \CAT\Sections as Sections;
 
-if(!class_exists('Router',false))
-{
+if (!class_exists('Router', false)) {
     class Router extends Base
     {
         // log level
         #public    static $loglevel   = \Monolog\Logger::EMERGENCY;
-        public    static $loglevel   = \Monolog\Logger::DEBUG;
+        public static $loglevel   = \Monolog\Logger::DEBUG;
         // instance
-        private   static $instance   = NULL;
+        private static $instance   = null;
         // full route
-        private          $route      = NULL;
+        private $route      = null;
         // query string
-        private          $query      = NULL;
+        private $query      = null;
         // the route split into parts
-        private          $parts      = NULL;
+        private $parts      = null;
         // flag
-        private          $backend    = false;
+        private $backend    = false;
 
-        private          $func       = NULL;
+        private $func       = null;
 
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// Spaeter konfigurierbar machen!
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        private   static $asset_paths = array(
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // Spaeter konfigurierbar machen!
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        private static $asset_paths = array(
             'css','js','images','eot','fonts'
         );
-        private   static $assets = array(
-            'css','js','eot','svg','ttf','woff','woff2',
+        private static $assets = array(
+            'css','js','eot','svg','ttf','woff','woff2','map','jpg','jpeg','gif','png'
         );
 
         public static function getInstance()
         {
-            if (!self::$instance)
+            if (!self::$instance) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }
 
@@ -76,40 +76,45 @@ if(!class_exists('Router',false))
          **/
         public function dispatch()
         {
-            if(!$this->route) {
+            if (!$this->route) {
                 $this->route = 'index';
             }
 
             // ----- serve asset files -----------------------------------------
-            $suffix = pathinfo($this->route,PATHINFO_EXTENSION);
-            if(
-                ($type=$this->match('~^('.implode('|',self::$asset_paths).')~i'))!==false
+            $suffix = pathinfo($this->route, PATHINFO_EXTENSION);
+            if (
+                ($type=$this->match('~^('.implode('|', self::$asset_paths).')~i'))!==false
                 ||
-                (strlen($suffix) && in_array($suffix,self::$assets))
+                (strlen($suffix) && in_array($suffix, self::$assets))
             ) {
-                if(strlen($suffix) && in_array($suffix,self::$assets))
-                {
-                    \CAT\Helper\Assets::serve($suffix,array($this->route),true);
+                self::log()->addDebug(sprintf(
+                    'dispatch() serving asset file [%s]',
+                    $this->route
+                ));
+                if (strlen($suffix) && in_array($suffix, self::$assets)) {
+                    \CAT\Helper\Assets::serve($suffix, array($this->route), true);
                 } else {
-                    parse_str($this->getQuery(),$files);
+                    parse_str($this->getQuery(), $files);
                     // remove leading / from all files
-                    foreach($files as $i => $f) $files[$i] = preg_replace('~^/~','',$f,1);
-                    \CAT\Helper\Assets::serve($type,$files);
+                    foreach ($files as $i => $f) {
+                        $files[$i] = preg_replace('~^/~', '', $f, 1);
+                    }
+                    \CAT\Helper\Assets::serve($type, $files);
                 }
                 return;
             }
 
             $this->controller = "\\CAT\\".($this->backend ? 'Backend' : 'Frontend'); // \CAT\Backend || \CAT\Frontend
-            $this->function   = ( (is_array($this->parts) && count($this->parts)>0 ) ? $this->parts[0] : 'index' );
+            $this->function   = ((is_array($this->parts) && count($this->parts)>0) ? $this->parts[0] : 'index');
 
             // ----- load template language files ------------------------------
-            if(self::isBackend()) {
+            if (self::isBackend()) {
                 Backend::initialize();
                 $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.\CAT\Registry::get('DEFAULT_THEME').'/languages');
             } else {
                 $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.\CAT\Registry::get('DEFAULT_TEMPLATE').'/languages');
             }
-            if(is_dir($lang_path)) {
+            if (is_dir($lang_path)) {
                 self::addLangFile($lang_path);
             }
 
@@ -120,11 +125,13 @@ if(!class_exists('Router',false))
             ));
 
             // ----- frontend page ---------------------------------------------
-            if(!$this->backend)
-            {
+            if (!$this->backend) {
+                self::log()->addDebug(sprintf(
+                    'dispatch() serving frontend page',
+                    $this->route
+                ));
                 $page = HPage::getPageForRoute($this->route);
-                if($page && is_int($page))
-                {
+                if ($page && is_int($page)) {
                     $pg = \CAT\Page::getInstance($page);
                     $pg->show();
                     exit;
@@ -135,25 +142,21 @@ if(!class_exists('Router',false))
             // Note: This may be dangerous, but for now, we do not have a
             //       whitelist for allowed file names
             // -----------------------------------------------------------------
-            if(self::router()->match('~^modules/~i') && $suffix=='php')
-            {
+            if (self::router()->match('~^modules/~i') && $suffix=='php') {
                 require CAT_ENGINE_PATH.'/'.self::router()->getRoute();
                 return;
             }
 
-#echo "is callable controller[", $this->controller, "] function [", $this->function,"] result [", is_callable(array($this->controller,$this->function)), "]<br />";
+            #echo "is callable controller[", $this->controller, "] function [", $this->function,"] result [", is_callable(array($this->controller,$this->function)), "]<br />";
             // ----- internal handler? ex \CAT\Backend::index() ----------------
-            if(!is_callable(array($this->controller,$this->function)))
-            {
-                self::log()->addDebug(sprintf('is_callable() failed for function [%s], trying to find something in route parts',$this->function));
+            if (!is_callable(array($this->controller,$this->function))) {
+                self::log()->addDebug(sprintf('is_callable() failed for function [%s], trying to find something in route parts', $this->function));
                 // find controller
-                if(class_exists($this->controller.'\\'.ucfirst($this->function)))
-                {
+                if (class_exists($this->controller.'\\'.ucfirst($this->function))) {
                     $this->controller = $this->controller.'\\'.ucfirst($this->function);
-                    $this->function   = ( count($this->parts)>1 ? $this->parts[1] : 'index' );
-#echo sprintf("controller [%s] func [%s]<br />", $this->controller, $this->function);
-                    if($this->function=='index' && count($this->params)>0)
-                    {
+                    $this->function   = (count($this->parts)>1 ? $this->parts[1] : 'index');
+                    #echo sprintf("controller [%s] func [%s]<br />", $this->controller, $this->function);
+                    if ($this->function=='index' && count($this->params)>0) {
                         $this->function = array_shift($this->params);
                     }
                 }
@@ -161,25 +164,25 @@ if(!class_exists('Router',false))
 
             $handler = $this->controller.'::'.$this->function;
             self::log()->addDebug(sprintf(
-                'handler [%s]', $handler
+                'handler [%s]',
+                $handler
             ));
-#echo sprintf("is_callable controller [%s] func [%s]<br />", $this->controller, $this->function);
-            if(is_callable(array($this->controller,$this->function)))
-            {
+
+#echo "controller: ", $this->controller, "<br />function: ", $this->function, "<br />";
+            if (is_callable(array($this->controller,$this->function))) {
                 self::log()->addDebug('is_callable() succeeded');
-                if(is_callable(array($this->controller,'getPublicRoutes')))
-                {
+                if (is_callable(array($this->controller,'getPublicRoutes'))) {
                     self::log()->addDebug('found getPublicRoutes() method in controller');
                     $public_routes = $this->controller::getPublicRoutes();
-                    if(is_array($public_routes) && in_array($this->route,$public_routes))
-                    {
+                    if (is_array($public_routes) && in_array($this->route, $public_routes)) {
                         self::log()->addDebug('found current route in public routes, unprotecting it');
                         $this->protected = false;
                     }
                 }
 
+#echo "is auth [", self::user()->isAuthenticated(), "]<br />";
                 // check for protected route
-                if($this->protected && !self::user()->is_authenticated()) {
+                if ($this->protected && !self::user()->isAuthenticated()) {
                     self::log()->addDebug(sprintf(
                         'protected route [%s], forwarding to login page',
                         $this->route
@@ -194,7 +197,6 @@ if(!class_exists('Router',false))
             }
 
             \CAT\Page::print404();
-
         }   // end function dispatch()
         
 
@@ -206,7 +208,9 @@ if(!class_exists('Router',false))
          **/
         public function getController()
         {
-            if($this->controller) return $this->controller;
+            if ($this->controller) {
+                return $this->controller;
+            }
             return false;
         }   // end function getController()
 
@@ -229,7 +233,9 @@ if(!class_exists('Router',false))
          **/
         public function getFunction()
         {
-            if($this->function) return $this->function;
+            if ($this->function) {
+                return $this->function;
+            }
             return false;
         }   // end function getFunction()
 
@@ -241,18 +247,13 @@ if(!class_exists('Router',false))
          **/
         public function setFunction($name)
         {
-            if(!$name || !strlen($name))
-            {
+            if (!$name || !strlen($name)) {
                 $caller = debug_backtrace();
                 $dbg    = '';
-                foreach(array('file','function','class','line',) as $key)
-                {
-                    if(isset($caller[0][$key]))
-                    {
+                foreach (array('file','function','class','line',) as $key) {
+                    if (isset($caller[0][$key])) {
                         $dbg .= "$key => ".$caller[0][$key]." | ";
-                    }
-                    else
-                    {
+                    } else {
                         $dbg .= "$key => not set | ";
                     }
                 }
@@ -262,8 +263,7 @@ if(!class_exists('Router',false))
                 ));
                 return;
             }
-            if(is_numeric($name))
-            {
+            if (is_numeric($name)) {
                 $this->log()->error(
                     'Router error: setFunction called with numeric function name'
                 );
@@ -281,15 +281,14 @@ if(!class_exists('Router',false))
          **/
         public function getHandler()
         {
-            if(!$this->handler)
-            try {
-                $class = $this->controller;
-                $this->handler = $class::getInstance();
-            }
-            catch( Exception $e )
-            {
-                echo $e->getMessage();
-                return false;
+            if (!$this->handler) {
+                try {
+                    $class = $this->controller;
+                    $this->handler = $class::getInstance();
+                } catch (Exception $e) {
+                    echo $e->getMessage();
+                    return false;
+                }
             }
             return $this->handler;
         }   // end function getHandler()
@@ -299,17 +298,22 @@ if(!class_exists('Router',false))
          * @access public
          * @return
          **/
-        public function getParam($index=-1,$shift=false)
+        public function getParam($index=-1, $shift=false)
         {
-            if(!is_array($this->params)) return NULL;
-            if($index == -1) { // last param
+            if (!is_array($this->params)) {
+                return null;
+            }
+            if ($index == -1) { // last param
                 end($this->params);
                 $index = key($this->params);
             }
-            if(!isset($this->params[$index])) return NULL;
+            if (!isset($this->params[$index])) {
+                return null;
+            }
             $value = $this->params[$index];
-            if($shift)
-                array_splice($this->params,$index,1);
+            if ($shift) {
+                array_splice($this->params, $index, 1);
+            }
             return $value;
         }   // end function getParam()
         
@@ -322,7 +326,9 @@ if(!class_exists('Router',false))
          **/
         public function getParams()
         {
-            if($this->params && is_array($this->params)) return $this->params;
+            if ($this->params && is_array($this->params)) {
+                return $this->params;
+            }
             return false;
         }   // end function getParams()
 
@@ -333,7 +339,9 @@ if(!class_exists('Router',false))
          **/
         public function getParts() : array
         {
-            if($this->parts) return $this->parts;
+            if ($this->parts) {
+                return $this->parts;
+            }
             return array();
         }   // end function getParts()
 
@@ -345,7 +353,9 @@ if(!class_exists('Router',false))
          **/
         public function getRoute()
         {
-            if($this->route) return $this->route;
+            if ($this->route) {
+                return $this->route;
+            }
             return false;
         }   // end function getRoute()
 
@@ -356,16 +366,16 @@ if(!class_exists('Router',false))
          **/
         public function getRoutePart($index)
         {
-            if($this->route)
-            {
-                $parts = explode('/',$this->route);
-                if(is_array($parts) && count($parts))
-                {
-                    if($index == -1) { // last param
+            if ($this->route) {
+                $parts = explode('/', $this->route);
+                if (is_array($parts) && count($parts)) {
+                    if ($index == -1) { // last param
                         end($parts);
                         $index = key($parts);
                     }
-                    if(isset($parts[$index])) return $parts[$index];
+                    if (isset($parts[$index])) {
+                        return $parts[$index];
+                    }
                 }
             }
             return false;
@@ -378,8 +388,8 @@ if(!class_exists('Router',false))
          **/
         public function getQuery()
         {
-            if($this->query) {
-                parse_str($this->query,$query);
+            if ($this->query) {
+                parse_str($this->query, $query);
                 return $query;
             }
             return false;
@@ -392,50 +402,52 @@ if(!class_exists('Router',false))
          * @access public
          * @return
          **/
-        public function initRoute($remove_prefix=NULL)
+        public function initRoute($remove_prefix=null)
         {
             self::log()->addDebug('initializing route');
 
-            $this->route     = NULL;
-            $this->query     = NULL;
+            $this->route     = null;
+            $this->query     = null;
             $this->params    = array();
             $this->protected = false;
             $this->backend   = false;
 
-            foreach(array_values(array('REQUEST_URI','REDIRECT_SCRIPT_URL','SCRIPT_URL','ORIG_PATH_INFO','PATH_INFO')) as $key)
-            {
-                if(isset($_SERVER[$key]))
-                {
+            foreach (array_values(array('REQUEST_URI','REDIRECT_SCRIPT_URL','SCRIPT_URL','ORIG_PATH_INFO','PATH_INFO')) as $key) {
+                if (isset($_SERVER[$key])) {
                     self::log()->addDebug(sprintf(
-                        'found key [%s] in $_SERVER', $key
+                        'found key [%s] in $_SERVER',
+                        $key
                     ));
-                    $route = parse_url($_SERVER[$key],PHP_URL_PATH);
+                    $route = parse_url($_SERVER[$key], PHP_URL_PATH);
                     self::log()->addDebug(sprintf(
-                        'route [%s]', $route
+                        'route [%s]',
+                        $route
                     ));
                     break;
                 }
             }
-            if(!$route) { $route = '/'; }
+            if (!$route) {
+                $route = '/';
+            }
 
-            if(isset($_SERVER['QUERY_STRING']))
-            {
+            if (isset($_SERVER['QUERY_STRING'])) {
                 $this->query = $_SERVER['QUERY_STRING'];
                 self::log()->addDebug(sprintf(
-                        'query string [%s]', $this->query
+                        'query string [%s]',
+                    $this->query
                     ));
             }
 
             // remove params
-            if(stripos($route,'?')) {
-                list($route,$ignore) = explode('?',$route,2);
+            if (stripos($route, '?')) {
+                list($route, $ignore) = explode('?', $route, 2);
             }
 
             // remove site subfolder
-            $route = preg_replace('~^\/'.self::site()['site_folder'].'\/?~i','',$route);
+            $route = preg_replace('~^\/'.self::site()['site_folder'].'\/?~i', '', $route);
 
             // remove index.php
-            $route = str_ireplace('index.php','',$route);
+            $route = str_ireplace('index.php', '', $route);
 
             // remove document root
             $path_prefix = str_ireplace(
@@ -445,47 +457,41 @@ if(!class_exists('Router',false))
             );
 
             // remove leading /
-            if(substr($route,0,1)=='/')
-                $route = substr($route,1,strlen($route));
-
-            // remove trailing /
-            if(substr($route,-1,1)=='/')
-                $route = substr($route,0,strlen($route)-1);
-
-            // if there's a prefix to remove (needed for backend paths)
-            if($remove_prefix)
-            {
-                $route = str_replace($remove_prefix,'',$route);
-                $route = substr($route,1,strlen($route));
+            if (substr($route, 0, 1)=='/') {
+                $route = substr($route, 1, strlen($route));
             }
 
-            if($route)
-            {
-                $this->parts = explode('/',str_replace('\\','/',$route));
+            // remove trailing /
+            if (substr($route, -1, 1)=='/') {
+                $route = substr($route, 0, strlen($route)-1);
+            }
+
+            // if there's a prefix to remove (needed for backend paths)
+            if ($remove_prefix) {
+                $route = str_replace($remove_prefix, '', $route);
+                $route = substr($route, 1, strlen($route));
+            }
+
+            if ($route) {
+                $this->parts = explode('/', str_replace('\\', '/', $route));
                 $this->route = $route;
                 $backend_route = defined('BACKEND_PATH')
                     ? BACKEND_PATH
                     : 'backend';
-                if(preg_match('~^/?'.$backend_route.'/?~i', $route))
-                {
+                if (preg_match('~^/?'.$backend_route.'/?~i', $route)) {
                     $this->backend   = true;
                     $this->protected = true;
                     array_shift($this->parts); // remove backend/ from route
-                    $this->route     = implode("/",$this->parts);
-                    // pages list
-                    if(!self::asJSON() && self::user()->hasPerm('pages_list'))
-                    {
-                        self::tpl()->setGlobals('pages',BPage::tree());
-                        self::tpl()->setGlobals('pagelist',HPage::getPages(1));
-                        self::tpl()->setGlobals('sections',Sections::getSections());
-                    }
+                    $this->route     = implode("/", $this->parts);
+                    
                 }
             }
 
             self::log()->addDebug(sprintf(
-                'initRoute() returning result: route [%s] query [%s]', $route, $this->query
+                'initRoute() returning result: route [%s] query [%s]',
+                $route,
+                $this->query
             ));
-            
         }   // end function initRoute()
 
         /**
@@ -497,10 +503,10 @@ if(!class_exists('Router',false))
         {
             // if the pattern has brackets, we return the first match
             // if not, we return boolean true
-            if(preg_match($pattern,$this->getRoute(),$m))
-            {
-                if(count($m) && strlen($m[0]))
+            if (preg_match($pattern, $this->getRoute(), $m)) {
+                if (count($m) && strlen($m[0])) {
                     return $m[0];
+                }
                 return true;
             }
             return false;
@@ -534,7 +540,8 @@ if(!class_exists('Router',false))
         {
             $this->log()->addDebug(sprintf(
                 'protecting route [%s] with needed perm [%s]',
-                $this->getRoute(), $needed_perm
+                $this->getRoute(),
+                $needed_perm
             ));
             $this->protected = true;
             $this->perm      = $needed_perm;
@@ -549,6 +556,5 @@ if(!class_exists('Router',false))
             $this->initRoute();
             $this->dispatch();
         }
-
     }
 }

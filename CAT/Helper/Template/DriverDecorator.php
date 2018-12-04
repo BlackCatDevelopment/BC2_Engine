@@ -21,41 +21,39 @@ use \CAT\Helper\Template as Template;
 use \CAT\Helper\Directory as Directory;
 use \CAT\Backend as Backend;
 
-if (!class_exists('DriverDecorator'))
-{
+if (!class_exists('DriverDecorator')) {
     class DriverDecorator extends Template
     {
         protected static $loglevel     = \Monolog\Logger::EMERGENCY;
 
-        public    $template_block;
-        protected $last         = NULL;
-        private   $te           = NULL;
-        private   $seen         = array();
-        private   $paths        = array(
-            'current'           => NULL,
-            'frontend'          => NULL,
-            'frontend_fallback' => NULL,
-            'backend'           => NULL,
-            'backend_fallback'  => NULL,
-            'workdir'           => NULL
+        public $template_block;
+        protected $last         = null;
+        private $te           = null;
+        private $seen         = array();
+        private $paths        = array(
+            'current'           => null,
+            'frontend'          => null,
+            'frontend_fallback' => null,
+            'backend'           => null,
+            'backend_fallback'  => null,
+            'workdir'           => null
         );
-        private   $search_order = array(
+        private $search_order = array(
             'current', 'frontend', 'frontend_fallback', 'backend', 'backend_fallback', 'workdir'
         );
 
-        public function __construct( $obj )
+        public function __construct($obj)
         {
             parent::__construct();
             $this->te = $obj;
             // get current working directory
             $callstack = debug_backtrace();
             $this->te->paths['workdir']
-                = ( isset( $callstack[0] ) && isset( $callstack[0]['file'] ) )
+                = (isset($callstack[0]) && isset($callstack[0]['file']))
                 ? Directory::sanitizePath(realpath(dirname($callstack[0]['file'])))
                 : Directory::sanitizePath(realpath(dirname(__FILE__)));
 
-            if (file_exists( $this->te->paths['workdir'].'/templates' ))
-            {
+            if (file_exists($this->te->paths['workdir'].'/templates')) {
                 $this->te->paths['workdir'] .= '/templates';
             }
             $this->te->paths['current'] = $this->te->paths['workdir'];
@@ -63,10 +61,10 @@ if (!class_exists('DriverDecorator'))
 
         public function __call($method, $args)
         {
-            if ( ! method_exists( $this->te, $method ) )
+            if (! method_exists($this->te, $method)) {
                 $this->log()->logCrit('No such method: ['.$method.']');
-            switch(count($args))
-            {
+            }
+            switch (count($args)) {
                 case 0:
                     return $this->te->$method();
                 case 1:
@@ -94,13 +92,18 @@ if (!class_exists('DriverDecorator'))
          **/
         public function resetPath($context='frontend')
         {
-            if(Backend::isBackend()) $context = 'backend';
-            $this->log()->logDebug(sprintf('resetting path to [%s], context [%s]',$this->last,$context));
-            if(!$this->last) return;
+            if (Backend::isBackend()) {
+                $context = 'backend';
+            }
+            $this->log()->logDebug(sprintf('resetting path to [%s], context [%s]', $this->last, $context));
+            if (!$this->last) {
+                return;
+            }
             $this->te->paths[$context]  = $this->last;
             $this->te->paths['current'] = $this->last;
-            if(isset($this->te->paths[$context.'_fallback']))
-                    $this->te->paths[$context.'_fallback'] = $this->last;
+            if (isset($this->te->paths[$context.'_fallback'])) {
+                $this->te->paths[$context.'_fallback'] = $this->last;
+            }
         }   // end function resetPath()
 
         /**
@@ -112,25 +115,26 @@ if (!class_exists('DriverDecorator'))
          * @return boolean
          *
          **/
-         public function setPath($path,$context='frontend')
-         {
-            if(Backend::isBackend()) $context = 'backend';
+        public function setPath($path, $context='frontend')
+        {
+            if (Backend::isBackend()) {
+                $context = 'backend';
+            }
             $path = Directory::sanitizePath($path);
-            $this->last = NULL;
-            $this->log()->logDebug(sprintf('context [%s] path [%s]',$context,$path));
-            if(file_exists($path))
-            {
-                if(isset($this->te->paths[$context]))
+            $this->last = null;
+            $this->log()->logDebug(sprintf('context [%s] path [%s]', $context, $path));
+            if (file_exists($path)) {
+                if (isset($this->te->paths[$context])) {
                     $this->last = $this->te->paths[$context];
+                }
                 $this->te->paths[$context]  = $path;
                 $this->te->paths['current'] = $path;
-                if(!isset($this->te->paths[$context.'_fallback']))
+                if (!isset($this->te->paths[$context.'_fallback'])) {
                     $this->te->paths[$context.'_fallback'] = $path;
+                }
                 return true;
-            }
-            else
-            {
-                $this->log()->logWarn( 'unable to set template path: does not exist!', $path );
+            } else {
+                $this->log()->logWarn('unable to set template path: does not exist!', $path);
                 return false;
             }
         }   // end function setPath()
@@ -144,17 +148,15 @@ if (!class_exists('DriverDecorator'))
          * @return boolean
          *
          **/
-        public function setFallbackPath($path,$context='frontend')
+        public function setFallbackPath($path, $context='frontend')
         {
             $path = Directory::sanitizePath($path);
-            $this->log()->logDebug(sprintf('context [%s] fallback path [%s]', $context, $path ));
-            if ( file_exists( $path ) ) {
+            $this->log()->logDebug(sprintf('context [%s] fallback path [%s]', $context, $path));
+            if (file_exists($path)) {
                 $this->te->paths[$context.'_fallback'] = $path;
-            return true;
-            }
-            else
-            {
-                $this->log()->logWarn( 'unable to set fallback template path: does not exist!', $path );
+                return true;
+            } else {
+                $this->log()->logWarn('unable to set fallback template path: does not exist!', $path);
                 return false;
             }
         }   // end function setFallbackPath()
@@ -174,42 +176,31 @@ if (!class_exists('DriverDecorator'))
          * @param  string           $value (optional)
          *
          **/
-        public function setGlobals($var,$value=NULL)
+        public function setGlobals($var, $value=null)
         {
             $class = get_class($this->te);
-            if(!is_array($var) && isset($value))
-            {
-               $class::$_globals[$var] = $value;
-               return;
+            if (!is_array($var) && isset($value)) {
+                $class::$_globals[$var] = $value;
+                return;
             }
-            if(is_array($var))
-            {
-                foreach($var as $k => $v)
-                {
-                    if(!isset($class::$_globals[$k]))
-                    {
+            if (is_array($var)) {
+                foreach ($var as $k => $v) {
+                    if (!isset($class::$_globals[$k])) {
                         $class::$_globals[$k] = $v;
-                    }
-                    else // allows to add items to already existing globals
-                    {
-                        if(is_array($class::$_globals[$k]))
-                        {
-                            if(is_array($v))
-                            {
+                    } else { // allows to add items to already existing globals
+                        if (is_array($class::$_globals[$k])) {
+                            if (is_array($v)) {
                                 $class::$_globals[$k] = array_merge(
                                     $class::$_globals[$k],
                                     $v
                                 );
-                            }
-                            else
-                            {
+                            } else {
                                 $class::$_globals[$k][] = $v;
                             }
                         }
                     }
                 }
             }
-
         }  // end function setGlobals()
 
         /**
@@ -218,10 +209,11 @@ if (!class_exists('DriverDecorator'))
         public function hasTemplate($name)
         {
             $file = $this->findTemplate($name);
-            if(is_array($file) && count($file)>0)
+            if (is_array($file) && count($file)>0) {
                 return $file[0];
-            else
+            } else {
                 return false;
+            }
         }   // end function hasTemplate()
 
         /**
@@ -231,16 +223,17 @@ if (!class_exists('DriverDecorator'))
          **/
         public function findTemplate($_tpl)
         {
-            // remove suffix
-            $_tpl = preg_replace('~\.tpl|htt$~i','',$_tpl);
-
             // cached
-            if(isset($this->seen[$this->te->paths['current'] . $_tpl]))
+            if (isset($this->seen[$this->te->paths['current'] . $_tpl])) {
                 return $this->seen[$this->te->paths['current'] . $_tpl];
+            }
 
-            $suffix = pathinfo($_tpl,PATHINFO_EXTENSION);
-            $has_suffix = ( $suffix != '' ) ? true : false;
+            $suffix     = pathinfo($_tpl, PATHINFO_EXTENSION);
+            $has_suffix = ($suffix != '') ? true : false;
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: Check if template search paths are inside allowed paths
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             // scan search paths (if any)
             $paths = array();
             $s_paths = $this->te->paths;
@@ -250,31 +243,30 @@ if (!class_exists('DriverDecorator'))
             $temp = array('current' => $s_paths['current']);
             unset($s_paths['current']);
             $s_paths = $temp + $s_paths;
-            foreach($s_paths as $key => $value)
-                if(isset($s_paths[$key]) && file_exists($s_paths[$key]))
+            foreach ($s_paths as $key => $value) {
+                if (isset($s_paths[$key]) && file_exists($s_paths[$key])) {
                     $paths[] = $value;
+                }
+            }
             // remove doubles
             $paths = array_unique($paths);
-            self::log()->logDebug('template search paths:',$paths);
-
-            foreach($paths as $dir)
-            {
-                if($has_suffix && file_exists($dir.'/'.$_tpl))
-                {
+            self::log()->logDebug('template search paths:', $paths);
+            // if $_tpl contains a directory
+            $subdir = pathinfo($_tpl,PATHINFO_DIRNAME);
+            // scan paths
+            foreach ($paths as $dir) {
+                if ($has_suffix && file_exists($dir.'/'.$_tpl)) {
                     $file = $dir.'/'.$_tpl;
+                    return $file;
+                } else {
+                    $file = Directory::findFiles($dir, array('filename'=>$_tpl,'extensions'=>array('tpl','htt')));
                 }
-                else
-                {
-                    $file = Directory::findFiles($dir,array('filename'=>$_tpl,'extensions'=>array('tpl','htt')));
-                }
-                if(is_array($file) && count($file)>0)
-                {
+                if (is_array($file) && count($file)>0) {
                     $this->seen[$this->te->paths['current'] . $_tpl] = $file[0];
                     return $file[0];
                 }
             }
-            self::log()->addDebug( "The template [$_tpl] does not exist in one of the possible template paths!", $paths );
+            self::log()->addDebug("The template [$_tpl] does not exist in one of the possible template paths!", $paths);
         }   // end function findTemplate()
-
     }
 }

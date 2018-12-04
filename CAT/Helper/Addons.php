@@ -149,23 +149,26 @@ if ( !class_exists( 'Addons' ) )
 
                     // get the data
                     $data = $q->execute()->fetchAll();
+
                     // remove addons the user is not allowed for
-                    for($i=(count($data)-1);$i>=0;$i--)
+                    $count = (count($data)-1);
+                    for($i=$count;$i>=0;$i--)
                     {
-                        $addon = $data[$i];
+                        $addon =& $data[$i];
                         if(!self::user()->hasModulePerm($addon['addon_id']))
                         {
                             unset($data[$i]); // not allowed
+                            continue;
                         }
                         if(!$names_only)
                         {
                             if($find_icon) {
                                 $icon = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.$addon['type'].'s/'.$addon['directory'].'/icon.png');
-                                $data[$i]['icon'] = '';
+                                $addon['icon'] = '';
                                 if(file_exists($icon)){
                                     list($width, $height, $type_of, $attr) = getimagesize($icon);
                                     // Check whether file is 32*32 pixel and is an PNG-Image
-                                    $data[$i]['icon']
+                                    $addon['icon']
                                         = ($width == 32 && $height == 32 && $type_of == 3)
                                         ? CAT_URL.'/'.$addon['type'].'s/'.$addon['directory'].'/icon.png'
                                         : false
@@ -174,7 +177,7 @@ if ( !class_exists( 'Addons' ) )
                             }
                             if($addon['type']!='language') {
                                 $info = self::getInfo($addon['directory']);
-                                $data[$i] = array_merge($data[$i],$info);
+                                $addon = array_merge($addon,$info);
                             }
                         }
                     }

@@ -31,15 +31,18 @@ if (!class_exists('\CAT\Backend\Sites'))
          **/
         public static function add()
         {
-            if(!self::user()->hasPerm('site_admin'))
+            if(!self::user()->hasPerm('site_admin')) {
                 self::printFatalError('You are not allowed for the requested action!');
+            }
 
-            $form = self::populateForm();
+            $form   = self::populateForm();
+            $errors = 0;
+
+            $form->setAttribute('action',CAT_ADMIN_URL.'/sites/add');
 
             if($form->isValid())
             {
                 $data   = $form->getData();
-                $errors = 0;
 /*
 Array
 (
@@ -47,6 +50,7 @@ Array
     [site_basedir] => fff
     [site_folder] => asdfasdf
     [site_owner] => 1
+    [site_url] => xxx
     [Speichern] => Speichern
     [Abbrechen] =>
 )
@@ -81,9 +85,9 @@ Array
                 if(!$errors) {
                     // create db entry
                     self::db()->query(
-                          'INSERT INTO `:prefix:sites` (`site_owner`,`site_basedir`,`site_folder`,`site_name`) '
-                        . 'VALUES(?,?,?,?)',
-                        array($data['site_owner'],$data['site_basedir'],$data['site_folder'],$data['site_name'])
+                          'INSERT INTO `:prefix:sites` (`site_owner`,`site_basedir`,`site_folder`,`site_name`,`site_url`) '
+                        . 'VALUES(?,?,?,?,))',
+                        array($data['site_owner'],$data['site_basedir'],$data['site_folder'],$data['site_name'],$data['site_url'])
                     );
                     // create folder
                     \CAT\Helper\Directory::createDirectory($fullpath);
@@ -91,6 +95,15 @@ Array
                     \CAT\Helper\Directory::createDirectory($fullpath.'/media');
                     self::createFiles($fullpath,self::db()->lastInsertId(),$data);
                 }
+            }
+
+            if(self::asJSON())
+            {
+                echo \CAT\Helper\Json::printResult(
+                    ( ($errors>0) ? false : true ),
+                    $form->render(1)
+                );
+                return;
             }
 
             \CAT\Backend::printHeader();
@@ -102,6 +115,60 @@ Array
             );
             \CAT\Backend::printFooter();
         }   // end function add()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function edit()
+        {
+            if (!self::user()->hasPerm('site_edit')) {
+                \CAT\Helper\Json::printError('You are not allowed for the requested action!');
+            }
+            $id   = self::getItemID();
+            $form = self::populateForm($id);
+            $form->setAttribute('action',CAT_ADMIN_URL.'/sites/edit/'.$id);
+            $form->getElement('create_site')->setLabel(self::lang()->t('Edit site'));
+            $form->getElement('site_basedir')->setReadonly(true);
+            $form->getElement('site_folder')->setReadonly(true);
+
+            if($form->isValid())
+            {
+                $data   = $form->getData();
+/*
+Array
+(
+    [site_id] => 7
+    [site_owner] => 1
+    [site_basedir] => p:\BlackCat2\htdocs
+    [site_folder] => site3
+    [site_name] => Site3
+    [site_url] => //localhost:444/
+    [Speichern] => Speichern
+    [Abbrechen] =>
+)
+*/
+            }
+
+            if(self::asJSON())
+            {
+                echo \CAT\Helper\Json::printResult(
+                    true,
+                    $form->render(1)
+                );
+                return;
+            }
+
+            \CAT\Backend::printHeader();
+            self::tpl()->output(
+                'backend_sites',
+                array(
+                    'edit_site_form' => (isset($form) ? $form->render(1) : ''),
+                )
+            );
+            \CAT\Backend::printFooter();
+        }   // end function edit()
 
         /**
          *
@@ -189,8 +256,8 @@ Array
             fwrite($fh,"*/\n\n");
 
             fwrite($fh,"define('CAT_SITE_ID',".$id.");\n");
-            fwrite($fh,"define('CAT_URL','//localhost:444');\n");
-            fwrite($fh,"define('CAT_SITE_URL','//localhost:444/".$data['site_folder']."');\n");
+            fwrite($fh,"define('CAT_URL','".CAT_URL."');\n");
+            fwrite($fh,"define('CAT_SITE_URL','".$data['site_url']."/".$data['site_folder']."');\n");
             fwrite($fh,"define('CAT_PATH',str_replace('\\\\','/',__DIR__));\n");
             fwrite($fh,"define('CAT_ENGINE_PATH',str_replace('\\\\','/',__DIR__).'/../../cat_engine');\n");
             fwrite($fh,"define('CAT_BACKEND_PATH','backend');\n");
@@ -218,11 +285,11 @@ Array
          * @access protected
          * @return
          **/
-        protected static function populateForm()
+        protected static function populateForm($id=null)
         {
             $form = \CAT\Helper\FormBuilder::generateForm('be_site',array());
-            $form->setAttribute('action',CAT_ADMIN_URL.'/sites/add');
 
+            // user select
             $stmt = self::db()->query(
                   'SELECT `user_id`, `username`, `display_name` '
                 . 'FROM `:prefix:rbac_users` '
@@ -236,6 +303,18 @@ Array
                 }
             }
             $form->getElement('site_owner')->setData($users);
+            $form->getElement('site_url')->setValue(CAT_URL.'/');
+
+            if($id) {
+                $stmt = self::db()->query(
+                      'SELECT * '
+                    . 'FROM `:prefix:sites` '
+                    . 'WHERE `site_id`=?',
+                    array($id)
+                );
+                $data = $stmt->fetchAll();
+                $form->setData($data[0]);
+            }
             return $form;
         }   // end function populateForm()
         

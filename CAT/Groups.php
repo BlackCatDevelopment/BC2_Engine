@@ -16,19 +16,20 @@
 */
 
 namespace CAT;
+
 use \CAT\Base as Base;
 
-if (!class_exists('\CAT\Groups'))
-{
+if (!class_exists('\CAT\Groups')) {
     class Groups extends Base
     {
         protected static $loglevel = \Monolog\Logger::EMERGENCY;
-        protected static $instance = NULL;
+        protected static $instance = null;
 
         public static function getInstance()
         {
-            if(!is_object(self::$instance))
+            if (!is_object(self::$instance)) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -39,8 +40,12 @@ if (!class_exists('\CAT\Groups'))
          **/
         protected function initPerms()
         {
-            if(!$this->roles) $this->initRoles();
-            if(!is_array($this->roles) || !count($this->roles)) return array();
+            if (!$this->roles) {
+                $this->initRoles();
+            }
+            if (!is_array($this->roles) || !count($this->roles)) {
+                return array();
+            }
 
             $q   = 'SELECT * FROM `:prefix:rbac_rolepermissions` AS t1
                    JOIN `:prefix:rbac_permissions` AS t2
@@ -49,8 +54,7 @@ if (!class_exists('\CAT\Groups'))
             $sth   = self::db()->query($q);
             $perms = $sth->fetchAll(\PDO::FETCH_ASSOC);
 
-            foreach(array_values($perms) as $perm)
-            {
+            foreach (array_values($perms) as $perm) {
                 $this->perms[$perm['role_id']][] = $perm;
             }
         }   // end function initPerms()

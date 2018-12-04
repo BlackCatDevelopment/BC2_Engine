@@ -42,10 +42,108 @@ if(!class_exists('\CAT\Helper\Menu',false))
          * @access public
          * @return
          **/
-        public static function show(int $id, $attr) : string
+        public static function get(bool $group_by_type=false)
         {
-// !!!!! TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// $attr verarbeiten
+            $stmt = self::db()->query(
+                  'SELECT * '
+                . 'FROM `:prefix:menutypes` as `t1` '
+                . 'LEFT JOIN `:prefix:menus` AS `t2` '
+                . 'ON `t1`.`type_id`=`t2`.`type_id` '
+                . 'ORDER BY `t1`.`type_name` ASC'
+            );
+            $data = $stmt->fetchAll();
+
+            if($group_by_type) {
+                $menus = array();
+                for($i=0;$i<count($data);$i++) {
+                    if(isset($menus[$data[$i]['type_id']])) {
+                        $menus[$data[$i]['type_id']][] = $data[$i];
+                    } else {
+                        $menus[$data[$i]['type_id']] = array($data[$i]);
+                    }
+                }
+                return $menus;
+            } else {
+                return $data;
+            }
+        }   // end function get()
+
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function getSettings(string $for, int $id) : array
+        {
+            switch($for) {
+                case 'type':
+                    $stmt = self::db()->query(
+                          'SELECT `type_name`, `default_value`, `value`, `option_name` '
+                        . 'FROM `:prefix:menutypes` AS `t1` '
+                        . 'JOIN `:prefix:menutype_settings` as `t2` '
+                        . 'ON `t1`.`type_id`=`t2`.`type_id` '
+                        . 'join `:prefix:menutype_options` as `t3` '
+                        . 'on `t2`.`option_id`=`t3`.`option_id` '
+                        . 'WHERE `t1`.`type_id`=?',
+                        array($id)
+                    );
+                    break;
+                case 'menu':
+                    /*
+                    $stmt = self::db()->query(
+                          'SELECT * '
+                        . 'FROM `:prefix:menus` AS `t1` '
+                        . 'JOIN `:prefix:menutypes` AS `t2` '
+                        . 'ON `t1`.`type_id`=`t2`.`type_id` '
+                        . 'JOIN `:prefix:menutype_settings` as `t3` '
+                        . 'ON `t2`.`type_id`=`t3`.`type_id` '
+                        . 'join `:prefix:menutype_options` as `t4` '
+                        . 'on `t3`.`option_id`=`t4`.`option_id` '
+                        . 'WHERE `t1`.`menu_id`=?',
+                        array($id)
+                    );
+                    */
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// FALLBACK auf Defaults fehlt
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    $stmt = self::db()->query(
+                          'SELECT DISTINCT '
+                        . '   `t1`.`option_name`, '
+                        . '   `t2`.value '
+                        . 'FROM '
+                        . '	  `cat_menutype_options` AS `t1` '
+                        . 'JOIN '
+                        . '   `cat_menu_options` AS `t2` '
+                        . 'ON '
+                        . '	`t1`.`option_id`=`t2`.`option_id` '
+                        . 'WHERE '
+                        . '	`t2`.`menu_id`=?',
+                        array($id)
+                    );
+                    break;
+            }
+            $data     = $stmt->fetchAll();
+
+            $settings = array(); // fallback for empty options
+            if(is_array($data) && count($data)>0) {
+                $settings['type'] = ( isset($data[0]['type_name']) ? $data[0]['type_name'] : 'fullmenu' );
+                foreach($data as $i => $item) {
+                    $settings[$item['option_name']]
+                        = ( empty($item['value']) ? $item['default_value'] : $item['value'] );
+                }
+            }
+
+            return $settings;
+        }   // end function getSettings()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function show(int $id) : string
+        {
             // get type
             $stmt = self::db()->query(
                 'SELECT `type_id` FROM `:prefix:menus` WHERE `menu_id`=?',
@@ -100,17 +198,20 @@ if(!class_exists('\CAT\Helper\Menu',false))
          **/
         protected static function getRenderer(array $settings)
         {
+            // default formatter
             $formatter = '\wblib\wbList\Formatter\ListFormatter';
-            $variant   = 'navbar';
+            // special
             switch($settings['type']) {
                 case 'breadcrumb':
                     $formatter = '\wblib\wbList\Formatter\BreadcrumbFormatter';
-                    $variant   = 'no_defaults';
+                    break;
+                case 'siblings':
+                    $settings['mindepth'] = 1;
+                    $settings['maxdepth'] = 1;
                     break;
             }
 
-            $renderer = new $formatter(array('template_variant'=>$variant));
-            $renderer->setMaxDepth(self::tree($settings['type'])->getDepth());
+            $renderer = new $formatter($settings);
             $renderer->setOption('id_prefix','area','li');
 
             foreach(array_values(array('ul','li','a')) as $tag) {
@@ -129,49 +230,6 @@ if(!class_exists('\CAT\Helper\Menu',false))
 
             return $renderer;
         }   // end function getRenderer()
-        
-
-        /**
-         *
-         * @access protected
-         * @return
-         **/
-        protected static function getSettings(string $for, int $id) : array
-        {
-            switch($for) {
-                case 'type':
-                    $stmt = self::db()->query(
-                          'SELECT `t1`.`type_name`, `t2`.`attribute`, `t2`.`value` '
-                        . 'FROM  `:prefix:menu_types` AS `t1` '
-                        . 'LEFT JOIN `:prefix:menutype_options` AS `t2` '
-                        . 'ON `t1`.`type_id`=`t2`.`type_id` '
-                        . 'WHERE `t1`.`type_id`=?',
-                        array($id)
-                    );
-                    break;
-                case 'menu':
-                    $stmt = self::db()->query(
-                          'SELECT `type_name`, `attribute`, `value` FROM `:prefix:menus` AS `t1` '
-                        . 'LEFT JOIN `:prefix:menu_options` AS `t2` '
-                        . 'ON `t1`.`menu_id`=`t2`.`menu_id` '
-                        . 'JOIN `:prefix:menu_types` AS `t3` '
-                        . 'ON `t1`.`type_id`=`t3`.`type_id` '
-                        . 'WHERE `t1`.`menu_id`=?',
-                        array($id)
-                    );
-                    break;
-            }
-            $data     = $stmt->fetchAll();
-            $settings = array();
-            if(is_array($data) && count($data)>0) {
-                $settings['type'] = ( isset($data[0]['type_name']) ? $data[0]['type_name'] : 'fullmenu' );
-                foreach($data as $i => $item) {
-                    $settings[$item['attribute']] = $item['value'];
-                }
-            }
-            return $settings;
-        }   // end function getSettings()
-        
 
         /**
          * creates a wbList Tree object

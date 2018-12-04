@@ -17,7 +17,7 @@
 
 namespace CAT\Helper;
 
-use \CAT\Base As Base;
+use \CAT\Base as Base;
 use \CAT\Backend as Backend;
 use \CAT\Registry as Registry;
 use \CAT\Helper\Addons as Addons;
@@ -25,14 +25,12 @@ use \CAT\Helper\Page as HPage;
 use \CAT\Helper\Directory as Directory;
 use \CAT\Helper\Template\DriverDecorator as DriverDecorator;
 
-if (!class_exists('\CAT\Helper\Template'))
-{
+if (!class_exists('\CAT\Helper\Template')) {
     class Template extends Base
     {
-
         protected static $loglevel       = \Monolog\Logger::EMERGENCY;
-        private   static $_drivers       = array();
-        private   static $_driver        = NULL;
+        private static $_drivers       = array();
+        private static $_driver        = null;
         protected static $template_menus = array();
 
         public function __construct($compileDir=null, $cacheDir=null)
@@ -42,12 +40,11 @@ if (!class_exists('\CAT\Helper\Template'))
             // get current working directory
             $callstack = debug_backtrace();
             $this->workdir
-                = ( isset( $callstack[0] ) && isset( $callstack[0]['file'] ) )
-                ? realpath( dirname( $callstack[0]['file'] ) )
-                : realpath( dirname(__FILE__) );
+                = (isset($callstack[0]) && isset($callstack[0]['file']))
+                ? realpath(dirname($callstack[0]['file']))
+                : realpath(dirname(__FILE__));
 
-            if(file_exists($this->workdir.'/templates'))
-            {
+            if (file_exists($this->workdir.'/templates')) {
                 $this->setPath($this->workdir.'/templates');
             }
         }   // end function __construct()
@@ -59,7 +56,7 @@ if (!class_exists('\CAT\Helper\Template'))
          **/
         public static function getBlocks($template=null)
         {
-            if(!$template) {
+            if (!$template) {
                 $template = Registry::get('DEFAULT_TEMPLATE');
             }
 
@@ -67,7 +64,7 @@ if (!class_exists('\CAT\Helper\Template'))
             $classname = '\CAT\Addon\Template\\'.$template;
             $filename  = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.$template.'/inc/class.'.$template.'.php');
 
-            if(file_exists($filename)) {
+            if (file_exists($filename)) {
                 include_once $filename;
                 $blocks = $classname::getBlocks();
             }
@@ -83,55 +80,53 @@ if (!class_exists('\CAT\Helper\Template'))
          **/
         public static function getInstance($driver)
         {
-            if(!(strcasecmp(substr($driver, strlen($driver) - strlen('driver')),'driver')===0))
+            if (!(strcasecmp(substr($driver, strlen($driver) - strlen('driver')), 'driver')===0)) {
                 $driver .= 'Driver';
+            }
 
-            if(!file_exists(dirname(__FILE__).'/Template/'.$driver.'.php'))
-            {
+            if (!file_exists(dirname(__FILE__).'/Template/'.$driver.'.php')) {
                 Base::printFatalError('No such template driver: ['.$driver.']');
             }
             self::$_driver = $driver;
-            if(!isset(self::$_drivers[$driver]) || !is_object(self::$_drivers[$driver]))
-            {
+            if (!isset(self::$_drivers[$driver]) || !is_object(self::$_drivers[$driver])) {
                 require_once dirname(__FILE__).'/Template/DriverDecorator.php';
                 require_once dirname(__FILE__).'/Template/'.$driver.'.php';
                 $driver = '\CAT\Helper\Template\\'.$driver;
                 self::$_drivers[$driver] = new DriverDecorator(new $driver());
-                foreach(array_values(array('CAT_URL','CAT_ADMIN_URL','CAT_ENGINE_PATH')) as $item)
-                {
-                    if(defined($item))
-                    {
-                        self::$_drivers[$driver]->setGlobals($item,constant($item));
+                foreach (array_values(array('CAT_URL','CAT_ADMIN_URL','CAT_ENGINE_PATH')) as $item) {
+                    if (defined($item)) {
+                        self::$_drivers[$driver]->setGlobals($item, constant($item));
                     }
                 }
                 $defs = get_defined_constants(true);
-                foreach($defs['user'] as $const => $value ) {
-                    if(preg_match('~^DEFAULT_~',$const)) { // DEFAULT_CHARSET etc.
-                        self::$_drivers[$driver]->setGlobals($const,$value);
+                foreach ($defs['user'] as $const => $value) {
+                    if (preg_match('~^DEFAULT_~', $const)) { // DEFAULT_CHARSET etc.
+                        self::$_drivers[$driver]->setGlobals($const, $value);
                         continue;
                     }
-                    if(preg_match('~^WEBSITE_~',$const)) { // WEBSITE_HEADER etc.
-                        self::$_drivers[$driver]->setGlobals($const,$value);
+                    if (preg_match('~^WEBSITE_~', $const)) { // WEBSITE_HEADER etc.
+                        self::$_drivers[$driver]->setGlobals($const, $value);
                         continue;
                     }
-                    if(preg_match('~^SHOW_~',$const)) { // SHOW_SEARCH etc.
-                        self::$_drivers[$driver]->setGlobals($const,$value);
+                    if (preg_match('~^SHOW_~', $const)) { // SHOW_SEARCH etc.
+                        self::$_drivers[$driver]->setGlobals($const, $value);
                         continue;
                     }
-                    if(preg_match('~^FRONTEND_~',$const)) { // FRONTEND_LOGIN etc.
-                        self::$_drivers[$driver]->setGlobals($const,$value);
+                    if (preg_match('~^FRONTEND_~', $const)) { // FRONTEND_LOGIN etc.
+                        self::$_drivers[$driver]->setGlobals($const, $value);
                         continue;
                     }
-                    if(preg_match('~_FORMAT$~',$const)) { // DATE_FORMAT etc.
-                        self::$_drivers[$driver]->setGlobals($const,$value);
+                    if (preg_match('~_FORMAT$~', $const)) { // DATE_FORMAT etc.
+                        self::$_drivers[$driver]->setGlobals($const, $value);
                         continue;
                     }
-                    if(preg_match('~^ENABLE_~',$const)) { // ENABLE_HTMLPURIFIER etc.
-                        self::$_drivers[$driver]->setGlobals($const,$value);
+                    if (preg_match('~^ENABLE_~', $const)) { // ENABLE_HTMLPURIFIER etc.
+                        self::$_drivers[$driver]->setGlobals($const, $value);
                         continue;
                     }
                 }
             }
+
             return self::$_drivers[$driver];
         }   // end function getInstance()
 
@@ -140,11 +135,93 @@ if (!class_exists('\CAT\Helper\Template'))
          * @access public
          * @return
          **/
+        public static function getOptions($pageID=null)
+        {
+            if($pageID) {
+                $tpl = self::getPageTemplate($pageID);
+            } else {
+                $tpl = \CAT\Registry::get('default_template');
+            }
+            $tpl_id = \CAT\Helper\Addons::getDetails($tpl,'addon_id');
+            $stmt = self::db()->query(
+                'SELECT * FROM `:prefix:templates` WHERE `tpl_id`=?',
+                array($tpl_id)
+            );
+            $data = $stmt->fetchAll();
+            $opt  = array();
+            if(is_array($data) && count($data)>0) {
+                foreach($data as $i => $item) {
+                    $opt[$item['option']] = $item['value'];
+                }
+            }
+            return $opt;
+        }   // end function getOptions()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function getOptionsForm($pageID=null)
+        {
+            if($pageID) {
+                $tpl = self::getPageTemplate($pageID);
+                $var = self::getVariant($pageID);
+            } else {
+                $tpl = \CAT\Registry::get('default_template');
+                $var = \CAT\Registry::get('default_template_variant');
+            }
+            if(file_exists(CAT_ENGINE_PATH.'/templates/'.$tpl.'/templates/'.$var.'/inc.forms.php'))
+            {
+                $form = \wblib\wbForms\Form::loadFromFile(
+                    'tploptions',
+                    CAT_ENGINE_PATH.'/templates/'.$tpl.'/templates/'.$var.'/inc.forms.php'
+                );
+                return $form;
+            }
+
+            return null;
+        }   // end function getOptionsForm()
+
+        /**
+         * returns the template for the given page
+         *
+         * @access public
+         * @param  integer  $page_id
+         * @return string
+         **/
+        public static function getPageTemplate(int $pageID)
+        {
+            $tpl = \CAT\Helper\Page::properties($pageID,'template');
+            return ( $tpl != '' ) ? $tpl : \CAT\Registry::get('DEFAULT_TEMPLATE');
+        }   // end function getPageTemplate()
+
+        /**
+         * returns the full path to the page template, i.e. including variant
+         *
+         * @access public
+         * @return
+         **/
+        public static function getPath(int $pageID, bool $fullpath=true)
+        {
+            $tpl = self::getPageTemplate($pageID);
+            if($fullpath) {
+                $var = self::getVariant($pageID);
+                return CAT_ENGINE_PATH.'/templates/'.$tpl.'/templates/'.$var;
+            }
+            return CAT_ENGINE_PATH.'/templates/'.$tpl;
+        }   // end function getPath()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
         public static function getTemplates($for='frontend')
         {
-//******************************************************************************
-// TODO: Rechte beruecksichtigen!
-//******************************************************************************
+            //******************************************************************************
+            // TODO: Rechte beruecksichtigen!
+            //******************************************************************************
             $templates = array();
             $addons = Addons::getAddons(
                 (($for=='backend') ? 'theme' : 'template')
@@ -153,33 +230,71 @@ if (!class_exists('\CAT\Helper\Template'))
         }   // end function getTemplates()
 
         /**
+         * returns the template variant for the given page
+         *
+         * @access public
+         * @param  int      $page_id
+         * @return string
+         **/
+        public static function getVariant(int $pageID) : string
+        {
+            $variant = \CAT\Helper\Page::properties($pageID,'variant');
+            if(!$variant) {
+                $variant = \CAT\Registry::get('default_template_variant');
+                if(!$variant) {
+                    $variant = 'default';
+                }
+            }
+            return $variant;
+        }   // end function getVariant()
+
+        /**
          *
          * @access public
          * @return
          **/
-        public static function getVariants($for=NULL)
+        public static function getVariants($for=null)
         {
             $variants = array();
             $info     = array();
             $paths    = array();
 
-            if(!$for)
+            if (!$for) {
                 $for = Backend::isBackend()
-                     ? Registry::get('DEFAULT_THEME')
-                     : Registry::get('DEFAULT_TEMPLATE');
+                     ? Registry::get('default_theme')
+                     : Registry::get('default_template');
+            }
+            // dirty hack for FormBuilder call
+            if($for=='frontend') {
+                $for = Registry::get('default_template');
+            }
 
-            if(is_numeric($for)) // assume page_id
+            if (is_numeric($for)) { // assume page_id
                 $tpl_path = CAT_ENGINE_PATH.'/templates/'.HPage::getPageTemplate($for).'/templates/';
-            else
+            } else {
                 $tpl_path = CAT_ENGINE_PATH.'/templates/'.$for.'/templates/';
+            }
+            $paths = Directory::findDirectories($tpl_path, array('remove_prefix'=>true));
 
-            $paths = Directory::findDirectories($tpl_path,array('remove_prefix'=>true));
+            if (count($paths)) {
+                $variants = array_merge($variants, $paths);
+            }
 
-            if(count($paths))
-                $variants = array_merge($variants,$paths);
-
-            return $variants;
+            return array_combine($variants,$variants);
         }   // end function getVariants()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function hasOptions($pageID=null)
+        {
+            return (
+                count(self::getOptions($pageID))>0
+            );
+        }   // end function hasOptions()
+        
         
 
         /**
@@ -187,30 +302,31 @@ if (!class_exists('\CAT\Helper\Template'))
          * @access public
          * @return
          **/
-        public static function get_template_block_name($template=NULL,$selected=1)
+        public static function get_template_block_name($template=null, $selected=1)
         {
-            if(!$template) $template = Registry::get('DEFAULT_TEMPLATE');
+            if (!$template) {
+                $template = Registry::get('DEFAULT_TEMPLATE');
+            }
             // include info.php for template info
-			$template_location = ( $template != '' ) ?
-				CAT_ENGINE_PATH.'/templates/'.$template.'/info.php' :
-				CAT_ENGINE_PATH.'/templates/'.Registry::get('DEFAULT_TEMPLATE').'/info.php';
-			if(file_exists($template_location))
-            {
-				require $template_location;
+            $template_location = ($template != '') ?
+                CAT_ENGINE_PATH.'/templates/'.$template.'/info.php' :
+                CAT_ENGINE_PATH.'/templates/'.Registry::get('DEFAULT_TEMPLATE').'/info.php';
+            if (file_exists($template_location)) {
+                require $template_location;
                 $driver = self::getInstance(self::$_driver);
-    			return (
+                return (
                     isset($block[$selected]) ? $block[$selected] : $driver->lang()->translate('Main')
                 );
             }
             return $driver->lang()->translate('Main');
         }   // end function get_template_block_name()
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// Die Funktion muss ueberarbeitet werden, wenn Templates keine info.php mehr
-// haben.
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // Die Funktion muss ueberarbeitet werden, wenn Templates keine info.php mehr
+        // haben.
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    	/**
+        /**
     	 * get all menus of a template
     	 *
     	 * @access public
@@ -218,34 +334,32 @@ if (!class_exists('\CAT\Helper\Template'))
     	 * @param  int   $selected (default: 1)
     	 * @return void
     	 */
-    	public static function get_template_menus($template=NULL, $selected=1)
-    	{
-            if(!$template) $template = Registry::get('DEFAULT_TEMPLATE');
+        public static function get_template_menus($template=null, $selected=1)
+        {
+            if (!$template) {
+                $template = Registry::get('DEFAULT_TEMPLATE');
+            }
 
-			$tpl_info
+            $tpl_info
                 = ($template != '')
                 ? CAT_ENGINE_PATH.'/templates/'.$template.'/info.php'
                 : CAT_ENGINE_PATH.'/templates/'.Registry::get('DEFAULT_TEMPLATE').'/info.php'
                 ;
 
-			if(file_exists($tpl_info))
-            {
-				require $tpl_info;
-    			if(!isset($menu[1]) || $menu[1] == '')
-    				$menu[1]	= 'Main';
+            if (file_exists($tpl_info)) {
+                require $tpl_info;
+                if (!isset($menu[1]) || $menu[1] == '') {
+                    $menu[1]	= 'Main';
+                }
 
                 $result = array();
-    			foreach($menu as $number => $name)
-    			{
-    				$result[$number] = $name;
-    			}
-    			return $result;
-    		}
-    		else
-            {
+                foreach ($menu as $number => $name) {
+                    $result[$number] = $name;
+                }
+                return $result;
+            } else {
                 return false;
             }
-    	}   // end function get_template_menus()
-
+        }   // end function get_template_menus()
     }   // end class Template
 }

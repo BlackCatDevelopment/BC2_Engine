@@ -16,22 +16,23 @@
 */
 
 namespace CAT;
+
 use \CAT\Base as Base;
 use \CAT\Helper\Assets as Assets;
 
-if (!class_exists('Frontend', false))
-{
+if (!class_exists('Frontend', false)) {
     class Frontend extends Base
     {
         #protected static $loglevel    = \Monolog\Logger::EMERGENCY;
         protected static $loglevel    = \Monolog\Logger::DEBUG;
-        private   static $instance    = array();
-        private   static $maintenance = NULL;
+        private static $instance    = array();
+        private static $maintenance = null;
 
         public static function getInstance()
         {
-            if (!self::$instance)
+            if (!self::$instance) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -41,8 +42,9 @@ if (!class_exists('Frontend', false))
         public static function dispatch()
         {
             // forward to backend router
-            if(Backend::isBackend())
+            if (Backend::isBackend()) {
                 return \CAT\Backend::dispatch();
+            }
             return self::router()->dispatch();
         }   // end function dispatch()
 
@@ -53,10 +55,9 @@ if (!class_exists('Frontend', false))
         {
             $page_id = \CAT\Page::getID();
             // no page found
-            if(!$page_id)
-            {
+            if (!$page_id) {
                 ob_start();
-                    $empty_page_bg = Assets::serve('images',array("CAT/templates/empty_page_bg.jpg"));
+                $empty_page_bg = Assets::serve('images', array("CAT/templates/empty_page_bg.jpg"));
                 ob_end_clean();
                 require dirname(__FILE__).'/templates/empty.php';
                 exit;
@@ -75,8 +76,7 @@ if (!class_exists('Frontend', false))
          **/
         public static function isMaintenance()
         {
-            if(!self::$maintenance)
-            {
+            if (!self::$maintenance) {
                 self::$maintenance
                     = \CAT\Registry::get('maintenance_mode') == 'true'
                     ? true
@@ -84,6 +84,5 @@ if (!class_exists('Frontend', false))
             }
             return self::$maintenance;
         }   // end function isMaintenance()
-
     }   // end class Frontend
 }

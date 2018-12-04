@@ -16,30 +16,30 @@
 */
 
 namespace CAT\Backend;
+
 use \CAT\Base as Base;
 use \CAT\Backend as Backend;
 
-if (!class_exists('\CAT\Backend\Settings'))
-{
+if (!class_exists('\CAT\Backend\Settings')) {
     class Settings extends Base
     {
         // log level
         protected static $loglevel       = \Monolog\Logger::EMERGENCY;
         //protected static $loglevel  = \Monolog\Logger::DEBUG;
-        protected static $instance       = NULL;
+        protected static $instance       = null;
         protected static $perm_prefix    = 'settings_';
-        private   static $regions        = NULL;
-        private   static $avail_settings = NULL;
+        private static $regions        = null;
+        private static $avail_settings = null;
 
-        public static function __callstatic($name,$arguments)
+        public static function __callstatic($name, $arguments)
         {
             $stmt = self::db()->query(
                 'SELECT `region` FROM `:prefix:settings` AS `t1` GROUP BY `region`'
             );
             $data = $stmt->fetchAll();
-            for($i=0;$i<count($data);$i++) {
-                if($name==$data[$i]['region']) {
-                    call_user_func([__CLASS__, 'index'] ,$name);
+            for ($i=0;$i<count($data);$i++) {
+                if ($name==$data[$i]['region']) {
+                    call_user_func([__CLASS__, 'index'], $name);
                 }
             }
         }   // end function __callstatic()
@@ -51,8 +51,7 @@ if (!class_exists('\CAT\Backend\Settings'))
          **/
         public static function getInstance()
         {
-            if(!is_object(self::$instance))
-            {
+            if (!is_object(self::$instance)) {
                 self::$instance = new self();
                 self::addLangFile(__dir__.'/languages');
             }
@@ -66,7 +65,7 @@ if (!class_exists('\CAT\Backend\Settings'))
          **/
         public static function get($name)
         {
-            if(!self::$avail_settings) {
+            if (!self::$avail_settings) {
                 self::getSettings();
             }
             return (
@@ -81,8 +80,7 @@ if (!class_exists('\CAT\Backend\Settings'))
          **/
         public static function getSettings()
         {
-            if(!self::$avail_settings)
-            {
+            if (!self::$avail_settings) {
                 $data = self::db()->query(
                     'SELECT * FROM `:prefix:settings` AS `t1` '
                     . 'JOIN `:prefix:forms_fieldtypes` AS `t2` '
@@ -91,8 +89,7 @@ if (!class_exists('\CAT\Backend\Settings'))
                     . 'ORDER BY `region`,`name`',
                     array('Y')
                 );
-                if($data)
-                {
+                if ($data) {
                     self::$avail_settings = $data->fetchAll();
                 }
             }
@@ -106,11 +103,12 @@ if (!class_exists('\CAT\Backend\Settings'))
          **/
         public static function index()
         {
-            if(!self::user()->hasPerm('settings_list'))
+            if (!self::user()->hasPerm('settings_list')) {
                 self::printFatalError('You are not allowed for the requested action!');
+            }
 
             $settings = self::getSettings();
-            if(!is_array($settings) || !count($settings)) {
+            if (!is_array($settings) || !count($settings)) {
                 self::printFatalError('missing settings!');
             }
 
@@ -118,8 +116,8 @@ if (!class_exists('\CAT\Backend\Settings'))
             $region = self::getRegion();
 
             // filter settings by region
-            if($region && $region != 'index') {
-                $settings = \CAT\Helper\HArray::filter($settings,'region',$region,'matching');
+            if ($region && $region != 'index') {
+                $settings = \CAT\Helper\HArray::filter($settings, 'region', $region, 'matching');
             }
 
             // get the form
@@ -128,9 +126,75 @@ if (!class_exists('\CAT\Backend\Settings'))
                 $settings,           // form items
                 self::loadSettings() // form data
             );
+            $form->setAttribute('action', CAT_ADMIN_URL.'/settings/'.$region);
 
-            if(!self::asJSON())
-            {
+            // add template options (if any)
+            if(!$region || $region=='frontend') {
+                $form2 = \CAT\Helper\Template::getOptionsForm();
+                if(is_object($form2)) {
+                    foreach($form2->getElements() as $e) {
+                        $form->addElement($e,'default_template_variant');
+                    }
+                }
+            }
+
+            if($form->isSent()) {
+                if($form->isValid()) {
+                    $data = $form->getData();
+                    // known settings
+                    $known = array();
+                    foreach($settings as $i => $s) {
+                        $known[$s['name']] = $i;
+                    }
+                    // there may be template options
+                    $tpl_options = array();
+                    if(isset($data['options'])) {
+                        $opt = explode(',',$data['options']);
+                        foreach(array_values($opt) as $o) {
+                            if(isset($data[$o])) {
+                                $tpl_options[$o] = $data[$o];
+                            }
+                        }
+                    }
+                    // save settings
+                    foreach($data as $key => $value) {
+                        // check if that setting exists
+                        if(isset($known[$key])) {
+                            // check if value != default
+                            if(empty($value) || $value==$settings[$known[$key]]['default_value']) {
+                                self::db()->query(
+                                    'DELETE FROM `:prefix:settings_site` WHERE `site_id`=? AND `name`=?',
+                                    array(CAT_SITE_ID, $key)
+                                );
+                            }
+                            elseif($value!=$settings[$known[$key]]['default_value']) {
+                                // dirty hack for checkboxes
+                                if(is_array($value) && $value[0]=='Yes') {
+                                    $value = true;
+                                }
+                                self::db()->query(
+                                    'REPLACE INTO `:prefix:settings_site` VALUES ( ?, ?, ? )',
+                                    array(CAT_SITE_ID, $key, $value)
+                                );
+                            }
+                        }
+                    }
+                    if(count($tpl_options)>0) {
+                        $addon_id = \CAT\Helper\Addons::getDetails(
+                            \CAT\Registry::get('default_template'),
+                            'addon_id'
+                        );
+                        foreach($tpl_options as $opt => $val) {
+                            self::db()->query(
+                                'REPLACE INTO `:prefix:templates` VALUES ( ?, ?, ? )',
+                                array($addon_id, $opt, $val)
+                            );
+                        }
+                    }
+                }
+            }
+
+            if (!self::asJSON()) {
                 Backend::printHeader();
                 self::tpl()->output(
                     'backend_settings',
@@ -150,12 +214,13 @@ if (!class_exists('\CAT\Backend\Settings'))
         protected static function getRegion()
         {
             $region     = self::router()->getParam();
-            if(!$region)
+            if (!$region) {
                 $region = self::router()->getFunction();
-            if(!$region)
+            }
+            if (!$region) {
                 $region = self::router()->getRoutePart(1);
+            }
             return $region;
         }   // end function getRegion()
-        
     } // class CAT_Backend_Settings
 } // if class_exists()

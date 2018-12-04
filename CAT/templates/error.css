@@ -1,0 +1,17 @@
+.cat-alert{position:absolute;z-index:999;top:0;left:0;right:0;background-color:#fcf8e3;color:#c00;text-align:center;font:bold 12px/30px sans-serif;box-shadow:0 5px 0 hsla(0,0%,0%,.1);min-height:40px;padding:10px 5px 5px 5px;top:-100px;-webkit-animation:cat-alert 1s ease forwards;-moz-animation:cat-alert 1s ease forwards;-ms-animation:cat-alert 1s ease forwards;-o-animation:cat-alert 1s ease forwards;animation:cat-alert 1s ease forwards;}
+.cat-alert:hover:after{background:hsla(0,0%,0%,.8);border-radius:3px;color:#f6f6f6;content:"<?php echo \CAT\Base::lang()->t('Click to dismiss') ?>";height:30px;left:50%;margin-left:-150px;position:absolute;text-align:center;top:50px;width:220px;}
+.cat-alert:hover:before{border-bottom:10px solid hsla(0,0%,0%,.8);border-left:10px solid transparent;border-right:10px solid transparent;content:"";height:0;left:50%;margin-left:-50px;position:absolute;top:40px;width:0;}
+.cat-alert.hide{animation:dismiss-cat-alert 1s ease forwards;}
+
+/* Animation */
+@keyframes cat-alert {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { top: 0; }
+}
+@keyframes dismiss-cat-alert {
+  0% {top:0}
+  50% {opacity:.5}
+  100% {top:-100px;opacity:0;}
+}
+

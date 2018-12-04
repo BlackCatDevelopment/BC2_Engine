@@ -17,14 +17,14 @@
 
 
 namespace CAT;
+
 use \CAT\Base as Base;
 
-if (!class_exists('\CAT\Roles'))
-{
+if (!class_exists('\CAT\Roles')) {
     class Roles extends Base
     {
-        protected        $roles    = array();
-        protected static $instance = NULL;
+        protected $roles    = array();
+        protected static $instance = null;
         protected static $loglevel = \Monolog\Logger::EMERGENCY;
 
         /**
@@ -33,7 +33,7 @@ if (!class_exists('\CAT\Roles'))
          * @access public
          * @return object
          **/
-        public function __construct($id=NULL)
+        public function __construct($id=null)
         {
             parent::__construct();
             $this->initRoles();
@@ -44,8 +44,9 @@ if (!class_exists('\CAT\Roles'))
          **/
         public static function getInstance()
         {
-            if(!is_object(self::$instance))
+            if (!is_object(self::$instance)) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -54,7 +55,7 @@ if (!class_exists('\CAT\Roles'))
          * @access public
          * @return
          **/
-        public function addRole($name,$description)
+        public function addRole($name, $description)
         {
             $sth = self::db()->query(
                    'INSERT INTO `:prefix:rbac_roles` ( `title`, `description` ) '
@@ -71,11 +72,16 @@ if (!class_exists('\CAT\Roles'))
          **/
         public function exists($item)
         {
-            if(!$this->roles) $this->initRoles();
-            foreach($this->roles as $role)
-            {
-                if(is_numeric($item)  && $role['role_id'] == $item) return true;
-                if(!is_numeric($item) && strcasecmp($role['title'],$item)===0) return true;
+            if (!$this->roles) {
+                $this->initRoles();
+            }
+            foreach ($this->roles as $role) {
+                if (is_numeric($item)  && $role['role_id'] == $item) {
+                    return true;
+                }
+                if (!is_numeric($item) && strcasecmp($role['title'], $item)===0) {
+                    return true;
+                }
             }
             return false;
         }   // end function exists()
@@ -97,10 +103,13 @@ if (!class_exists('\CAT\Roles'))
          **/
         public function getRole($id)
         {
-            if(!$this->roles) $this->initRoles();
-            foreach($this->roles as $role)
-            {
-                if($role['role_id'] == $id) return $role;
+            if (!$this->roles) {
+                $this->initRoles();
+            }
+            foreach ($this->roles as $role) {
+                if ($role['role_id'] == $id) {
+                    return $role;
+                }
             }
             return false;
         }   // end function getRole()
@@ -121,12 +130,12 @@ if (!class_exists('\CAT\Roles'))
          * @param  array   $opt - optional options array
          * @return array
          **/
-        public static function getRoles($opt=NULL)
+        public static function getRoles($opt=null)
         {
-            if(is_array($opt))
-            {
-                if(!isset($opt['for']) || !in_array($opt['for'],array('user','group')))
+            if (is_array($opt)) {
+                if (!isset($opt['for']) || !in_array($opt['for'], array('user','group'))) {
                     return false;
+                }
 
                 $table = $opt['for'];
                 $query = 'SELECT * '
@@ -136,26 +145,24 @@ if (!class_exists('\CAT\Roles'))
                        ;
                 $query_options = array();
 
-                if(isset($opt['user_id']) && strlen($opt['user_id']))
-                {
+                if (isset($opt['user']) && strlen($opt['user'])) {
                     $query .= 'WHERE t1.`'.$table.'_id`=:id';
-                    $query_options = array('id'=>$opt['user_id']);
+                    $query_options = array('id'=>$opt['user']);
                 }
-                if(isset($opt['group_id']) && strlen($opt['group_id']))
-                {
+                if (isset($opt['group']) && strlen($opt['group'])) {
                     $query .= 'WHERE t1.`'.$table.'_id`=:id';
-                    $query_options = array('id'=>$opt['group_id']);
+                    $query_options = array('id'=>$opt['group']);
                 }
-                if(isset($opt['role_id']) && strlen($opt['role_id']))
-                {
+                if (isset($opt['role_id']) && strlen($opt['role_id'])) {
                     $query .= 'WHERE t2.`role_id`=:id';
                     $query_options = array('id'=>$opt['role_id']);
                 }
 
                 $sth = self::db()->query(
-                    sprintf($query,$table),
+                    sprintf($query, $table),
                     $query_options
                 );
+
                 return $sth->fetchAll(\PDO::FETCH_ASSOC);
             } else {
                 $query = 'SELECT * FROM `:prefix:rbac_roles`';
@@ -187,8 +194,11 @@ if (!class_exists('\CAT\Roles'))
                 'DELETE FROM `:prefix:rbac_roles` WHERE `role_id`=:id',
                 array('id'=>$id)
             );
-            if(!$dbh->isError()) return true;
-            else                 return false;
+            if (!$dbh->isError()) {
+                return true;
+            } else {
+                return false;
+            }
         }   // end function removeRole()
 
         /**
@@ -196,15 +206,18 @@ if (!class_exists('\CAT\Roles'))
          * @access public
          * @return
          **/
-        public function set($field,$value,$id)
+        public function set($field, $value, $id)
         {
             $dbh  = self::db();
             $sth  = $dbh->query(
                 'UPDATE `:prefix:rbac_roles` SET `:fieldname:`=:value WHERE `role_id`=:id',
                 array('fieldname'=>$field,'value'=>$value,'id'=>$id)
             );
-            if(!$dbh->isError()) return true;
-            else                 return false;
+            if (!$dbh->isError()) {
+                return true;
+            } else {
+                return false;
+            }
         }   // end function set()
 
         /**
@@ -222,7 +235,5 @@ if (!class_exists('\CAT\Roles'))
             );
             $this->roles = $sth->fetchAll(\PDO::FETCH_ASSOC);
         }   // end function initRoles()
-
     } // class Roles
-
 } // if class_exists()

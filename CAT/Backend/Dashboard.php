@@ -24,11 +24,10 @@ use \CAT\Helper\Json as Json;
 use \CAT\Helper\Validate as Validate;
 use \CAT\Helper\Widget as Widget;
 
-if(!class_exists('\CAT\Backend\Dashboard'))
-{
+if (!class_exists('\CAT\Backend\Dashboard')) {
     class Dashboard extends Base
     {
-        protected static $instance = NULL;
+        protected static $instance = null;
         protected static $loglevel = \Monolog\Logger::EMERGENCY;
         protected static $debug    = true;
         //protected static $loglevel = \Monolog\Logger::DEBUG;
@@ -40,8 +39,9 @@ if(!class_exists('\CAT\Backend\Dashboard'))
          **/
         public static function getInstance()
         {
-            if(!is_object(self::$instance))
+            if (!is_object(self::$instance)) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -50,16 +50,18 @@ if(!class_exists('\CAT\Backend\Dashboard'))
          * @access public
          * @return
          **/
-        public static function add($dash=NULL)
+        public static function add($dash=null)
         {
             // validate path
-            if(!$dash)
-                $dash = self::getDashID();
+            if (!$dash) {
+                $dash = self::getItemID('dash_id');
+            }
             // check if dashboard exists
-            if(!HDash::exists($dash))
+            if (!HDash::exists($dash)) {
                 echo Json::printError('no such dashboard');
+            }
             $widget = Validate::sanitizePost('widget_id');
-            $result = HDash::addWidget($widget,$dash);
+            $result = HDash::addWidget($widget, $dash);
             echo Json::printSuccess('ok');
         }   // end function add()
 
@@ -73,37 +75,6 @@ if(!class_exists('\CAT\Backend\Dashboard'))
             $page = Validate::sanitizePost('page');
             HDash::getDashboard($page);
         }   // end function getDashboard()
-        
-        /**
-         * tries to retrieve 'page_id' by checking (in this order):
-         *
-         *    - $_POST['page_id']
-         *    - $_GET['page_id']
-         *    - Route param['page_id']
-         *
-         * also checks for numeric value
-         *
-         * @access private
-         * @return integer
-         **/
-        public static function getDashID()
-        {
-            $dashID  = Validate::sanitizePost('dash_id','numeric');
-
-            if(!$dashID)
-                $dashID  = Validate::sanitizeGet('dash_id','numeric');
-
-            if(!$dashID)
-                $dashID = self::router()->getParam(-1);
-
-            if(!$dashID)
-                $dashID = self::router()->getRoutePart(-1);
-
-#            if(!$dashID || !is_numeric($dashID) || !HPage::exists($dashID))
-#                $dashID = NULL;
-
-            return intval($dashID);
-        }   // end function getDashID()
 
         /**
          * show dashboard; if no path is given, will try to resolve the
@@ -114,59 +85,52 @@ if(!class_exists('\CAT\Backend\Dashboard'))
          * @access public
          * @return
          **/
-        public static function index($path=NULL)
+        public static function index($path=null)
         {
             // validate path
-            if(!$path)
+            if (!$path) {
                 $path = self::router()->getRoute();
+            }
             $dash = HDash::getDashboardID($path);
 
             // check if dashboard exists
-            if(!HDash::exists($dash))
-            {
-                if($path)
-                {
+            if (!HDash::exists($dash)) {
+                if ($path) {
                     HDash::saveDashboardConfig(
-                        NULL,
+                        null,
                         self::user()->getID(),
                         $path,
                         2
                     );
-                }
-                else
-                {
-                    self::log()->addAlert(sprintf('No such dashboard! [id: %d; path: %s]',$dash,$path));
+                } else {
+                    self::log()->addAlert(sprintf('No such dashboard! [id: %d; path: %s]', $dash, $path));
                     self::printFatalError('Access denied');
                 }
             }
 
             // forward query data to widget
             $query   = self::router()->getQuery();
-            if($query)
-            {
+            if ($query) {
                 // widget id?
-                if(isset($query['widget']))
-                {
+                if (isset($query['widget'])) {
                     // check if widget exists
-                    if(Widget::exists($query['widget']))
-                    {
+                    if (Widget::exists($query['widget'])) {
                         // check if widget is visible on current dashboard
-                        if(Widget::isOnDashboard($query['widget'],$dash))
-                        {
+                        if (Widget::isOnDashboard($query['widget'], $dash)) {
                             // forward
                             $widget = Widget::getWidget($query['widget']);
-                            Widget::handleCall($widget,$query);
+                            Widget::handleCall($widget, $query);
                         }
                     }
                 }
-/*
-Array
-(
-    [widget] => 3
-    [widget_logs_file] => core_CAT_User_01-18-2017.log
-    [_] => 1485528661687
-)
-*/
+                /*
+                Array
+                (
+                    [widget] => 3
+                    [widget_logs_file] => core_CAT_User_01-18-2017.log
+                    [_] => 1485528661687
+                )
+                */
             }
 
             // get the template contents
@@ -179,6 +143,7 @@ Array
                 ),
                 'MAIN_MENU' => Backend::getMainMenu(),
             );
+
 
             Backend::printHeader();
             self::tpl()->output('backend_dashboard', $tpl_data);
@@ -197,11 +162,14 @@ Array
             $id   = Validate::sanitizePost('id');
             $col  = Validate::sanitizePost('col');
             $pos  = Validate::sanitizePost('row');
-            if(!$col>0) $col = 1;
-            if(!$pos>0) $pos = 1;
+            if (!$col>0) {
+                $col = 1;
+            }
+            if (!$pos>0) {
+                $pos = 1;
+            }
             
-            if($dash)
-            {
+            if ($dash) {
                 // update position
                 self::db()->query(
                     'UPDATE `:prefix:dashboard_has_widgets` SET `column`=?, `position`=? WHERE `dashboard_id`=? AND `widget_id`=?',
@@ -209,7 +177,10 @@ Array
                 );
                 self::log()->addDebug(sprintf(
                     'updated dash [%s] widget [%s] col [%s] pos [%s]',
-                    $dash,$id,$col,$pos
+                    $dash,
+                    $id,
+                    $col,
+                    $pos
                 ));
                 // update order
                 self::db()->query(
@@ -230,55 +201,48 @@ Array
                     array($pos,$col,$pos,$id,$dash)
                 );
                 $result = Json::printSuccess('ok');
-            }
-            else {
-                self::log()->addWarn(sprintf('no such dashboard: [%s]',$dash));
+            } else {
+                self::log()->addWarn(sprintf('no such dashboard: [%s]', $dash));
                 $result = Json::printError('not ok');
             }
 
-            if(self::asJSON())
-            {
+            if (self::asJSON()) {
                 echo header('Content-Type: application/json');
                 echo $result;
                 return;
             }
         }   // end function order()
 
-        public static function reload($dash=NULL)
+        public static function reload($dash=null)
         {
             // validate path
-            if(!$dash)
-            {
+            if (!$dash) {
                 // remove "reload" from route
                 $route = self::router()->getRoute();
-                $route = preg_replace('~\/reload$~i','',$route);
+                $route = preg_replace('~\/reload$~i', '', $route);
                 $dash  = HDash::getDashboardID($route);
             }
             // check if dashboard exists
-            if(!HDash::exists($dash))
+            if (!HDash::exists($dash)) {
                 echo Json::printError('Invalid data')
                    . (self::$debug ? '(Backend_Dashboard::reload())' : '');
+            }
             $widget = Validate::sanitizePost('widget_id');
             // check if widget exists
-            if(Widget::exists($widget))
-            {
+            if (Widget::exists($widget)) {
                 // check if widget is visible on current dashboard
-                if(Widget::isOnDashboard($widget,$dash))
-                {
+                if (Widget::isOnDashboard($widget, $dash)) {
                     // forward
                     $widget  = Widget::getWidget($widget);
-                    $content = Widget::execute($widget,$dash);
-                    if(self::asJSON())
-                    {
+                    $content = Widget::execute($widget, $dash);
+                    if (self::asJSON()) {
                         echo header('Content-Type: application/json');
                         echo Json::printSuccess($content);
                         return;
                     } else {
-
                     }
                 }
             }
-
         }
 
         /**
@@ -286,17 +250,19 @@ Array
          * @access public
          * @return
          **/
-        public static function remove($dash=NULL)
+        public static function remove($dash=null)
         {
             // validate path
-            if(!$dash)
-                $dash = self::getDashID();
+            if (!$dash) {
+                $dash = self::getItemID('dash_id');
+            }
             // check if dashboard exists
-            if(!HDash::exists($dash))
+            if (!HDash::exists($dash)) {
                 echo Json::printError('Invalid data')
                    . (self::$debug ? '(Backend_Dashboard::remove())' : '');
+            }
             $widget = Validate::sanitizePost('widget_id');
-            HDash::removeWidget($widget,$dash);
+            HDash::removeWidget($widget, $dash);
             echo Json::printSuccess('ok');
         }   // end function remove()
 
@@ -305,15 +271,17 @@ Array
          * @access public
          * @return
          **/
-        public static function reset($dash=NULL)
+        public static function reset($dash=null)
         {
             // validate path
-            if(!$dash)
-                $dash = self::getDashID();
+            if (!$dash) {
+                $dash = self::getItemID('dash_id');
+            }
             // check if dashboard exists
-            if(!HDash::exists($dash))
+            if (!HDash::exists($dash)) {
                 echo Json::printError('Invalid data')
                    . (self::$debug ? '(Backend_Dashboard::reset())' : '');
+            }
             // remove current settings
             self::db()->query(
                 'DELETE FROM `:prefix:dashboard_has_widgets` WHERE `dashboard_id`=?',
@@ -323,11 +291,9 @@ Array
                 'DELETE FROM `:prefix:dashboard_widget_data` WHERE `dashboard_id`=?',
                 array($dash)
             );
-            if(self::asJSON())
-            {
+            if (self::asJSON()) {
                 echo Json::printSuccess('success');
             }
-
         }   // end function reset()
 
         /**
@@ -340,19 +306,16 @@ Array
             $id   = Validate::sanitizePost('id');
             $vis  = Validate::sanitizePost('vis');
             $dash = Validate::sanitizePost('dashboard');
-            if($dash)
-            {
+            if ($dash) {
                 self::db()->query(
                     'UPDATE `:prefix:dashboard_has_widgets` SET `open`=? WHERE `dashboard_id`=? AND `widget_id`=?',
                     array($vis,$dash,$id)
                 );
                 $result = Json::printSuccess('ok');
-            }
-            else {
+            } else {
                 $result = Json::printError('not ok');
             }
-            if(self::asJSON())
-            {
+            if (self::asJSON()) {
                 echo header('Content-Type: application/json');
                 echo $result;
                 return;
@@ -367,26 +330,28 @@ Array
          * @param  mixed  $dash - id or dashboard path
          * @return mixed
          **/
-        public static function widgets($dash=NULL)
+        public static function widgets($dash=null)
         {
             // validate path
-            if(!$dash)
-                $dash = self::getDashID();
+            if (!$dash) {
+                $dash = self::getItemID('dash_id');
+            }
             // check if dashboard exists
-            if(!HDash::exists($dash))
+            if (!HDash::exists($dash)) {
                 echo Json::printError('No such dashboard id: '.$dash);
+            }
             // get list of widgets the user is allowed to see
             $all  = Widget::getAllowed();
             // get list of widgets already an the dashboard
             $vis  = HDash::renderDashboard($dash);
             // filter array $all
-            $diff = array_diff(array_column($all,'widget_id'),array_column($vis,'widget_id'));
+            $diff = array_diff(array_column($all, 'widget_id'), array_column($vis, 'widget_id'));
 
             $result = array_filter(
                 $all,
-                function ($e) use($diff) {
+                function ($e) use ($diff) {
                     return (
-                        in_array($e['widget_id'],$diff)
+                        in_array($e['widget_id'], $diff)
                         ? true
                         : false
                     );
@@ -394,8 +359,5 @@ Array
             );
             echo Json::printSuccess(array_values($result));
         }   // end function widgets()
-        
-        
     } // class HDash
-
 } // if class_exists()

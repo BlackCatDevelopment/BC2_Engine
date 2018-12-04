@@ -258,6 +258,7 @@ $directories[] = $name;
                 'recurse'       => false, // recurse or not
                 'remove_prefix' => false, // prefix to remove from path
                 'remove_suffix' => false, // suffix to remove from path
+                'as_uri'        => false, // converts paths to URLs
             ), $options);
 
 
@@ -355,7 +356,13 @@ $directories[] = $name;
                         if(self::$debug) self::$trace[] = sprintf(
                             'adding file [%s]', $filename
                         );
-                        $files[] = $filename;
+
+                        $files[] = (
+                            $options['as_uri'] === true
+                            ? \CAT\Helper\Validate::path2uri($filename)
+                            : $filename
+                        );
+
                     } else {
                         if(is_dir($curr_item) && $options['recurse']===true && $options['curr_depth']<$options['max_depth']) {
                             $files = array_merge($files, self::findFiles($curr_item,$options));

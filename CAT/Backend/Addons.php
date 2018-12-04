@@ -87,8 +87,10 @@ if (!class_exists('\CAT\Backend\Addons'))
          **/
         public static function catalog()
         {
-            if(!file_exists(CAT_ENGINE_PATH."/temp/catalog.json"))
-            {
+            if(
+                   !file_exists(CAT_ENGINE_PATH."/temp/catalog.json")
+                || self::router()->getRoutePart(-1) == 'update'
+            ) {
                 self::updateCatalog();
             }
             $catalog = self::getCatalog();
@@ -98,20 +100,24 @@ if (!class_exists('\CAT\Backend\Addons'))
             $installed = array();
             foreach($modules as $i => $m) {
                 if(isset($m['version'])) {
-                    $installed[$m['directory']] = $m['version'];
+                    $installed[$m['directory']] = $m;
                 }
             }
+
             // find installed in catalog
             foreach($catalog['modules'] as $i => $m)
             {
                 $catalog['modules'][$i]['upgradable']   = false;
+                $catalog['modules'][$i]['removable']    = false;
                 $catalog['modules'][$i]['is_installed'] = false;
 
                 if(isset($installed[$m['directory']]))
                 {
                     $catalog['modules'][$i]['is_installed'] = true;
-                    $catalog['modules'][$i]['installed_version'] = $installed[$m['directory']];
-                    if(version_compare($m['version'],$installed[$m['directory']],'>'))
+                    $catalog['modules'][$i]['removable']    =
+                        ( $installed[$m['directory']]['removable'] == 'N' ? false : true );
+                    $catalog['modules'][$i]['installed_version'] = $installed[$m['directory']]['version'];
+                    if(version_compare($m['version'],$installed[$m['directory']]['version'],'>'))
                     {
                         $catalog['modules'][$i]['upgradable'] = true;
                     }
@@ -122,8 +128,8 @@ if (!class_exists('\CAT\Backend\Addons'))
                 }
                 // get description for current language
                 if(isset($m['description'])) {
-                    if(isset($m['description'][LANGUAGE]['title'])) {
-                        $catalog['modules'][$i]['description'] = $m['description'][LANGUAGE]['title'];
+                    if(isset($m['description'][strtolower(LANGUAGE)]['title'])) {
+                        $catalog['modules'][$i]['description'] = $m['description'][strtolower(LANGUAGE)]['title'];
                     } elseif(isset($m['description']['en']['title'])) {
                         $catalog['modules'][$i]['description'] = $m['description']['en']['title'];
                     } else {
@@ -149,9 +155,11 @@ if (!class_exists('\CAT\Backend\Addons'))
                 exit();
             }
 
+            $catalog['modules'] = \CAT\Helper\HArray::sort($catalog['modules'],'name');
             $tpl_data = array(
                 'modules'      => $catalog['modules'],
                 'current'      => 'catalog',
+                'version'      => $catalog['version'],
             );
 
             Backend::printHeader();
@@ -166,12 +174,14 @@ if (!class_exists('\CAT\Backend\Addons'))
          **/
         public static function create()
         {
-            if(!self::user()->hasPerm('addons_create'))
+            if(!self::user()->hasPerm('addons_create')) {
                 self::printFatalError('You are not allowed for the requested action!');
+            }
+            $known_types = array_combine(self::$known_types,self::$known_types);
 
             $form = FormBuilder::generateForm('be_addon_create');
             $form->setAttribute('action',CAT_ADMIN_URL.'/addons/create');
-            $form->getElement('addon_type')->setData(self::$known_types);
+            $form->getElement('addon_type')->setData($known_types);
 
             // form already sent?
             if($form->isSent())
@@ -181,23 +191,75 @@ if (!class_exists('\CAT\Backend\Addons'))
                 {
                     // save data
                     $data = $form->getData();
-                    // create database entry
-                    self::db()->query(
-                          'INSERT INTO `:prefix:addons` '
-                        . '(`type`,`directory`,`name`,`installed`,`upgraded`,`removable`,`bundled`) '
-                        . 'VALUES (?,?,?,?,?,"Y","N")',
-                        array(
-                            strtolower(self::$known_types[$data['addon_type']]),
-                            $data['addon_directory'],
-                            $data['addon_name'],
-                            time(),
-                            time(),
-                        )
-                    );
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: Create folder and default files
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    self::router()->reroute(CAT_BACKEND_PATH.'/addons');
+                    if(is_dir(CAT_ENGINE_PATH.'/modules/'.$data['addon_directory'])) {
+                        $form->addError('There already exists a directory with this name');
+                    } else {
+                        $data['addon_type'] = strtolower($data['addon_type']);
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!! TODO: sanitize addon_directory (don't allow umlauts, diacritics, ...)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        // create database entry
+                        self::db()->query(
+                              'INSERT INTO `:prefix:addons` '
+                            . '(`type`,`directory`,`name`,`installed`,`upgraded`,`removable`,`bundled`) '
+                            . 'VALUES (?,?,?,?,?,"Y","N")',
+                            array(
+                                $data['addon_type'],
+                                $data['addon_directory'],
+                                $data['addon_name'],
+                                time(),
+                                time(),
+                            )
+                        );
+
+                        if(self::db()->isError()===false) {
+                            if($data['addon_type']!='language') {
+                                $basedir = CAT_ENGINE_PATH.'/modules/'.$data['addon_directory'];
+                                Directory::createDirectory($basedir);
+                                Directory::createDirectory($basedir.'/inc');
+                                if($data['addon_type']!='library' && $data['addon_type']!='wysiwyg') {
+                                    Directory::createDirectory($basedir.'/css');
+                                    Directory::createDirectory($basedir.'/js');
+                                    Directory::createDirectory($basedir.'/templates');
+                                    Directory::createDirectory($basedir.'/templates/default');
+                                    if($data['addon_type']=='page') {
+                                        $data['for']='frontend';
+                                    } elseif($data['addon_type']=='tool') {
+                                        $data['for']='backend';
+                                    }
+                                    if(isset($data['for'])) {
+                                        foreach(array_values(array('headers','footers')) as $pos) {
+                                            $tpl = self::tpl()->get(
+                                                CAT_ENGINE_PATH.'/CAT/templates/headers_and_footers_inc.tpl',
+                                                array_merge(
+                                                    array(
+                                                        'position' => $pos,
+                                                    ),
+                                                    $data
+                                                )
+                                            );
+                                            $fh = fopen($basedir.'/inc/'.$pos.'.inc.php','w');
+                                            fwrite($fh,'<'.'?'.'php'."\n");
+                                            fwrite($fh,$tpl);
+                                            fclose($fh);
+                                        }
+                                    }
+                                }
+                            } else {
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!! TODO: check language shortcut
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                $basedir = CAT_ENGINE_PATH.'/languages';
+                                $file    = $data['addon_directory'];
+                                $fh = fopen($basedir.'/'.$file.'.php','w');
+                                fwrite($fh,'<'.'?'.'php'."\n");
+                                fwrite($fh,'$LANG = array('."\n");
+                                fwrite($fh,');'."\n");
+                                fclose($fh);
+                            }
+                        }
+                    }
+                    $form->setInfo('The module was created.');
                 }
             }
 
@@ -336,7 +398,7 @@ if (!class_exists('\CAT\Backend\Addons'))
          **/
         private static function updateCatalog()
         {
-            $ch   = GitHub::init_curl(GITHUB_CATALOG_LOCATION);
+            $ch   = GitHub::init_curl(\CAT\Registry::get('github_catalog_location'));
             $data = curl_exec($ch);
             if(curl_error($ch))
             {

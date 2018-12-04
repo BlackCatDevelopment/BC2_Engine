@@ -22,7 +22,6 @@ use \CAT\Helper\Directory as Directory;
 use \CAT\Helper\DB\CPDOExceptionHandler as CPDOExceptionHandler;
 
 use Doctrine\Common\ClassLoader as ClassLoader;
-require dirname(__FILE__).'/../../modules/lib_doctrine/Doctrine/Common/ClassLoader.php';
 
 if(!class_exists('DB'))
 {
@@ -37,7 +36,7 @@ if(!class_exists('DB'))
         private static $conn_failed = false;
 
         private $lasterror          = NULL;
-        private $classLoader        = NULL;
+        #private $classLoader        = NULL;
 
         /**
          * constructor; initializes Doctrine ClassLoader and sets up a database
@@ -49,11 +48,11 @@ if(!class_exists('DB'))
     	public function __construct($opt=array())
         {
             self::$prefix = defined('CAT_TABLE_PREFIX') ? CAT_TABLE_PREFIX : '';
-            if(!$this->classLoader)
-            {
-                $this->classLoader = new ClassLoader('Doctrine', dirname(__FILE__).'/../../modules/lib_doctrine');
-                $this->classLoader->register();
-            }
+            #if(!$this->classLoader)
+            #{
+            #    $this->classLoader = new ClassLoader('Doctrine', CAT_ENGINE_PATH.'/vendor/doctrine');
+            #    $this->classLoader->register();
+            #}
             $this->connect($opt);
         }   // end function __construct()
 
@@ -512,7 +511,7 @@ if(!class_exists('DB'))
         public function getError()
         {
             // show detailed error message only to global admin
-            #if(User::is_authenticated() && User::is_root())
+            #if(User::isAuthenticated() && User::isRoot())
             return $this->lasterror;
             #else
             #    return "An internal error occured. We're sorry for inconvenience.";

@@ -235,7 +235,7 @@ if (!class_exists('\CAT\Page', false)) {
             // check if user is allowed to see this page
             if (!self::user()->isRoot()) {
                 // global perm
-                if (!self::user()->hasPagePerm($this->page_id, 'pages_view')) {
+                if (!HPage::isVisible($this->page_id)) {
                     self::log()->addError(sprintf(
                         'User with ID [%s] tried to view page [%d], but does not have the pages_view permission',
                         self::user()->getID(),

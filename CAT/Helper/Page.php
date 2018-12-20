@@ -545,6 +545,22 @@ if (!class_exists('Page'))
          * @access public
          * @return
          **/
+        public static function getVisibilityID(string $vis)
+        {
+            self::getVisibilities();
+            foreach(self::$visibilities as $id => $name) {
+                if($name==$vis) {
+                    return $id;
+                }
+            }
+            return 4;
+        }   // end function getVisibilityID()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
         public static function getVisibilities()
         {
             if(!count(self::$visibilities))
@@ -702,6 +718,16 @@ if (!class_exists('Page'))
             }
             return NULL;
         }   // end function properties()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function reload()
+        {
+            self::init(true);
+        }   // end function reload()
 
 
         /**

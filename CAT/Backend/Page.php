@@ -183,10 +183,17 @@ if (!class_exists('Page')) {
                 self::printFatalError('You are not allowed for the requested action!');
             }
 
-            self::db()->query(
-                'DELETE FROM `:prefix:pages` WHERE `page_id`=?',
-                array($pageID)
-            );
+            if (self::getSetting('trash_enabled')!==true) {
+                self::db()->query(
+                    'DELETE FROM `:prefix:pages` WHERE `page_id`=?',
+                    array($pageID)
+                );
+            } else {
+                self::db()->query(
+                    'UPDATE `:prefix:pages` SET `page_visibility`=? WHERE `page_id`=?',
+                    array(HPage::getVisibilityID('deleted'), $pageID)
+                );
+            }
 
             if (self::asJSON()) {
                 echo Json::printSuccess('Page deleted');
@@ -204,7 +211,6 @@ if (!class_exists('Page')) {
          **/
         public static function edit()
         {
-            //$pageID  = self::getPageID();
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
 
             // the user needs to have the global pages_edit permission plus
@@ -546,19 +552,6 @@ if (!class_exists('Page')) {
 
             $pages = HPage::getPages(true);
 
-            /*
-                        $lang  = self::router()->getRoutePart(-1);
-                        if($lang && !in_array($lang,array('page','index','list')))
-                        {
-                            $addon = Addons::getDetails($lang);
-                            if(!$addon || !is_array($addon) || !isset($addon['type']) || !$addon['type'] == 'language')
-                            {
-                                self::printFatalError('Invalid data! (Page::list())');
-                            }
-                            $pages = HPage::getPagesForLanguage($lang);
-                        }
-            */
-
             if (!$as_array && self::asJSON()) {
                 echo header('Content-Type: application/json');
                 echo json_encode($pages, true);
@@ -567,6 +560,34 @@ if (!class_exists('Page')) {
 
             return $pages;
         }   // end function list()
+
+        /**
+         * recover a page marked as "deleted"
+         *
+         * @access public
+         * @return
+         **/
+        public static function recover()
+        {
+            $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
+
+            if (!self::user()->hasPerm('pages_recover')) {
+                Json::printError('You are not allowed for the requested action!');
+            }
+
+            self::db()->query(
+                'UPDATE `:prefix:pages` SET `page_visibility`=? WHERE `page_id`=?',
+                array(HPage::getVisibilityID('hidden'), $pageID)
+            );
+
+            if (self::asJSON()) {
+                echo Json::printSuccess('Page recovered');
+                exit;
+            }
+
+            HPage::reload();
+            return self::router()->reroute(CAT_BACKEND_PATH.'/pages');
+        }   // end function recover()
 
         /**
          *
@@ -647,7 +668,6 @@ if (!class_exists('Page')) {
          **/
         public static function save()
         {
-            //$pageID  = self::getPageID();
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
 
             // the user needs to have the global pages_edit permission plus

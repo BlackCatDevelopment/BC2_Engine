@@ -138,6 +138,10 @@ if (!class_exists('Backend', false)) {
                 // remove menu items not accessible to current user
                 for($i=count(self::$menu)-1;$i>=0;$i--) {
                     if(!self::user()->hasPerm(self::$menu[$i]['name'])) {
+                        self::log()->addDebug(sprintf(
+                            'removing item [%s] (missing permission)',
+                            self::$menu[$i]['name']
+                        ));
                         unset(self::$menu[$i]);
                     }
                 }
@@ -184,6 +188,8 @@ if (!class_exists('Backend', false)) {
                 $menu = HArray::filter($menu, 'parent', $parent);
                 return $menu;
             }
+
+            self::log()->addDebug('remaining menu items: '.print_r(self::$menu, 1));
 
             return self::$menu;
         }   // end function getMainMenu()

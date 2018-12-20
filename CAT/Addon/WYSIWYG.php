@@ -86,7 +86,7 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
                     $c      = self::db()->conn();
                     foreach($contents as $item)
                     {
-                        $attr = (isset($item['attribute']) ? $item['attribute'] : null);
+                        $attr = (isset($item['attribute']) ? $item['attribute'] : ''  );
                         $col  = (isset($item['column'])    ? $item['column']    : 1   );
 
                         if(isset($curr_data[$col])) {
@@ -109,19 +109,18 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
                             $qb->execute();
 
                         } else {
-
                             $qb = \CAT\Helper\DB::qb()
                                       ->insert(sprintf('%smod_wysiwyg',CAT_TABLE_PREFIX))
                                       ->setValue($c->quoteIdentifier('section_id'),'?')
+                                      ->setValue($c->quoteIdentifier('column'),'?')
                                       ->setValue($c->quoteIdentifier('content'),'?')
                                       ->setValue($c->quoteIdentifier('text'),'?')
                                       ->setParameter(0,$section_id)
-                                      ->setParameter(1,$item['content'])
-                                      ->setParameter(2,strip_tags($item['content']))
+                                      ->setparameter(1,$col)
+                                      ->setParameter(2,$item['content'])
+                                      ->setParameter(3,strip_tags($item['content']))
                                       ;
-
                             $qb->execute();
-
                         }
 
                         if(self::db()->isError())

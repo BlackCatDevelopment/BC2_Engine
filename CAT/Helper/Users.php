@@ -166,6 +166,19 @@ if ( ! class_exists( 'Users', false ) )
         }   // end function isOwner()
 
         /**
+         *
+         * @access public
+         * @return
+         **/
+        public function isRoot()
+        {
+            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+                return false;
+            }
+            return self::$curruser->isRoot();
+        }   // end function isRoot()
+
+        /**
          * delete a user
          *
          * @access public
@@ -338,12 +351,15 @@ if ( ! class_exists( 'Users', false ) )
                         array(time(), $_SERVER['REMOTE_ADDR'], $token, $uid)
                     );
                     self::$curruser = new \CAT\Objects\User($uid);
+                    $lifetime = time()+ini_get('session.gc_maxlifetime');
                     setcookie(
                         self::getCookieName(),
                         $token,
-                        time()+ini_get('session.gc_maxlifetime'),
+                        $lifetime,
                         '/',
-                        CAT_SITE_URL
+                        CAT_SITE_URL,
+                        true,
+                        true
                     );
                     return $token;
                 } else {

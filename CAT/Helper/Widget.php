@@ -134,12 +134,16 @@ Array
             {
                 // get the user's groups
                 $groups = self::user()->getGroups(1);
-                $query->andWhere(
-                    $query->expr()->orX(
-                        'needed_group IS NULL',
-                        'needed_group IN (:ids)'
-                    )
-                )->setParameter('ids', array_values($groups), \Doctrine\DBAL\Connection::PARAM_STR_ARRAY);
+                if(is_array($groups) && count($groups)>0) {
+                    $query->andWhere(
+                        $query->expr()->orX(
+                            'needed_group IS NULL',
+                            'needed_group IN (:ids)'
+                        )
+                    )->setParameter('ids', array_values($groups), \Doctrine\DBAL\Connection::PARAM_STR_ARRAY);
+                } else {
+                    $query->andWhere('needed_group IS NULL');
+                }
             }
 
             $sth = $query->execute();

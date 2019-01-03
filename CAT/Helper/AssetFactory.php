@@ -16,6 +16,7 @@
 */
 
 namespace CAT\Helper;
+
 use \CAT\Base as Base;
 use \CAT\Backend as Backend;
 use \CAT\Registry as Registry;
@@ -23,10 +24,9 @@ use \CAT\Helper\Assets as Assets;
 use \CAT\Helper\Page as HPage;
 use \CAT\Helper\Validate as Validate;
 
-if(!class_exists('AssetFactory'))
-{
+if (!class_exists('AssetFactory')) {
     class AssetFactory
-	{
+    {
         private static $ids = array();
         private $id   = null;
         private $js   = array('header'=>array(),'footer'=>array());
@@ -40,15 +40,15 @@ if(!class_exists('AssetFactory'))
         /**
          * output template for external stylesheets
          **/
-        private   static $css_tpl  = '%%condition_open%%<link rel="stylesheet" href="%%file%%" media="%%media%%" />%%condition_close%%';
+        private static $css_tpl  = '%%condition_open%%<link rel="stylesheet" href="%%file%%" media="%%media%%" />%%condition_close%%';
         /**
          * output template for external javascripts
          **/
-        private   static $js_tpl   = '%%condition_open%%<script type="text/javascript" src="%%file%%">%%code%%</script>%%condition_close%%';
+        private static $js_tpl   = '%%condition_open%%<script type="text/javascript" src="%%file%%">%%code%%</script>%%condition_close%%';
         /**
          * output template for meta tags
          **/
-        private   static $meta_tpl = '<meta %%content%% />';
+        private static $meta_tpl = '<meta %%content%% />';
 
         /**
          * Constructor
@@ -69,10 +69,11 @@ if(!class_exists('AssetFactory'))
          **/
         public static function getInstance($id=null)
         {
-            if(isset(self::$ids[$id]))
+            if (isset(self::$ids[$id])) {
                 return self::$ids[$id];
-            else
+            } else {
                 return new self($id);
+            }
         }   // end function getInstance()
         
 
@@ -81,12 +82,18 @@ if(!class_exists('AssetFactory'))
          * @access public
          * @return
          **/
-        public function addAsset($file,$parm)
+        public function addAsset($file, $parm)
         {
-            $type = pathinfo($file,PATHINFO_EXTENSION);
-            if($type=='css') $this->addCSS(Validate::path2uri($file));
-            if($type=='js')  $this->addJS(Validate::path2uri($file),$parm);
-            if($type=='php') Assets::addInclude($file,$parm);
+            $type = pathinfo($file, PATHINFO_EXTENSION);
+            if ($type=='css') {
+                $this->addCSS(Validate::path2uri($file));
+            }
+            if ($type=='js') {
+                $this->addJS(Validate::path2uri($file), $parm);
+            }
+            if ($type=='php') {
+                Assets::addInclude($file, $parm);
+            }
         }   // end function addAsset()
 
         /**
@@ -94,24 +101,26 @@ if(!class_exists('AssetFactory'))
          * @access public
          * @return
          **/
-        public function addCode($code,$pos='header',$after=null)
+        public function addCode($code, $pos='header', $after=null)
         {
             $index = null;
-            if(!strlen($pos))
+            if (!strlen($pos)) {
                 $pos = 'footer';
-            if(!isset($this->code[$pos]))
-                $this->code[$pos] = array();
-/*
-            if($after)
-            {
-                $index = array_search($after,$this->js[$pos]);
-#echo "INDEX: $index<br />";
-                if($index) {
-                    array_splice($this->js[$pos],$index,0,$file);
-                    return;
-                }
             }
-*/
+            if (!isset($this->code[$pos])) {
+                $this->code[$pos] = array();
+            }
+            /*
+                        if($after)
+                        {
+                            $index = array_search($after,$this->js[$pos]);
+            #echo "INDEX: $index<br />";
+                            if($index) {
+                                array_splice($this->js[$pos],$index,0,$file);
+                                return;
+                            }
+                        }
+            */
             $this->code[$pos][] = $code;
         }   // end function addCode()
 
@@ -131,13 +140,17 @@ if(!class_exists('AssetFactory'))
          * @access public
          * @return
          **/
-        public function addCSS($url,$media='screen')
+        public function addCSS($url, $media='screen')
         {
-            if(!strlen($media)) $media = 'screen';
-            if(!isset($this->css[$media]))
+            if (!strlen($media)) {
+                $media = 'screen';
+            }
+            if (!isset($this->css[$media])) {
                 $this->css[$media] = array();
-            if(!in_array($url,$this->css[$media]))
+            }
+            if (!in_array($url, $this->css[$media])) {
                 $this->css[$media][] = $url;
+            }
         }   // end function addCSS()
 
         /**
@@ -155,21 +168,21 @@ if(!class_exists('AssetFactory'))
          * @access public
          * @return
          **/
-        public function addJS($file,$pos='header',$after=null)
+        public function addJS($file, $pos='header', $after=null)
         {
             $index = null;
-            if(!strlen($pos))
+            if (!strlen($pos)) {
                 $pos = 'footer';
-            if(!isset($this->js[$pos]))
+            }
+            if (!isset($this->js[$pos])) {
                 $this->js[$pos] = array();
-            if(!in_array($file,$this->js[$pos]))
-            {
-                if($after)
-                {
-                    $index = array_search($after,$this->js[$pos]);
-#echo "INDEX: $index<br />";
-                    if($index) {
-                        array_splice($this->js[$pos],$index,0,$file);
+            }
+            if (!in_array($file, $this->js[$pos])) {
+                if ($after) {
+                    $index = array_search($after, $this->js[$pos]);
+                    #echo "INDEX: $index<br />";
+                    if ($index) {
+                        array_splice($this->js[$pos], $index, 0, $file);
                         return;
                     }
                 }
@@ -203,10 +216,9 @@ if(!class_exists('AssetFactory'))
          * @access public
          * @return
          **/
-        public function getCSS($media=NULL)
+        public function getCSS($media=null)
         {
-            if($media)
-            {
+            if ($media) {
                 return (
                     isset($this->css[$media])
                     ? $this->css[$media]
@@ -225,28 +237,24 @@ if(!class_exists('AssetFactory'))
         public function renderCSS()
         {
             $output = array();
-            if(count($this->css))
-            {
-                foreach(array_keys($this->css) as $media)
-                {
+            if (count($this->css)) {
+                foreach (array_keys($this->css) as $media) {
                     $files = $this->css[$media];
                     $files_with_conditions = array();
-                    for($i=count($files)-1;$i>=0;$i--)
-                    {
+                    for ($i=count($files)-1;$i>=0;$i--) {
                         $file = $files[$i];
-                        $files[$i] = preg_replace('~^/~','',$file); // remove leading /
-                        if(isset($this->cond[$file])) {
+                        $files[$i] = preg_replace('~^/~', '', $file); // remove leading /
+                        if (isset($this->cond[$file])) {
                             $files_with_conditions[$this->cond[$file]][] = $file;
                             unset($files[$i]);
                         }
                     }
                     $line = str_replace(
                         array('%%condition_open%%','%%file%%','%%media%%','%%condition_close%%'),
-                        array('',Assets::serve('css',$files),$media,''),
+                        array('',Assets::serve('css', $files),$media,''),
                         self::$css_tpl
                     );
-                    if(isset($this->cond[$file]))
-                    {
+                    if (isset($this->cond[$file])) {
                         $line = '<!--[if '.$this->cond[$file].']>'."\n"
                               . $line
                               . '<![endif]-->'."\n"
@@ -254,13 +262,12 @@ if(!class_exists('AssetFactory'))
                     }
                     $output[] = $line;
 
-                    foreach($files_with_conditions as $cond => $files)
-                    {
+                    foreach ($files_with_conditions as $cond => $files) {
                         $line = str_replace(
                             array('%%condition_open%%','%%file%%','%%media%%','%%condition_close%%'),
                             array(
                                 '<!--[if '.$cond.']>',
-                                Assets::serve('css',$files),
+                                Assets::serve('css', $files),
                                 $media,
                                 '<![endif]-->'
                             ),
@@ -270,7 +277,7 @@ if(!class_exists('AssetFactory'))
                     }
                 }
             }
-            return implode("\n",$output);
+            return implode("\n", $output);
         }   // end function renderCSS()
 
         /**
@@ -281,58 +288,55 @@ if(!class_exists('AssetFactory'))
         public function renderJS($pos='header')
         {
             $output = array();
-            if($this->ui)
-                array_unshift($this->js['header'],'CAT/vendor/components/jqueryui/jquery-ui.min.js');
-            if($this->ui || $this->jq)
-                array_unshift($this->js['header'],'CAT/vendor/components/jquery/jquery.min.js');
+            if ($this->ui) {
+                array_unshift($this->js['header'], 'CAT/vendor/components/jqueryui/jquery-ui.min.js');
+            }
+            if ($this->ui || $this->jq) {
+                array_unshift($this->js['header'], 'CAT/vendor/components/jquery/jquery.min.js');
+            }
 
-            if($pos=='header')
-            {
+            if ($pos=='header') {
                 // add static js
                 $header_js = array('var CAT_URL = "'.CAT_SITE_URL.'";');
-                if(Backend::isBackend())
-                {
+                if (Backend::isBackend()) {
                     array_push(
                         $header_js,
-	                    'var CAT_ADMIN_URL = "'.CAT_ADMIN_URL. '";'
+                        'var CAT_ADMIN_URL = "'.CAT_ADMIN_URL. '";'
                     );
                 }
                 $output[] = str_replace(
                     array('%%condition_open%%',' src="%%file%%"','%%code%%','%%condition_close%%'),
-                    array('','',implode("\n",$header_js),''),
+                    array('','',implode("\n", $header_js),''),
                     self::$js_tpl
                 );
             }
 
-            if(count($this->js) && isset($this->js[$pos]) && count($this->js[$pos]))
-            {
+            if (count($this->js) && isset($this->js[$pos]) && count($this->js[$pos])) {
                 $files = $this->js[$pos];
-                for($i=count($files)-1;$i>=0;$i--)
-                {
+                for ($i=count($files)-1;$i>=0;$i--) {
                     $file = $files[$i];
-                    $files[$i] = preg_replace('~^/~','',$file); // remove leading /
+                    $files[$i] = preg_replace('~^/~', '', $file); // remove leading /
                 }
                 $line = str_replace(
                     array('%%condition_open%%','%%file%%','%%code%%','%%condition_close%%'),
                     array(
-                        ( isset($this->cond[$file]) ? '<!--[if '.$this->cond[$file].']>' : '' ),
-                        Assets::serve('js',$files),
+                        (isset($this->cond[$file]) ? '<!--[if '.$this->cond[$file].']>' : ''),
+                        Assets::serve('js', $files),
                         '',
-                        ( isset($this->cond[$file]) ? '<![endif]-->' : '' ),
+                        (isset($this->cond[$file]) ? '<![endif]-->' : ''),
                     ),
                     self::$js_tpl
                 );
                 $output[] = $line;
             }
 
-            if(count($this->code) && isset($this->code[$pos]) && count($this->code[$pos]))
-            {
+            if (count($this->code) && isset($this->code[$pos]) && count($this->code[$pos])) {
                 $output[] = "<script type=\"text/javascript\">\n"
-                          . implode("\n",$this->code[$pos])
+                          . implode("\n", $this->code[$pos])
                           . "</script>\n";
             }
 
-            return implode("\n",$output);
+            return implode("\n", $output);
         }   // end function renderJS()
 
         /**
@@ -345,14 +349,15 @@ if(!class_exists('AssetFactory'))
             $output = array();
             $title  = null;
 
-            if(count($this->meta))
-            {
-                foreach($this->meta as $el)
-                {
-                    if(!is_array($el) || !count($el)) continue;
+            if (count($this->meta)) {
+                foreach ($this->meta as $el) {
+                    if (!is_array($el) || !count($el)) {
+                        continue;
+                    }
                     $str = '<meta ';
-                    foreach($el as $key => $val)
+                    foreach ($el as $key => $val) {
                         $str .= $key.'="'.$val.'" ';
+                    }
                     $str .= '/>';
                     $output[] = $str;
                 }
@@ -360,52 +365,56 @@ if(!class_exists('AssetFactory'))
             $output = array_unique($output);
 
             // Frontend only: get page properties
-            if(is_numeric($this->id))
-            {
+            if (is_numeric($this->id)) {
                 $properties = HPage::properties($this->id);
 
                 // droplets may override page title and description and/or
                 // add meta tags
 
                 // check page title
-                if(isset($droplets_config['page_title']))
+                if (isset($droplets_config['page_title'])) {
                     $title = $droplets_config['page_title'];
-                elseif(null!=($t=HPage::getTitle()))
+                } elseif (null!=($t=HPage::getTitle())) {
                     $title = $t;
-                elseif(defined('WEBSITE_TITLE'))
-                    $title = WEBSITE_TITLE . (isset($properties['page_title']) ? ' - ' . $properties['page_title'] : '' );
-                elseif(isset($properties['page_title']))
+                } elseif (defined('WEBSITE_TITLE')) {
+                    $title = WEBSITE_TITLE . (isset($properties['page_title']) ? ' - ' . $properties['page_title'] : '');
+                } elseif (isset($properties['page_title'])) {
                     $title = $properties['page_title'];
-                else
+                } else {
                     $title = '-';
+                }
 
                 // check description
-                if(isset($droplets_config['description']))
+                if (isset($droplets_config['description'])) {
                     $description = $droplets_config['description'];
-                elseif(isset($properties['description']) && $properties['description'] != '' )
+                } elseif (isset($properties['description']) && $properties['description'] != '') {
                     $description = $properties['description'];
-                else
+                } else {
                     $description = Registry::get('WEBSITE_DESCRIPTION');
+                }
 
                 // check other meta tags set by droplets
-                if(isset($droplets_config['meta']))
+                if (isset($droplets_config['meta'])) {
                     $output[] = $droplets_config['meta'];
+                }
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: SEO
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            }
-            else {
+            } else {
                 $description = Registry::get('WEBSITE_DESCRIPTION');
-                if(null!=($t=HPage::getTitle()))
+                if (null!=($t=HPage::getTitle())) {
                     $title = $t;
+                }
             }
 
-            if($title)
+            if ($title) {
                 $output[] = '<title>' . $title . '</title>';
-            if ($description!='')
+            }
+            if ($description!='') {
                 $output[] = '<meta name="description" content="' . $description . '" />';
-            return implode("\n",$output);
+            }
+            return implode("\n", $output);
         }   // end function renderMeta()
     }
 }

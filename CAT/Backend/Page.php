@@ -389,43 +389,6 @@ if (!class_exists('Page')) {
         }   // end function edit()
 
         /**
-         * tries to retrieve 'page_id' by checking (in this order):
-         *
-         *    - $_POST['page_id']
-         *    - $_GET['page_id']
-         *    - Route param['page_id']
-         *
-         * also checks for numeric value
-         *
-         * access is 'public' as it is used by the Assets helper
-         *
-         * @access public
-         * @return integer
-         **/
-        public static function getPageID()
-        {
-            $pageID  = Validate::sanitizePost('page_id', 'numeric');
-
-            if (!$pageID) {
-                $pageID  = Validate::sanitizeGet('page_id', 'numeric');
-            }
-
-            if (!$pageID) {
-                $pageID = self::router()->getParam(-1);
-            }
-
-            if (!$pageID) {
-                $pageID = self::router()->getRoutePart(-1);
-            }
-
-            if (!$pageID || !is_numeric($pageID) || !HPage::exists($pageID)) {
-                $pageID = null;
-            }
-
-            return intval($pageID);
-        }   // end function getPageID()
-
-        /**
          * get header files
          *
          * @access public
@@ -433,7 +396,6 @@ if (!class_exists('Page')) {
          **/
         public static function headerfiles()
         {
-            //$pageID  = self::getPageID();
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
 
             // the user needs to have the global pages_edit permission plus
@@ -596,7 +558,6 @@ if (!class_exists('Page')) {
          **/
         public static function reorder()
         {
-            //$pageID  = self::getPageID();
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
 
             // the user needs to have the global pages_settings permission plus
@@ -857,6 +818,8 @@ Array
                 }
             }
 
+            HPage::reload();
+
 
             // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             // TODO: Die aktuellen Einstellungen als JSON zurueckliefern, nicht nur als
@@ -881,7 +844,6 @@ Array
          **/
         public static function sections()
         {
-            //$pageID  = self::getPageID();
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
             if (self::asJSON()) {
                 Json::printSuccess($form->getForm());
@@ -930,7 +892,6 @@ Array
          **/
         public static function unlink()
         {
-            //$pageID   = self::getPageID();
             $pageID   = self::getItemID('page_id', '\CAT\Helper\Page::exists');
             $unlinkID = Validate::sanitizePost('unlink');
 
@@ -971,21 +932,28 @@ Array
             if (!self::user()->hasPerm('pages_edit')) {
                 Json::printError('You are not allowed for the requested action!');
             }
-            $params  = self::router()->getParams();
-            $page_id = $params[0];
-            $newval  = $params[1];
-            if (!is_numeric($page_id)) {
+
+            $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
+            $newval = self::router()->getParam();
+
+            if (!is_numeric($pageID) || $pageID==0) {
+                // if "Editable" jQuery Plugin is used
+                $pageID = \CAT\Helper\Validate::sanitizePost('pk');
+            }
+            if(empty($newval)) {
+                // if "Editable" jQuery Plugin is used
+                $newval = \CAT\Helper\Validate::sanitizePost('value');
+            }
+
+            if (!is_numeric($pageID) || empty($newval)) {
                 Json::printError('Invalid value');
             }
-            if (!in_array($newval, array('public','private','hidden','none','deleted','registered'))) {
-                Json::printError('Invalid value');
-            }
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // MUSS ANGEPASST WERDEN! Neue Spalte vis_id (FK)
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+            // map $newval to id
+            $visid = HPage::getVisibilityID($newval);
             self::db()->query(
-                'UPDATE `:prefix:pages` SET `visibility`=? WHERE `page_id`=?',
-                array($newval,$page_id)
+                'UPDATE `:prefix:pages` SET `page_visibility`=? WHERE `page_id`=?',
+                array($visid,$pageID)
             );
             echo Base::json_result(
                 self::db()->isError(),

@@ -82,7 +82,7 @@ if (!class_exists('\CAT\Page', false)) {
                     }
                     define('CAT_PAGE_ID', self::$curr_page);
                 } else {
-                    return \CAT\Backend\Page::getPageID();
+                    return self::getItemID('page_id', '\CAT\Helper\Page::exists');
                 }
             }
             return self::$curr_page;

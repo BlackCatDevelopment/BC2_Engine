@@ -24,7 +24,8 @@ use \CAT\Sections as Sections;
 use \CAT\Helper\AssetFactory as AssetFactory;
 use \CAT\Helper\Directory as Directory;
 
-if (!class_exists('Assets')) {
+if (!class_exists('\CAT\Helper\Assets'))
+{
     class Assets extends Base
     {
         // set debug level
@@ -134,6 +135,7 @@ if (!class_exists('Assets')) {
                 $ignore_inc
             ));
 
+            // specific
             $am = AssetFactory::getInstance($id);
 
             // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -151,7 +153,7 @@ if (!class_exists('Assets')) {
                 $page_id = $id;
             }
             if (Backend::isBackend() && Backend::getArea()=='page') {
-                $page_id = \CAT\Backend\Page::getPageID();
+                $page_id = self::getItemID('page_id', '\CAT\Helper\Page::exists');
             }
 
             // if it's a frontend page, add scan paths for modules
@@ -453,15 +455,21 @@ if (!class_exists('Assets')) {
         {
             self::log()->addDebug('renderAssets()');
             $am = self::getAssets($pos, $id, $ignore_inc);
+            // global
+            $am_global = self::getAssets($pos, 'global', $ignore_inc);
+
             $output = null;
             switch ($pos) {
                 case 'header':
                     $output = $am->renderMeta()
+                            . $am_global->renderCSS()
                             . $am->renderCSS()
+                            . $am_global->renderJS('header')
                             . $am->renderJS('header');
                     break;
                 case 'footer':
-                    $output = $am->renderJS('footer');
+                    $output = $am_global->renderJS('footer')
+                            . $am->renderJS('footer');
                     break;
             }
             if (is_array(self::$sourcemaps) && count(self::$sourcemaps)>0) {

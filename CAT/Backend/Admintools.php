@@ -72,6 +72,7 @@ if (!class_exists('Backend\Admintools')) {
             }
 
             $d = \CAT\Helper\Dashboard::getDashboardConfig('backend/admintools');
+
             // no configuration yet
             if (!isset($d['widgets']) || !is_array($d['widgets']) || !count($d['widgets'])) {
                 $tools = Addons::getAddons('tool', 'name', false);

@@ -17,29 +17,31 @@
 
 
 namespace CAT\Helper;
+
 use \CAT\Base as Base;
 
-if(!class_exists('\CAT\Helper\HArray'))
-{
-	class HArray extends Base
-	{
-
+if (!class_exists('\CAT\Helper\HArray')) {
+    class HArray extends Base
+    {
         protected static $loglevel  = \Monolog\Logger::EMERGENCY;
-        private   static $instance  = NULL;
-        private   static $filtered  = null;
+        private static $instance  = null;
+        private static $filtered  = null;
 
         public function __call($method, $args)
         {
-            if ( ! isset($this) || ! is_object($this) )
+            if (! isset($this) || ! is_object($this)) {
                 return false;
-            if ( method_exists( $this, $method ) )
+            }
+            if (method_exists($this, $method)) {
                 return call_user_func_array(array($this, $method), $args);
+            }
         }
 
         public static function getInstance()
         {
-            if (!self::$instance)
+            if (!self::$instance) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -53,11 +55,14 @@ if(!class_exists('\CAT\Helper\HArray'))
          * @param  array  $vector
          * @return array
          **/
-        public static function diverse($vector) {
+        public static function diverse($vector)
+        {
             $result = array();
-            foreach($vector as $key1 => $value1)
-                foreach($value1 as $key2 => $value2)
+            foreach ($vector as $key1 => $value1) {
+                foreach ($value1 as $key2 => $value2) {
                     $result[$key2][$key1] = $value2;
+                }
+            }
             return $result;
         }   // end function diverse()
 
@@ -71,10 +76,16 @@ if(!class_exists('\CAT\Helper\HArray'))
          **/
         public static function encodeUTF8($dat)
         {
-            if (is_string($dat)) return utf8_encode($dat);
-            if (!is_array($dat)) return $dat;
+            if (is_string($dat)) {
+                return utf8_encode($dat);
+            }
+            if (!is_array($dat)) {
+                return $dat;
+            }
             $ret = array();
-            foreach($dat as $i=>$d) $ret[$i] = self::encodeUTF8($d);
+            foreach ($dat as $i=>$d) {
+                $ret[$i] = self::encodeUTF8($d);
+            }
             return $ret;
         }   // end function encodeUTF8()
 
@@ -99,20 +110,23 @@ if(!class_exists('\CAT\Helper\HArray'))
          * @param  string  $key
          * @return array
          **/
-        public static function extractList($array,$key,$index_by=null)
+        public static function extractList($array, $key, $index_by=null)
         {
-            if(!is_array($array) || !count($array)) return array();
+            if (!is_array($array) || !count($array)) {
+                return array();
+            }
             $result = array();
-            foreach($array as $i => $item)
-            {
-                if(isset($item[$key]) && is_array($item[$key]))
-                    $result[] = self::extract($item[$key],$key);
-                if(array_key_exists($key,$item))
-                    if($index_by && array_key_exists($index_by,$item))
+            foreach ($array as $i => $item) {
+                if (isset($item[$key]) && is_array($item[$key])) {
+                    $result[] = self::extract($item[$key], $key);
+                }
+                if (array_key_exists($key, $item)) {
+                    if ($index_by && array_key_exists($index_by, $item)) {
                         $result[$item[$index_by]] = $item[$key];
-                    else
+                    } else {
                         $result[] = $item[$key];
-
+                    }
+                }
             }
             return $result;
         }   // end function extractList()
@@ -139,26 +153,23 @@ if(!class_exists('\CAT\Helper\HArray'))
             $origarray = array_shift($arguments); // first arg must be the input array
             $array     = $origarray;
 
-            if(!is_array($array) || !count($array)) return array();
+            if (!is_array($array) || !count($array)) {
+                return array();
+            }
 
             $filterby = array_shift($arguments);
             $result   = new \stdClass();
 
-            if(!$filterby)
-            {
+            if (!$filterby) {
                 $byvalue = array_shift($arguments);
-                foreach($array as $k => $v)
-                {
-                    if(is_array($v))
-                    {
-                        $subresult = self::filter($v,null,$byvalue);
-                        if(count($subresult)) {
+                foreach ($array as $k => $v) {
+                    if (is_array($v)) {
+                        $subresult = self::filter($v, null, $byvalue);
+                        if (count($subresult)) {
                             $result->{$k} = $subresult;
                         }
-                    }
-                    else
-                    {
-                        if($v===$byvalue) {
+                    } else {
+                        if ($v===$byvalue) {
                             $result->{$k} = $v;
                         }
                     }
@@ -167,39 +178,36 @@ if(!class_exists('\CAT\Helper\HArray'))
             }
 
             // filter by key/value
-            if(!is_callable($filterby) && is_scalar($filterby))
-            {
+            if (!is_callable($filterby) && is_scalar($filterby)) {
                 $key  = $filterby;
                 $cond = null;
                 $val  = array_shift($arguments);
-                if(count($arguments)) $cond = array_shift($arguments);
-                foreach($array as $k => $v)
-                {
-                    if(is_array($v))
-                    {
-                        if(array_key_exists($key,$v)) {
-                            switch($cond) {
+                if (count($arguments)) {
+                    $cond = array_shift($arguments);
+                }
+                foreach ($array as $k => $v) {
+                    if (is_array($v)) {
+                        if (array_key_exists($key, $v)) {
+                            switch ($cond) {
                                 case 'matching':
-                                    if($v[$key] == $val) {
+                                    if ($v[$key] == $val) {
                                         $result->{$k} = $v;
                                     }
                                     break;
                                 default:
-                                    if($v[$key] !== $val) {
+                                    if ($v[$key] !== $val) {
                                         $result->{$k} = $v;
                                     }
                                     break;
                             }
                         } else {
-                            $result->{$k} = self::filter($v,$key,$val);
+                            $result->{$k} = self::filter($v, $key, $val);
                         }
-                    }
-                    else
-                    {
-echo "not an array<br />";
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: not implemented yet
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    } else {
+                        echo "not an array<br />";
+                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        // TODO: not implemented yet
+                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                         $result->{$k} = '?';
                     }
                 }
@@ -207,7 +215,7 @@ echo "not an array<br />";
 
             // store filtered items for later use (extract() method)
             // Compare all values by a json_encode
-            $diff = array_diff(array_map('json_encode', $origarray),array_map('json_encode', (array)$result));
+            $diff = array_diff(array_map('json_encode', $origarray), array_map('json_encode', (array)$result));
 
             // Json decode the result
             self::$filtered = array_map('json_decode', $diff);
@@ -223,15 +231,17 @@ echo "not an array<br />";
          * @param  reference $array
          * @return boolean
          **/
-        public static function keyExists($key,&$array)
+        public static function keyExists($key, &$array)
         {
-            if(!is_array($array))   return false;
-            if(isset($array[$key])) return true;
-            foreach($array as $elem)
-            {
-                if(is_array($elem))
-                {
-                    return self::keyExists($elem,$key);
+            if (!is_array($array)) {
+                return false;
+            }
+            if (isset($array[$key])) {
+                return true;
+            }
+            foreach ($array as $elem) {
+                if (is_array($elem)) {
+                    return self::keyExists($elem, $key);
                 }
             }
             return false;
@@ -250,23 +260,22 @@ echo "not an array<br />";
          **/
         public static function search($Needle, $Haystack, $NeedleKey="", $Strict=false, $Path=array())
         {
-            if(!is_array($Haystack)) {
+            if (!is_array($Haystack)) {
                 return false;
             }
             reset($Haystack);
-            foreach($Haystack as $Key => $Val) {
+            foreach ($Haystack as $Key => $Val) {
                 if (
                     is_array($Val)
                     &&
-                    $SubPath = self::search($Needle,$Val,$NeedleKey,$Strict,$Path)
+                    $SubPath = self::search($Needle, $Val, $NeedleKey, $Strict, $Path)
                 ) {
-                    $Path = array_merge($Path,Array($Key),$SubPath);
+                    $Path = array_merge($Path, array($Key), $SubPath);
                     return $Path;
-                }
-                elseif (
+                } elseif (
                     (!$Strict && $Val  == $Needle && $Key == (strlen($NeedleKey) > 0 ? $NeedleKey : $Key))
                     ||
-                    ( $Strict && $Val === $Needle && $Key == (strlen($NeedleKey) > 0 ? $NeedleKey : $Key))
+                    ($Strict && $Val === $Needle && $Key == (strlen($NeedleKey) > 0 ? $NeedleKey : $Key))
                 ) {
                     $Path[]=$Key;
                     return $Path;
@@ -286,25 +295,24 @@ echo "not an array<br />";
          * @param  boolean $case_sensitive - sort case sensitive; default: false
          *
          **/
-        public static function sort($array,$index,$order='asc',$natsort=false,$case_sensitive=false)
+        public static function sort($array, $index, $order='asc', $natsort=false, $case_sensitive=false)
         {
-            if(is_array($array) && count($array))
-            {
-                 foreach(array_keys($array) as $key)
-                     $temp[$key] = $array[$key][$index];
-                 if(!$natsort)
-                 {
-                     ($order=='asc') ? asort($temp) : arsort($temp);
-                 }
-                 else
-                 {
-                     ($case_sensitive) ? natsort($temp) : natcasesort($temp);
-                     if($order != 'asc')
-                         $temp = array_reverse($temp,TRUE);
-                 }
-                 foreach(array_keys($temp) as $key)
-                     (is_numeric($key)) ? $sorted[]=$array[$key] : $sorted[$key]=$array[$key];
-                 return $sorted;
+            if (is_array($array) && count($array)) {
+                foreach (array_keys($array) as $key) {
+                    $temp[$key] = $array[$key][$index];
+                }
+                if (!$natsort) {
+                    ($order=='asc') ? asort($temp) : arsort($temp);
+                } else {
+                    ($case_sensitive) ? natsort($temp) : natcasesort($temp);
+                    if ($order != 'asc') {
+                        $temp = array_reverse($temp, true);
+                    }
+                }
+                foreach (array_keys($temp) as $key) {
+                    (is_numeric($key)) ? $sorted[]=$array[$key] : $sorted[$key]=$array[$key];
+                }
+                return $sorted;
             }
             return $array;
         }   // end function sort()
@@ -318,25 +326,19 @@ echo "not an array<br />";
          **/
         public static function unique($array)
         {
-    		$set = array();
-    		$out = array();
-    		foreach($array as $key => $val)
-            {
-                if(is_array($val))
-                {
+            $set = array();
+            $out = array();
+            foreach ($array as $key => $val) {
+                if (is_array($val)) {
                     $out[$key] = self::unique($val);
-                }
-                elseif(!isset($set[$val]))
-                {
+                } elseif (!isset($set[$val])) {
                     $out[$key] = $val;
                     $set[$val] = true;
-                }
-                else
-                {
+                } else {
                     $out[$key] = $val;
                 }
-    		}
-    		return $out;
-   		}   // end function unique()
+            }
+            return $out;
+        }   // end function unique()
     }
 }

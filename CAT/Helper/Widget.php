@@ -27,6 +27,7 @@ if (!class_exists('\CAT\Helper\Widget'))
         private   static $instance;
         //protected static $loglevel = \Monolog\Logger::EMERGENCY;
         protected static $loglevel = \Monolog\Logger::DEBUG;
+        protected static $subdirs  = array('widgets','inc');
 
         public static function getInstance()
         {
@@ -77,14 +78,17 @@ Array
                 self::lang()->addFile($lang,$path.'/languages');
             }
 
-            if(file_exists($path.'/inc/'.$widget['widget_controller'].'.php'))
+            foreach(self::$subdirs as $subdir)
             {
-                $id = isset($widget['id'])
-                    ? $widget['id']
-                    : $widget['widget_id']
-                    ;
-                require_once $path.'/inc/'.$widget['widget_controller'].'.php';
-                return $widget['widget_controller']::view($id,$dashboard_id);
+                if(file_exists($path.'/'.$subdir.'/'.$widget['widget_controller'].'.php'))
+                {
+                    $id = isset($widget['id'])
+                        ? $widget['id']
+                        : $widget['widget_id']
+                        ;
+                    require_once $path.'/'.$subdir.'/'.$widget['widget_controller'].'.php';
+                    return $widget['widget_controller']::view($id,$dashboard_id);
+                }
             }
         }   // end function execute()
 
@@ -159,15 +163,18 @@ Array
          **/
         public static function handleCall($widget,$data=array())
         {
-            $path = CAT_ENGINE_PATH.'/modules/'.$widget['widget_module'].'/inc';
-            if(file_exists($path.'/'.$widget['widget_controller'].'.php'))
+            foreach(self::$subdirs as $subdir)
             {
-                $id = isset($widget['id'])
-                    ? $widget['id']
-                    : $widget['widget_id']
-                    ;
-                require_once $path.'/'.$widget['widget_controller'].'.php';
-                return $widget['widget_controller']::handleCall($data);
+                $path = CAT_ENGINE_PATH.'/modules/'.$widget['widget_module'].'/'.$subdir;
+                if(file_exists($path.'/'.$widget['widget_controller'].'.php'))
+                {
+                    $id = isset($widget['id'])
+                        ? $widget['id']
+                        : $widget['widget_id']
+                        ;
+                    require_once $path.'/'.$widget['widget_controller'].'.php';
+                    return $widget['widget_controller']::handleCall($data);
+                }
             }
         }   // end function handleCall()
 

@@ -265,17 +265,26 @@ if ( !class_exists( 'Addons' ) )
             {
                 // find class.<modulename>.php
                 $files = Directory::findFiles($fulldir,array('extension'=>'php','remove_prefix'=>true));
-                if(count($files)==1)
+                if(count($files)>0)
                 {
-                    $classname = str_ireplace('class.','',pathinfo($files[0],PATHINFO_FILENAME));
-                    if(!class_exists($classname,false))
+                    for($i=0;$i<count($files);$i++)
                     {
-                        require_once $fulldir.'/'.$files[0];
+                        $classname = str_ireplace('class.','',pathinfo($files[$i],PATHINFO_FILENAME));
+                        if(!class_exists($classname,false))
+                        {
+                            require_once $fulldir.'/'.$files[$i];
+                        }
+                        // as there may be files not containing a class...
+                        if(class_exists('\CAT\Addon\\'.$classname,false))
+                        {
+                            $class = '\CAT\Addon\\'.$classname;
+                            $info  = $class::getInfo();
+                            return $info;
+                        }
                     }
-                    $class = '\CAT\Addon\\'.$classname;
-                    $info  = $class::getInfo();
                 }
             }
+
             return $info;
         }   // end function getInfo()
 

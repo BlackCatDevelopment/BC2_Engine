@@ -99,9 +99,7 @@ if (!class_exists('\CAT\Backend\Addons'))
             // map installed
             $installed = array();
             foreach($modules as $i => $m) {
-                if(isset($m['version'])) {
-                    $installed[$m['directory']] = $m;
-                }
+                $installed[$m['directory']] = $m;
             }
 
             // find installed in catalog

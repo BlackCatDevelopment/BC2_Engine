@@ -219,9 +219,9 @@ if (!class_exists('Dashboard'))
          **/
         public static function renderDashboard($id)
         {
-
             // get widgets
             $widgets = self::getWidgets($id);
+            $subdirs = \CAT\Helper\Widget::getWidgetSubdirs();
 
             if(is_array($widgets) && count($widgets))
             {
@@ -232,10 +232,13 @@ if (!class_exists('Dashboard'))
                     $widget_data     = ( isset($w['data']) && strlen($w['data']) )
                                      ? unserialize($w['data'])
                                      : NULL;
-                    // script based widgets
-                    if(file_exists(CAT_ENGINE_PATH.$w['widget_controller']))
+
+                    foreach($subdirs as $subdir)
                     {
-                        include CAT_ENGINE_PATH.$w['widget_controller'];
+                        $path = CAT_ENGINE_PATH.'/modules/'.$w['widget_module'].'/'.$subdir;
+                        if(file_exists($path.'/'.$w['widget_controller'].'.php'))
+                        {
+                            include $path.'/'.$w['widget_controller'].'.php';
                         $name     = pathinfo($w['widget_controller'],PATHINFO_FILENAME);
                         $funcname = 'render_widget_';
                         if(isset($w['widget_module']) && strlen($w['widget_module']))
@@ -244,14 +247,17 @@ if (!class_exists('Dashboard'))
                             Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$w['widget_module'].'/languages/');
                         }
                         $funcname .= $name;
-                        if(function_exists($funcname))
+                            if(function_exists($funcname)) {
                             $widgets[$i]['content'] = $funcname();
-                        if(is_array($widget_settings) && isset($widget_settings['widget_title']))
+                            }
+                            if(is_array($widget_settings) && isset($widget_settings['widget_title'])) {
                             $widgets[$i]['widget_title'] = $widget_settings['widget_title'];
                     }
-                    else
-                    {
+                            continue 1;
+                        } else {
                         $widgets[$i]['content'] = Widget::execute($w,$id);
+                        }
+
                     }
                 }
             }

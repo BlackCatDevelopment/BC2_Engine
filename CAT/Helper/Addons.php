@@ -196,8 +196,7 @@ if ( !class_exists( 'Addons' ) )
                                 {
                                     // skip paths starting with __ (sometimes used for deactivating addons)
                                     if(substr($dir,0,2) == '__') continue;
-                                    $info = self::getInfo($dir);
-
+                                    $info = self::getInfo($dir, $t);
                                     if(is_array($info) && count($info) && !in_array($dir,$seen)) {
                                         $result[] = $info;
                                     }
@@ -256,10 +255,14 @@ if ( !class_exists( 'Addons' ) )
          * @access public
          * @return
          **/
-        public static function getInfo($directory)
+        public static function getInfo($directory,$type='module')
         {
             $info    = array();
-            $fulldir = CAT_ENGINE_PATH.'/modules/'.$directory.'/inc';
+            $fulldir = CAT_ENGINE_PATH.'/'.$type.'/'.$directory.'/inc';
+            $namespace = '\CAT\Addon';
+            if($type=='templates') {
+                $namespace .= '\Template';
+            }
 
             if(is_dir($fulldir))
             {
@@ -275,9 +278,9 @@ if ( !class_exists( 'Addons' ) )
                             require_once $fulldir.'/'.$files[$i];
                         }
                         // as there may be files not containing a class...
-                        if(class_exists('\CAT\Addon\\'.$classname,false))
+                        if(class_exists($namespace.'\\'.$classname,false))
                         {
-                            $class = '\CAT\Addon\\'.$classname;
+                            $class = $namespace.'\\'.$classname;
                             $info  = $class::getInfo();
                             return $info;
                         }

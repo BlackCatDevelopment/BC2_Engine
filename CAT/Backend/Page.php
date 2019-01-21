@@ -178,6 +178,9 @@ if (!class_exists('Page')) {
         public static function delete()
         {
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
+            if(empty($pageID)) {
+                Base::printFatalError('Invalid data!');
+            }
 
             if (!self::user()->hasPerm('pages_delete')) {
                 self::printFatalError('You are not allowed for the requested action!');
@@ -212,6 +215,9 @@ if (!class_exists('Page')) {
         public static function edit()
         {
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
+            if(empty($pageID)) {
+                Base::printFatalError('Invalid data!');
+            }
 
             // the user needs to have the global pages_edit permission plus
             // permissions for the current page
@@ -237,6 +243,7 @@ if (!class_exists('Page')) {
                 'addable' => $addable,
                 'langs'   => self::getLanguages(1), // available languages
                 'pages'   => HPage::getPages(1),
+                'current' => 'content',
                 'avail_blocks' => Template::getBlocks(),
             );
 
@@ -460,6 +467,8 @@ if (!class_exists('Page')) {
                 self::tpl()->output('backend_page_headerfiles', array(
                     'files'  => $files,
                     'tplcss' => $tplcss,
+                    'page'    => HPage::properties($pageID),
+                    'current' => 'headerfiles',
                 ));
                 Backend::printFooter();
             }
@@ -630,6 +639,9 @@ if (!class_exists('Page')) {
         public static function save()
         {
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
+            if(empty($pageID)) {
+                Base::printFatalError('Invalid data!');
+            }
 
             // the user needs to have the global pages_edit permission plus
             // permissions for the current page
@@ -674,6 +686,9 @@ if (!class_exists('Page')) {
         public static function settings()
         {
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
+            if(empty($pageID)) {
+                Base::printFatalError('Invalid data!');
+            }
 
             // the user needs to have the global pages_settings permission plus
             // permissions for the current page
@@ -682,6 +697,12 @@ if (!class_exists('Page')) {
             }
 
             $page      = HPage::properties($pageID);
+
+            // default template data
+            $tpl_data = array(
+                'current' => 'settings',
+            );
+
             $form      = FormBuilder::generateForm('be_page_settings', $page);
             $form->setAttribute('action', CAT_ADMIN_URL.'/page/settings/'.$pageID);
 
@@ -792,39 +813,16 @@ if (!class_exists('Page')) {
                                 self::printFatalError(self::db()->getError());
                             }
                         }
-
-/*
-Array
-(
-    [page_id] => 30
-    [page_parent] =>
-    [page_visibility] => 1
-    [page_menu] =>
-    [page_template] => b4
-    [template_variant] => slider
-    [page_title] => Homepage
-    [menu_title] => Homepage
-    [page_description] => asdf
-    [page_language] => DE
-    [Speichern] => Speichern
-    [Abbrechen] =>
-    [options] => theme
-    [theme] => default
-    [slider_folder] => business
-)
-*/
-
                     }
                 }
             }
 
             HPage::reload();
 
-
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // TODO: Die aktuellen Einstellungen als JSON zurueckliefern, nicht nur als
-            // fertiges HTML-Formular
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: Die aktuellen Einstellungen als JSON zurueckliefern, nicht nur als
+// fertiges HTML-Formular
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             if (self::asJSON()) {
                 Json::printSuccess($form->render(true));
             } else {
@@ -832,6 +830,7 @@ Array
                 self::tpl()->output('backend_page_settings', array(
                     'form' => $form->render(true),
                     'page' => HPage::properties($pageID),
+                    'current' => 'settings',
                 ));
                 Backend::printFooter();
             }
@@ -962,7 +961,6 @@ Array
             );
         }   // end function visibility()
         
-
         /**
          * add header file to the database; returns an array with keys
          *     'success' (boolean)

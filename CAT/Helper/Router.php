@@ -32,6 +32,7 @@ if (!class_exists('Router', false)) {
         public static $loglevel   = \Monolog\Logger::DEBUG;
         // instance
         private static $instance   = null;
+        private static $reroutes   = 0;
         // full route
         private $route      = null;
         // query string
@@ -79,6 +80,8 @@ if (!class_exists('Router', false)) {
          **/
         public function dispatch()
         {
+            self::log()->addDebug('>>>>> dispatch() <<<<<');
+
             if (!$this->route) {
                 $this->route = 'index';
             }
@@ -91,19 +94,16 @@ if (!class_exists('Router', false)) {
                 (strlen($suffix) && in_array($suffix, self::$assets))
             ) {
                 self::log()->addDebug(sprintf(
-                    'dispatch() serving asset file [%s]',
+                    'serving asset file [%s]',
                     $this->route
                 ));
                 if (strlen($suffix) && in_array($suffix, self::$assets)) {
-                    \CAT\Helper\Assets::serve($suffix, array($this->route), true);
+                    \CAT\Helper\Assets::serve($suffix, $this->route);
                 } else {
                     parse_str($this->getQuery(), $files);
-                    // remove leading / from all files
-                    foreach ($files as $i => $f) {
-                        $files[$i] = preg_replace('~^/~', '', $f, 1);
-                    }
                     \CAT\Helper\Assets::serve($type, $files);
                 }
+                self::log()->addDebug('>>>>> dispatch() ENDE <<<<<');
                 return;
             }
 
@@ -112,12 +112,14 @@ if (!class_exists('Router', false)) {
 
             // ----- load template language files ------------------------------
             if (self::isBackend()) {
+                self::log()->addDebug('initializing backend');
                 Backend::initialize();
                 $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.\CAT\Registry::get('DEFAULT_THEME').'/languages');
             } else {
                 $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.\CAT\Registry::get('DEFAULT_TEMPLATE').'/languages');
             }
             if (is_dir($lang_path)) {
+                self::log()->addDebug(sprintf('adding lang path [%s]',$lang_path));
                 self::addLangFile($lang_path);
             }
 
@@ -127,15 +129,18 @@ if (!class_exists('Router', false)) {
                 $this->function
             ));
 
+            $this->params = \CAT\Helper\HArray::filter($this->params,null,$this->function);
+
             // ----- frontend page ---------------------------------------------
             if (!$this->backend) {
                 self::log()->addDebug(sprintf(
-                    'dispatch() serving frontend page',
+                    'serving frontend page',
                     $this->route
                 ));
                 $page = HPage::getPageForRoute($this->route);
                 if ($page && is_int($page)) {
                     $pg = \CAT\Page::getInstance($page);
+                    self::log()->addDebug('>>>>> dispatch() ENDE <<<<<');
                     $pg->show();
                     exit;
                 }
@@ -146,6 +151,8 @@ if (!class_exists('Router', false)) {
             //       whitelist for allowed file names
             // -----------------------------------------------------------------
             if (self::router()->match('~^modules/~i') && $suffix=='php') {
+                self::log()->addDebug(sprintf('forwarding to module [%s]',self::$route));
+                self::log()->addDebug('>>>>> dispatch() ENDE <<<<<');
                 require CAT_ENGINE_PATH.'/'.self::router()->getRoute();
                 return;
             }
@@ -158,10 +165,13 @@ if (!class_exists('Router', false)) {
                 if (class_exists($this->controller.'\\'.ucfirst($this->function))) {
                     $this->controller = $this->controller.'\\'.ucfirst($this->function);
                     $this->function   = (count($this->parts)>1 ? $this->parts[1] : 'index');
+
                     #echo sprintf("controller [%s] func [%s]<br />", $this->controller, $this->function);
-                    if ($this->function=='index' && count($this->params)>0) {
-                        $this->function = array_shift($this->params);
-                    }
+                    # ????
+                    #if ($this->function=='index' && count($this->params)>0) {
+                    #    $this->function = array_shift($this->params);
+                    #}
+
                 }
             }
 
@@ -171,7 +181,6 @@ if (!class_exists('Router', false)) {
                 $handler
             ));
 
-#echo "controller: ", $this->controller, "<br />function: ", $this->function, "<br />";
             if (is_callable(array($this->controller,$this->function))) {
                 self::log()->addDebug('is_callable() succeeded');
                 if (is_callable(array($this->controller,'getPublicRoutes'))) {
@@ -183,7 +192,8 @@ if (!class_exists('Router', false)) {
                     }
                 }
 
-#echo "is auth [", self::user()->isAuthenticated(), "]<br />";
+                $this->params = \CAT\Helper\HArray::filter($this->params,null,$this->function);
+
                 // check for protected route
                 if ($this->protected && !self::user()->isAuthenticated()) {
                     self::log()->addDebug(sprintf(
@@ -199,6 +209,7 @@ if (!class_exists('Router', false)) {
                 return;
             }
 
+            self::log()->addDebug('!!!!! Forwarding to 404 !!!!!');
             \CAT\Page::print404();
         }   // end function dispatch()
         
@@ -306,9 +317,14 @@ if (!class_exists('Router', false)) {
             if (!is_array($this->params)) {
                 return null;
             }
-            if ($index == -1) { // last param
-                end($this->params);
-                $index = key($this->params);
+            if(!is_numeric($index)) {
+                return null;
+            }
+            if ($index < 0) { // last param
+                $reversed = array_reverse($this->params);
+                $index    = abs($index)-1;
+                $value    = isset($reversed[$index]) ? $reversed[$index] : null;
+                return $value;
             }
             if (!isset($this->params[$index])) {
                 return null;
@@ -504,12 +520,15 @@ if (!class_exists('Router', false)) {
                 $backend_route = defined('BACKEND_PATH')
                     ? BACKEND_PATH
                     : 'backend';
+
                 if (preg_match('~^/?'.$backend_route.'/?~i', $route)) {
                     $this->backend   = true;
                     $this->protected = true;
                     array_shift($this->parts); // remove backend/ from route
                     $this->route     = implode("/", $this->parts);
                 }
+
+                $this->params = $this->parts;
             }
 
             self::log()->addDebug(sprintf(
@@ -577,6 +596,14 @@ if (!class_exists('Router', false)) {
          **/
         public function reroute($newroute)
         {
+            self::$reroutes++;
+            if(self::$reroutes>=3) {
+                self::log()->addError(sprintf(
+                    'too many reroute attempts, unable to reroute [%s]',
+                    $newroute
+                ));
+                self::printFatalError('unable to serve');
+            }
             $_SERVER['REQUEST_URI'] = $newroute;
             $this->initRoute();
             $this->dispatch();

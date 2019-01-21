@@ -36,27 +36,23 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
          **/
         private static $lasterror     = null;
         /**
-         * password hashing options
+         * JWT settings
          **/
-        protected static $hashOpt     = array(
-            'algo'    => PASSWORD_BCRYPT,
-            'cost'    => 10
-        );
-
-        protected static $SECRET_KEY = 'Your-Secret-Key';
+        protected static $SECRET_KEY = '4gdr#hp2W\JNcEO$';
         protected static $ALGORITHM  = 'HS512';
 
         /**
          * Compare user's password with given password
+         *
          * @access public
-         * @param int $uid
+         * @param int    $uid
          * @param string $passwd
          * @param string $tfaToken
          * @return bool
          */
         public static function authenticate(int $uid,string $passwd,string $tfaToken=null)
         {
-            self::log()->debug(sprintf('Trying to verify password for UserID [%s]', $uid));
+            self::log()->addDebug(sprintf('authenticate() - Trying to verify password for UserID [%s]', $uid));
 
             if (!$uid||!$passwd) {
                 self::setError('An empty value was sent for authentication!');
@@ -66,15 +62,39 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
             $storedHash = self::getPasswd($uid);
 
             if (password_verify($passwd, $storedHash)) { // user found and password ok
-                $tokenId    = base64_encode(random_bytes(32));
+                self::log()->addDebug('authentication succeeded');
+                return self::generateToken($uid);
+            }
+
+            self::setError(sprintf('Login attempt failed for user with ID [%s]',$uid));
+
+            return false;
+        }   // end function authenticate()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function generateToken(int $uid, string $tokenId = '')
+        {
+            $lifetime   = 60*60*24;          // one day
                 $issuedAt   = time();
                 $notBefore  = $issuedAt;
-                $expire     = time()+ini_get('session.gc_maxlifetime');
+            $expire     = $issuedAt+$lifetime;
                 $serverName = CAT_SITE_URL;
+            $isFresh    = false;
 
-                /*
-                 * Create the token as an array
-                 */
+            if(empty($tokenId)) {
+                $tokenId    = base64_encode(random_bytes(32));
+                $isFresh    = true;
+                // save the tokenId
+                self::db()->query(
+                    'UPDATE `:prefix:rbac_users` SET `login_token`=? WHERE `user_id`=?',
+                    array($tokenId, $uid)
+                );
+            }
+
                 $data = array(
                     'iat'  => $issuedAt,         // Issued at: time when the token was generated
                     'jti'  => $tokenId,          // Json Token Id: an unique identifier for the token
@@ -82,7 +102,9 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
                     'nbf'  => $notBefore,        // Not before
                     'exp'  => $expire,           // Expire
                     'data' => array(             // Data related to the logged user you can set your required data
-    		            'user_id' => $uid, // id from the users table
+		            'user_id'  => $uid,      // id from the users table,
+                    'fresh'    => $isFresh,  // not used at the moment
+                    'expires'  => $issuedAt+ini_get('session.gc_maxlifetime'),
                     )
                 );
 
@@ -93,10 +115,23 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
                     $secretKey,       // The signing key
                     self::$ALGORITHM
                 );
+
+            // set cookie
+            self::log()->addDebug(sprintf('creating cookie with name [%s]',self::getCookieName()));
+            $lifetime = time()+ini_get('session.gc_maxlifetime');
+            setcookie(
+                self::getCookieName(),
+                $jwt,
+                $lifetime,
+                '/',
+                CAT_SITE_URL,
+                true,
+                true
+            );
+
                 return $jwt;
-            }
-            return false;
-        }   // end function authenticate()
+        }   // end function generateToken()
+        
 
         /**
          *
@@ -110,36 +145,53 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
             $secretKey = base64_decode(self::$SECRET_KEY);
             $decoded   = array();
 
+            // note: there will be no $decoded data if the token is invalid
+            //       or expired
+
             try {
                 $decoded = (array) JWT::decode($token, $secretKey, array(self::$ALGORITHM));
-                self::log()->addDebug(print_r($decoded,1));
             } catch (\InvalidArgumentException $e) {
-                // 500 internal server error
-                // your fault
+                // 500 internal server error - my fault
                 self::log()->addDebug('InvalidArgumentException: '.$e->getMessage());
+                self::invalidate();
+                return false;
+            } catch (\Firebase\JWT\ExpiredException $e ) {
+                self::log()->addDebug('ExpiredException: '.$e->getMessage());
+                self::invalidate();
+                return false;
             } catch (\Exception $e) {
-                // 401 unauthorized
-                // clients fault
+                // 401 unauthorized - clients fault
                 self::log()->addDebug('Exception: '.$e->getMessage());
+                self::invalidate();
+                return false;
             }
 
-            if(isset($decoded['data'])) {
+            if(isset($decoded['data']))
+            {
+                if(isset($decoded['data']->expires) && time()>$decoded['data']->expires) {
+                    self::log()->addDebug(sprintf('the token has expired - curr [%s] > exp [%s]',time(),$decoded['data']->expires));
+                    self::invalidate();
+                    return false;
+            }
+
                 $uid = $decoded['data']->user_id;
+
                 // check database for correct token
                 $storedToken = self::db()->query(
                     'SELECT `login_token` FROM `:prefix:rbac_users` WHERE `user_id`=:uid',
                     array( 'uid' => $uid )
                 )->fetchColumn();
-                if($storedToken==$token) {
+
+                self::log()->addDebug(sprintf('stored jti [%s] decoded jti [%s]',$storedToken,$decoded['jti']));
+
+                if($storedToken==$decoded['jti']) {
                     self::log()->addDebug(sprintf('storedToken == token, returning user_id',$uid));
+                    // update
+self::generateToken($uid,$storedToken);
                     return $uid;
                 } else {
                     // invalidate
-                    self::log()->addDebug('invalidate');
-                    self::db()->query(
-                        'UPDATE `:prefix:rbac_users` SET `login_when`=?, `login_ip`=?, `login_token`=? WHERE `user_id`=?',
-                        array(0, 0, null, $uid)
-                    );
+                    self::log()->addDebug('invalidate - storedToken != token');
                     return false;
                 }
             } else {
@@ -151,7 +203,7 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
 
         protected static function setError($msg, $logmsg=null)
         {
-            self::log()->debug($logmsg?$logmsg:$msg);
+            self::log()->addDebug($logmsg?$logmsg:$msg);
             self::$lasterror = $msg;
         }   // end function setError()
 
@@ -164,11 +216,10 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
         **/
         private static function getHash($passwd)
         {
-            return password_hash(
-                $passwd,
-                self::$hashOpt['algo'],
-                array('cost'=>self::$hashOpt['cost'])
-            );
+            $options = [
+                'cost' => 11,
+            ];
+            return password_hash($passwd,PASSWORD_BCRYPT,$options);
         }   // end function getHash()
 
         /**
@@ -180,6 +231,7 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
          **/
         private static function getPasswd($uid=null)
         {
+            self::log()->addDebug(sprintf('fetching password for UID [%s]',$uid));
             $storedHash = self::db()->query(
                 'SELECT `password` FROM `:prefix:rbac_users` WHERE `user_id`=:uid',
                 array( 'uid' => $uid )
@@ -191,5 +243,20 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
                 return $storedHash;
             }
         }   // end function getPasswd()
+
+        /**
+         *
+         * @access private
+         * @return
+         **/
+        private static function invalidate()
+        {
+            self::log()->addDebug('invalidate()');
+            if(isset($_COOKIE[self::getCookieName()])) {
+                unset($_COOKIE[self::getCookieName()]);
+                setcookie(self::getCookieName(), '', time() - 3600, '/');
+            }
+        }   // end function invalidate()
+        
     }
 }

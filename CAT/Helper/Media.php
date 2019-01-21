@@ -265,6 +265,10 @@ if (!class_exists('\CAT\Helper\Media')) {
          **/
         public static function isImage($filename)
         {
+            // unknown extension
+            if(!isset(self::$mimetypes[pathinfo($filename,PATHINFO_EXTENSION)])) {
+                return false;
+            }
             $types = self::getMimeTypes();
             $type  = self::$mimetypes[pathinfo($filename,PATHINFO_EXTENSION)];
             if(!is_array($type)) {

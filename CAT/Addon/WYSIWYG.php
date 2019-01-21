@@ -19,6 +19,7 @@ namespace CAT\Addon;
 
 use \CAT\Base as Base;
 use \CAT\Registry as Registry;
+use \CAT\Helper\Assets as Asset;
 use \CAT\Helper\Validate as Validate;
 
 if(!class_exists('\CAT\Addon\WYSIWYG',false))
@@ -165,8 +166,7 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
             // get the contents, ordered by 'order' column; returns an array
             $contents = self::getContent($id);
 
-            $am = \CAT\Helper\AssetFactory::getInstance('backend_page');
-            $am->addJS(
+            Asset::addJS(
                 self::$e->getJS(),
                 'footer'
             );

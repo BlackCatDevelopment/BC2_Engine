@@ -220,7 +220,7 @@ if (!class_exists('Validate'))
                 ),
                 array(
                     self::sanitize_url(self::getURI(CAT_URL)),
-                    self::sanitize_url(self::getURI(CAT_URL)),
+                    self::sanitize_url(self::getURI(CAT_SITE_URL)),
                 ),
                 Directory::getName(Directory::sanitizePath($path))
             );

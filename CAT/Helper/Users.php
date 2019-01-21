@@ -115,6 +115,7 @@ if ( ! class_exists( 'Users', false ) )
             self::log()->addDebug('isAuthenticated()');
 
             $token = Validate::get('_cat_access_token'); // check form data
+
             if(empty($token)) {
                 self::log()->addDebug('no token sent as form data');
                 $headers = self::getResponseHeaders(); // token from header
@@ -126,6 +127,7 @@ if ( ! class_exists( 'Users', false ) )
                 }
             } else {
                 self::log()->addDebug('got token from form data');
+                unset($_REQUEST['_cat_access_token']);
             }
 
             if(empty($token)) {
@@ -347,20 +349,10 @@ if ( ! class_exists( 'Users', false ) )
                 $token = Authenticate::authenticate($uid, $passwd, $token);
                 if($token) {
                     self::db()->query(
-                        'UPDATE `:prefix:rbac_users` SET `login_when`=?, `login_ip`=?, `login_token`=? WHERE `user_id`=?',
-                        array(time(), $_SERVER['REMOTE_ADDR'], $token, $uid)
+                        'UPDATE `:prefix:rbac_users` SET `login_when`=?, `login_ip`=? WHERE `user_id`=?',
+                        array(time(), $_SERVER['REMOTE_ADDR'], $uid)
                     );
                     self::$curruser = new \CAT\Objects\User($uid);
-                    $lifetime = time()+ini_get('session.gc_maxlifetime');
-                    setcookie(
-                        self::getCookieName(),
-                        $token,
-                        $lifetime,
-                        '/',
-                        CAT_SITE_URL,
-                        true,
-                        true
-                    );
                     return $token;
                 } else {
                     self::printFatalError('No such user, user not active, or invalid password!');

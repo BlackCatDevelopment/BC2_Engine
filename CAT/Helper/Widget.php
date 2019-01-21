@@ -200,6 +200,16 @@ Array
          * @access public
          * @return
          **/
+        public static function getWidgetSubdirs()
+        {
+            return self::$subdirs;
+        }   // end function getWidgetSubdirs()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
         public static function getWidget($id)
         {
             $sql  = 'SELECT `t1`.*, `t2`.`data` '

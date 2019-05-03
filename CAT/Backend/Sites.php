@@ -86,7 +86,7 @@ Array
                     // create db entry
                     self::db()->query(
                           'INSERT INTO `:prefix:sites` (`site_owner`,`site_basedir`,`site_folder`,`site_name`,`site_url`) '
-                        . 'VALUES(?,?,?,?,))',
+                        . 'VALUES(?,?,?,?,?)',
                         array($data['site_owner'],$data['site_basedir'],$data['site_folder'],$data['site_name'],$data['site_url'])
                     );
                     // create folder

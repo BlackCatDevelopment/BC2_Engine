@@ -127,6 +127,89 @@ if(!class_exists('\CAT\Helper\Socialmedia'))
 
         /**
          *
+         * @access public
+         * @return
+         **/
+        public static function showFollowButtons($tpl)
+        {
+            $pageID = \CAT\Page::getID();
+            if(empty($tpl)) {
+                // look for social.tpl in template folder
+                $path = \CAT\Helper\Template::getPath($pageID);
+                $files = array('social_follow.tpl','social.tpl');
+                foreach($files as $file) {
+                    $filepath = Directory::sanitizePath($path.'/'.$file);
+                    if(file_exists($filepath)) {
+                        $tpl = $filepath;
+                        break;
+                    }
+                }
+            }
+            try {
+                $btns = self::getFollowButtons($pageID);
+                if(is_array($btns) && !empty($btns)) {
+                    if(empty($tpl)) {
+                        $string = '<li><a href="{$follow_url}" target="_blank" title="{$name}"><span>{$name}</span></a></li>';
+                    }
+                    if($tpl) {
+                        \CAT\Base::tpl()->setPath(pathinfo($tpl,PATHINFO_BASENAME));
+                        return \CAT\Base::tpl()->get($tpl,array('btns'=>$btns));
+                    } else {
+                        $tpl    = new \Dwoo\Template\Str($string);
+                        foreach($btns as $name => $data) {
+                            $output[] = \CAT\Base::tpl()->get($tpl,array('name'=>$name,'follow_url'=>$data));
+                        }
+                        return '<strong class="socialmedia_follow">'.\CAT\Base::lang()->translate('Follow us on').':</strong><ul class="socialmedia">'.implode("\n",$output)."</ul>\n";
+                    }
+                }
+            } catch( Exception $e ) {
+            }
+        }   // end function showFollowButtons()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function showShareButtons($tpl)
+        {
+            $pageID = \CAT\Page::getID();
+            if(empty($tpl)) {
+                // look for social.tpl in template folder
+                $path = \CAT\Helper\Template::getPath($pageID);
+                $files = array('social_share.tpl','social.tpl');
+                foreach($files as $file) {
+                    $filepath = Directory::sanitizePath($path.'/'.$file);
+                    if(file_exists($filepath)) {
+                        $tpl = $filepath;
+                        break;
+                    }
+                }
+            }
+            try {
+                $btns = self::getShareButtons($pageID);
+                if(is_array($btns) && !empty($btns)) {
+                    if(empty($tpl)) {
+                        $string = '<li><a href="{$share_url}" target="_blank" title="{$name}"><span>{$name}</span></a></li>';
+                    }
+                    if($tpl) {
+                        \CAT\Base::tpl()->setPath(pathinfo($tpl,PATHINFO_BASENAME));
+                        return \CAT\Base::tpl()->get($tpl,array('btns'=>$btns));
+                    } else {
+                        $tpl    = new \Dwoo\Template\Str($string);
+                        foreach($btns as $name => $data) {
+                            $output[] = \CAT\Base::tpl()->get($tpl,array('name'=>$name,'share_url'=>$data));
+                        }
+                        return '<strong class="socialmedia_share">'.\CAT\Base::lang()->translate('Share this page on').':</strong><ul class="socialmedia">'.implode("\n",$output)."</ul>\n";
+                    }
+                }
+            } catch( Exception $e ) {
+            }
+        }   // end function showShareButtons()
+        
+
+        /**
+         *
          * @access protected
          * @return
          **/

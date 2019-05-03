@@ -1,3 +1,6 @@
+/*!
+  * session.js
+  */
 function CATSecondsToTimeString(seconds) {
     if(!seconds>0) {
         seconds = 1;

@@ -174,7 +174,7 @@ if (!class_exists('\CAT\Helper\HArray')) {
                         }
                     }
                 }
-                return json_decode(json_encode($result), true);
+                #return json_decode(json_encode($result), true);
             }
 
             // filter by key/value
@@ -220,7 +220,10 @@ if (!class_exists('\CAT\Helper\HArray')) {
             // Json decode the result
             self::$filtered = array_map('json_decode', $diff);
 
-            return json_decode(json_encode($result), true);
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// da stand vorher $result drin
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            return json_decode(json_encode(self::$filtered), true);
         }   // end function filter()
 
         /**

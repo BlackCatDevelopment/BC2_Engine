@@ -71,6 +71,25 @@ if ( !class_exists( 'Addons' ) )
          * @access public
          * @return
          **/
+        public static function executeHandler(string $handler,string $classname,string $method)
+        {
+            include_once $handler;
+            if(is_callable(array($classname,$method))) {
+                self::log()->addDebug(sprintf(
+                    'calling method [%s] in class [%s]',
+                    $method, $classname
+                ));
+                $classname::$method();
+                return;
+            }
+        }   // end function executeHandler()
+        
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
         public static function exists($addon)
         {
             $name = self::getDetails($addon,'name');
@@ -250,6 +269,21 @@ if ( !class_exists( 'Addons' ) )
             return NULL;
         } // end function getDetails()
 
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function getHandler(string $directory, string $module)
+        {
+            foreach (array_values(array(str_replace(' ', '', $directory),$module)) as $classname) {
+                $filename = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$directory.'/inc/class.'.$classname.'.php');
+                if (file_exists($filename)) {
+                    return array($filename,$classname);
+                }
+            }
+        }   // end function getHandler()
+        
         /**
          *
          * @access public

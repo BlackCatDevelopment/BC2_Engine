@@ -193,6 +193,73 @@ if (! class_exists('Sections', false)) {
         }   // end function exists()
         
         /**
+         * gets the addon_id for a given section
+         *
+         * @access public
+         * @param  integer $section_id
+         * @return integer
+         **/
+        public static function getModuleForSection(int $section_id)
+        {
+            $sec = self::db()->query(
+                'SELECT `module_id` FROM `:prefix:sections` WHERE `section_id`=:id',
+                array('id'=>$section_id)
+            );
+            if(is_object($sec) && $sec->rowCount()) {
+                $result = $sec->fetch();
+                return $result['module_id'];
+            }
+        }   // end function getModuleForSection()
+
+        /**
+         * gets the page_id for a given section
+         *
+         * NOTE: If a section is assigned to several pages, only the first page
+         *       will be returned!
+         *
+         * @access public
+         * @param  integer $section_id
+         * @return integer
+         **/
+        public static function getPageForSection(int $section_id)
+        {
+            $sec = self::db()->query(
+                'SELECT `page_id` FROM `:prefix:pages_sections` WHERE `section_id`=:id',
+                array('id'=>$section_id)
+            );
+            if (is_object($sec) && $sec->rowCount()) {
+                $result = $sec->fetch();
+                return $result['page_id'];
+            }
+        }   // end function getPageForSection()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function getParams(int $section_id)
+        {
+            $sec = self::db()->query(
+                'SELECT `params` FROM `:prefix:module_routes` WHERE `section_id`=? AND `addon_id`=? AND `route`=?',
+                array($section_id,self::getModuleForSection($section_id),self::router()->getRoute())
+            );
+
+            if(is_object($sec) && $sec->rowCount()) {
+                $result = $sec->fetch();
+                $params = $result['params'];
+                try{
+                    $data = @unserialize($params);
+                    if($data !== false || $params === 'b:0;') {
+                        return $data;
+                    }
+                } catch ( \Exception $e ) {
+                    return $params;
+                }
+            }
+        }   // end function getParams()
+        
+        /**
          *
          * @access public
          * @return
@@ -341,7 +408,6 @@ if (! class_exists('Sections', false)) {
                         }
                     }
                 }   // end foreach(self::$sections as $pageID => $items)
-
                 // this will remove non-active sections from self::$sections
                 self::$active = HArray::filter(self::$sections, 'expired', true);
             }
@@ -434,28 +500,6 @@ if (! class_exists('Sections', false)) {
             }
             return false;
         }   // end function getSectionForPage()
-
-        /**
-         * gets the page_id for a given section
-         *
-         * NOTE: If a section is assigned to several pages, only the first page
-         *       will be returned!
-         *
-         * @access public
-         * @param  integer $section_id
-         * @return integer
-         **/
-        public static function getPageForSection(int $section_id)
-        {
-            $sec = self::db()->query(
-                'SELECT `page_id` FROM `:prefix:pages_sections` WHERE `section_id`=:id',
-                array('id'=>$section_id)
-            );
-            if ($sec->rowCount()) {
-                $result = $sec->fetch();
-                return $result['page_id'];
-            }
-        }   // end function getPageForSection()
 
         /**
          *

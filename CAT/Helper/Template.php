@@ -131,27 +131,48 @@ if (!class_exists('\CAT\Helper\Template')) {
         }   // end function getInstance()
 
         /**
+         * get available options for a template
+         *
+         * @access public
+         * @param  int    $pageID - optional pageID to find the right tpl
+         * @return
+         **/
+        public static function getAvailableOptions($pageID=null)
+        {
+            $form = self::getOptionsForm($pageID);
+            if($form) {
+                $opt = array();
+                $elems = $form->getElements();
+                foreach($elems as $i => $e) {
+                    $opt[$e->getName()] = $e->getValue();
+                }
+                return $opt;
+            }
+        }   // end function getAvailableOptions()
+
+        /**
          *
          * @access public
          * @return
          **/
-        public static function getOptions($pageID=null)
+        public static function getOptions($pageID)
         {
             if($pageID) {
                 $tpl = self::getPageTemplate($pageID);
             } else {
                 $tpl = \CAT\Registry::get('default_template');
             }
-            $tpl_id = \CAT\Helper\Addons::getDetails($tpl,'addon_id');
+            $tpl_id = Addons::getDetails($tpl,"addon_id");
+            // get template id
             $stmt = self::db()->query(
-                'SELECT * FROM `:prefix:templates` WHERE `tpl_id`=?',
-                array($tpl_id)
+                'SELECT * FROM `:prefix:template_options` WHERE `tpl_id`=? AND `page_id`=?',
+                array($tpl_id,$pageID)
             );
             $data = $stmt->fetchAll();
             $opt  = array();
             if(is_array($data) && count($data)>0) {
                 foreach($data as $i => $item) {
-                    $opt[$item['option']] = $item['value'];
+                    $opt[$item['opt_name']] = $item['opt_value'];
                 }
             }
             return $opt;
@@ -291,10 +312,42 @@ if (!class_exists('\CAT\Helper\Template')) {
         public static function hasOptions($pageID=null)
         {
             return (
-                count(self::getOptions($pageID))>0
+                count(self::getAvialableOptions($pageID))>0
             );
         }   // end function hasOptions()
         
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function saveOptions(int $pageID, array $opt)
+        {
+            $tpl    = self::getPageTemplate($pageID);
+            $tpl_id = Addons::getDetails($tpl,'addon_id');
+            if(!empty($tpl_id)) {
+                foreach($opt as $key => $value) {
+                    $key = str_replace('template_option_','',$key);
+// !!!!! TODO: template_options_options brauchen wir nicht mehr
+                    if($key == 'options') {
+                        continue;
+                    }
+                    if(empty($value)) {
+                        self::db()->query(
+                            'DELETE FROM `:prefix:template_options` WHERE `tpl_id`=? AND `page_id`=? AND `opt_name`=?',
+                            array($tpl_id,$pageID,$key)
+                        );
+                    } else {
+                        self::db()->query(
+                            'REPLACE INTO `:prefix:template_options` '
+                            . '(`tpl_id`, `page_id`, `opt_name`, `opt_value`) '
+                            . 'VALUES ( ?, ?, ?, ? ) ',
+                            array($tpl_id,$pageID,$key,$value)
+                        );
+                    }
+                }
+            }
+        }   // end function saveOptions()
         
 
         /**

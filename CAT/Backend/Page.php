@@ -350,13 +350,18 @@ if (!class_exists('Page')) {
                                         $handler = $filename;
                                     }
                                 }
+
                                 // execute the module's modify() function
                                 if ($handler) {
+                                    self::tpl()->setGlobals(array(
+                                        'section_id' => $section_id,
+                                        'page_id'    => $pageID,
+                                    ));
                                     self::log()->addDebug(sprintf('found class file [%s]', $handler));
                                     include_once $handler;
-                                    $classname::initialize($section_id);
+                                    $classname::initialize($section);
                                     self::setTemplatePaths($module, $variant);
-                                    $section_content = $classname::modify($section_id);
+                                    $section_content = $classname::modify($section);
                                     // make sure to reset the template search paths
                                     Backend::initPaths();
                                 }
@@ -565,6 +570,40 @@ if (!class_exists('Page')) {
          * @access public
          * @return
          **/
+        public static function relations()
+        {
+            $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
+
+            // the user needs to have the global pages_settings permission plus
+            // permissions for the current page
+            if (!self::user()->hasPerm('pages_settings') || !self::user()->hasPagePerm($pageID, 'pages_settings')) {
+                Base::printFatalError('You are not allowed for the requested action!');
+            }
+
+            if (self::asJSON()) {
+                Json::printData(array(
+                    'success' => true,
+                    
+                ));
+            } else {
+                Backend::printHeader();
+                self::tpl()->output('backend_page_modify_relations', array(
+                    'page'    => HPage::properties($pageID),
+                    'pages'   => HPage::getPages(1),
+                    'linked'  => HPage::getLinkedByLanguage($pageID),
+                    'langs'   => self::getLanguages(1), // available languages
+                    'current' => 'relations',
+                ));
+                Backend::printFooter();
+            }
+        }   // end function relations()
+        
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
         public static function reorder()
         {
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
@@ -749,7 +788,8 @@ if (!class_exists('Page')) {
                     )
                 ));
                 foreach ($form2->getElements() as $e) {
-                    $form->addElement($e);
+                    //$form->addElement($e);
+                    $form->addElement($e->copyAs('template_option_'.$e->getName()));
                 }
             }
 
@@ -757,9 +797,20 @@ if (!class_exists('Page')) {
             if ($form->isSent()) {
                 // check data
                 if ($form->isValid()) {
+
                     // save data
                     $data = $form->getData();
                     if (is_array($data) && count($data)) {
+
+                        // extract optional template settings
+                        $tpl_opt = array();
+                        foreach(array_keys($data) as $key) {
+                            if(substr_compare($key, 'template_option_', 0, 16)==0) {
+                                $tpl_opt[$key] = $data[$key];
+                                unset($data[$key]);
+                            }
+                        }
+
                         // get old data
                         $old_parent       = intval($page['parent']);
                         $old_position     = intval($page['ordering']);
@@ -803,6 +854,11 @@ if (!class_exists('Page')) {
                                 $changes++;
                             }
                             
+                        }
+
+                        // template options
+                        if(isset($tpl_opt) && is_array($tpl_opt) && count($tpl_opt)>0) {
+                            \CAT\Helper\Template::saveOptions($pageID, $tpl_opt);
                         }
 
                         if($changes>0) {

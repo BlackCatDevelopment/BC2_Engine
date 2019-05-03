@@ -45,6 +45,14 @@ if ( ! class_exists( 'Users', false ) )
             return self::$instance;
         }   // end function getInstance()
 
+        public function getHomeFolder()
+        {
+            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+                return false;
+            }
+            return self::$curruser->getHomeFolder();
+        }   // end function getHomeFolder()
+
         /**
          *
          * @access public
@@ -234,6 +242,27 @@ if ( ! class_exists( 'Users', false ) )
                 return $data[0];
             return array();
         }   // end function getDetails()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function getUserNames()
+        {
+            $stmt = self::db()->query('SELECT `user_id`, `username`, `display_name` FROM `:prefix:rbac_users`');
+            $data = $stmt->fetchAll();
+            $list = array();
+
+            if(is_array($data) && count($data)>0) {
+                foreach($data as $i => $item) {
+                    $list[$item['user_id']] = $item;
+                }
+            }
+
+            return $list;
+        }   // end function getUserNames()
+        
         
         /**
          * get users from DB; has several options to define what is requested

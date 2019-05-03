@@ -26,17 +26,6 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
 {
     class WYSIWYG extends Page implements iAddon, iPage
     {
-        private static $e_url  = null;
-        private static $e_name = null;
-        private static $e      = null;
-
-        public static function init()
-        {
-            self::$e_name = Registry::get('wysiwyg_editor');     // name
-            self::$e_url  = Registry::get('wysiwyg_editor_url'); // url
-            self::$e      = new \CAT\Addon\WYSIWYG\CKEditor4();
-        }
-
         /**
          * @inheritdoc
          **/
@@ -143,12 +132,6 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
             }
         }
 
-        public static function getJS()
-        {
-            if(!is_object(self::$e)) self::init();
-            return self::$e->getJS();
-        }
-
         /**
          *
          * @access  public
@@ -159,37 +142,10 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
         {
             parent::modify($section); // sets template path(s)
 
-            if(!is_object(self::$e)) self::init();
-
             $id       = $section['section_id'];
 
             // get the contents, ordered by 'order' column; returns an array
             $contents = self::getContent($id);
-
-            Asset::addJS(
-                self::$e->getJS(),
-                'footer'
-            );
-
-            // editor has some init code
-            $editor_js = self::$e->getEditorJS();
-            if(!empty($editor_js))
-            {
-                $am->addCode(
-                    self::tpl()->get(
-                        new \Dwoo\Template\Str(),
-                        array(
-                            'section_id' => $section['section_id'],
-                            'action'     => CAT_ADMIN_URL.'/section/save/'.$section['section_id'],
-                            'width'      => self::$e->getWidth(),
-                            'height'     => self::$e->getHeight(),
-                            'id'         => $id,
-                            'content'    => $content
-                        )
-                    ),
-                    'footer'
-                );
-            }
 
             // render template
             $output  = self::tpl()->get(
@@ -197,29 +153,15 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
                 array(
                     'section_id' => $section['section_id'],
                     'action'     => CAT_ADMIN_URL.'/section/save/'.$section['section_id'],
-                    'width'      => self::$e->getWidth(),
-                    'height'     => self::$e->getHeight(),
+                    'width'      => \CAT\Helper\WYSIWYG::editor()->getWidth(),
+                    'height'     => \CAT\Helper\WYSIWYG::editor()->getHeight(),
                     'columns'    => $contents,
                     'options'    => (isset($section['options']) ? $section['options'] : null),
                     'editor'     => self::tpl()->get(
-                        new \Dwoo\Template\Str(self::$e->showEditor()),
-                        array(
-                            'section_id' => $section['section_id'],
-                            'action'     => CAT_ADMIN_URL.'/section/save/'.$section['section_id'],
-                            'width'      => self::$e->getWidth(),
-                            'height'     => self::$e->getHeight(),
-                            'id'         => $id,
-                            'content'    => $contents
-                        )
+                        new \Dwoo\Template\Str(\CAT\Helper\WYSIWYG::editor()->showEditor($id))
                     ),
                 )
             );
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// Ich verstehe nicht warum der CKE nicht erscheint wenn ich nicht hier ein
-// echo einbaue... :(
-#echo "\n";
-#echo "<div style=\"display:none;\"></div>";
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             return $output;
         }

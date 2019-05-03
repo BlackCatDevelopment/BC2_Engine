@@ -264,14 +264,14 @@ if (!class_exists('\CAT\Backend\Section')) {
          **/
         public static function save()
         {
-            $sectionID = self::getSectionID();
+            $sectionID = self::getItemID('section_id');
             if (!\CAT\Sections::exists($sectionID)) {
                 Base::printFatalError('Invalid data! (Section does not exist)');
             }
             // get section details
             $section = \CAT\Sections::getSection($sectionID, true);
             // get page ID
-            $pageID  = self::getPageID(); //$section['page_id'];
+            $pageID  = $section['page_id'];
             self::checkPerm($pageID, null);
             // set variant?
             if (null!=($variant=\CAT\Helper\Validate::sanitizePost('variant'))) {
@@ -323,6 +323,27 @@ if (!class_exists('\CAT\Backend\Section')) {
                 \CAT\Addon\WYSIWYG::initialize($section);
                 $result = \CAT\Addon\WYSIWYG::save($sectionID);
             } else {
+                // get the module class
+                $handler = null;
+                $module          = $section['module'];
+                $directory       = \CAT\Helper\Addons::getDetails($module, 'directory');
+                foreach (array_values(array(str_replace(' ', '', $directory),$module)) as $classname) {
+                    $filename = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$module.'/inc/class.'.$classname.'.php');
+                    if (file_exists($filename)) {
+                        $handler = $filename;
+                    }
+                }
+
+                // execute the module's modify() function
+                if ($handler) {
+                    self::log()->addDebug(sprintf('found class file [%s]', $handler));
+                    include_once $handler;
+                    $classname::initialize($section);
+                    self::setTemplatePaths($module, $variant);
+                    $result = $classname::save($sectionID);
+                    // make sure to reset the template search paths
+                    \CAT\Backend::initPaths();
+                }
             }
 
             if (self::asJSON()) {
@@ -331,6 +352,8 @@ if (!class_exists('\CAT\Backend\Section')) {
                     ''
                 );
                 return;
+            } else {
+echo "SUCCESS<br />";
             }
         }   // end function save()
 
@@ -404,33 +427,5 @@ if (!class_exists('\CAT\Backend\Section')) {
             return $pageID;
         }   // end function getPageID()
 
-        /**
-         *
-         * @access protected
-         * @return
-         **/
-        protected static function getSectionID()
-        {
-            $sectID  = \CAT\Helper\Validate::sanitizePost('section_id', 'numeric');
-
-            if (!$sectID) {
-                $sectID  = \CAT\Helper\Validate::sanitizeGet('section_id', 'numeric');
-            }
-
-            if (!$sectID) {
-                $sectID = self::router()->getParam(-1);
-            }
-
-            if (!$sectID) {
-                $sectID = self::router()->getRoutePart(-1);
-            }
-
-            if (!$sectID || !is_numeric($sectID) || !\CAT\Sections::exists($sectID)) {
-                Base::printFatalError('Invalid data')
-                . (self::$debug ? '(CAT_Backend_Section::getSectionID())' : '');
-            }
-
-            return $sectID;
-        }   // end function getSectionID()
     } // class Section
 } // if class_exists()

@@ -20,7 +20,8 @@ namespace CAT;
 use \CAT\Base as Base;
 use \CAT\Helper\Page as HPage;
 
-if (!class_exists('\CAT\Page', false)) {
+if (!class_exists('\CAT\Page', false))
+{
     class Page extends Base
     {
         // ID of last instantiated page
@@ -77,10 +78,12 @@ if (!class_exists('\CAT\Page', false)) {
                         if ($route == '' || $route == 'index') {
                             self::$curr_page = \CAT\Helper\Page::getDefaultPage();
                         } else { // find page by route
-                            self::$curr_page = \CAT\Helper\Page::getPageForRoute($route);
+                            self::$curr_page = self::router()->getPage($route);
                         }
                     }
+                    if(!defined('CAT_PAGE_ID')) {
                     define('CAT_PAGE_ID', self::$curr_page);
+                    }
                 } else {
                     return self::getItemID('page_id', '\CAT\Helper\Page::exists');
                 }
@@ -125,6 +128,7 @@ if (!class_exists('\CAT\Page', false)) {
 
             // in fact, this should never happen, als isActive() does the same
             if (!is_array($sections) || !count($sections)) { // no content for this block
+                self::log()->addDebug('no active sections found');
                 return false;
             }
 
@@ -161,8 +165,8 @@ if (!class_exists('\CAT\Page', false)) {
                         Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$module.'/languages/');
                         self::setTemplatePaths($module);
                         include_once $handler;
-                        $classname::initialize();
-                        $content = $classname::view($section_id);
+                        $classname::initialize($section);
+                        $content = $classname::view($section);
                     } else {
                         self::log()->addError(
                                 sprintf(
@@ -245,11 +249,24 @@ if (!class_exists('\CAT\Page', false)) {
                 }
             }
 
+            // set page template
             $this->setTemplate();
 
+            // add page id to global template vars
             self::tpl()->setGlobals('page_id', $this->page_id);
+            self::tpl()->setGlobals('page_properties', HPage::properties($this->page_id));
 
+            // count visit
             self::track($this->page_id);
+
+            // if the user is logged in and has page permissions...
+// !!!!!!!!!! TODO: Check page perms !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if(self::user()->isAuthenticated()) {
+                if(self::user()->hasPerm('pages_edit') && self::user()->hasPagePerm($this->page_id, 'pages_edit')) {
+                    \CAT\Helper\Assets::addJS('\CAT\Backend\js\frontend.js','footer');
+                    //\CAT\Helper\Assets::addCSS('\CAT\Backend\js\frontend.css');
+                }
+            }
 
             // including the template; it may calls different functions
             // like page_content() etc.
@@ -262,6 +279,7 @@ if (!class_exists('\CAT\Page', false)) {
                 echo $output;
             } else {
                 $variant = \CAT\Helper\Template::getVariant($this->page_id);
+                self::tpl()->setGlobals('template_options',\CAT\Helper\Template::getOptions($this->page_id));
                 if (file_exists(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/'.$variant.'/index.tpl')) {
                     self::tpl()->output(
                         \CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/'.$variant.'/index.tpl',

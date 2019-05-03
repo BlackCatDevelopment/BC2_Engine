@@ -90,7 +90,7 @@ if (!class_exists('Validate'))
          * @param  string  $global  - name of the superglobal (f.e. _REQUEST)
          * @return mixed
          **/
-        public static function get(string $key, string $require=NULL, bool $escape=false, string $global=null )
+        public static function get(string $key, string $require=NULL, bool $escape=false, string $global=null)
         {
             if(is_null($global)) {
                 $global = '_REQUEST';

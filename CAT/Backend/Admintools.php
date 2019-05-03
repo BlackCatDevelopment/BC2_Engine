@@ -95,7 +95,7 @@ if (!class_exists('Backend\Admintools')) {
                         $d['widgets'][] = array(
                             'column'        => $col,
                             'widget_name '  => self::lang()->translate($tool['name']),
-                            'content'       => self::lang()->translate($tool['description']),
+                            'content'       => (isset($tool['description']) ? self::lang()->translate($tool['description']) : ''),
                             'link'          => '<a href="'.CAT_ADMIN_URL.'/admintools/tool/'.$tool['directory'].'">'.$tool['name'].'</a>',
                             'position'      => 1,
                             'open'          => true,

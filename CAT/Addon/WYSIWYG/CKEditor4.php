@@ -20,40 +20,16 @@ namespace CAT\Addon\WYSIWYG;
 use \CAT\Base as Base;
 use \CAT\Registry as Registry;
 
-if(!class_exists('\CAT\Addon\WYSIWYG\CKEditor4',false))
+if(!class_exists('\CAT\Addon\WYSIWYG\ckeditor4',false))
 {
-    class CKEditor4
+    class ckeditor4 extends Editor implements IEditor
     {
-        public static function getJS()
+        public static function addJS()
         {
-            // if the module is installed...
-            if(\CAT\Helper\Addons::isInstalled('ckeditor4',null,'WYSIWYG'))
-                return '/modules/ckeditor4/js/wysiwyg.js';
-            // ...else use CDN
-            return 'https://cdn.ckeditor.com/4.7.3/full/ckeditor.js';
-        }
-        public static function getHeight()
-        {
-            return '350px';
-        }
-        public static function getWidth()
-        {
-            return '100%';
-        }
-        public function getEditorJS()
-        {
-            return '';
-        }   // end function getEditorJS()
-
-        public function showEditor()
-        {
-            return "
-            <form name=\"cat_wysiwyg_editor_{\$section_id}\" action=\"{\$action}\" method=\"post\">
-                <input type=\"hidden\" name=\"section_id\" value=\"{\$section_id}\" />
-                <input type=\"hidden\" name=\"content_id\" value=\"{\$id}\" />
-                <textarea class=\"cat_wysiwyg_editor\" id=\"{\$id}\" name=\"{\$id}\" style=\"width:{\$width};height:{\$height}\">{\$content}</textarea><br />
-            	<input type=\"submit\" value=\"{translate('Save')}\" />
-            </form>\n";
+            // important: wysiwyg.js loads the ckeditor.js, so do NOT add it here!
+            if(file_exists(CAT_ENGINE_PATH.'/CAT/vendor/ckeditor/ckeditor/ckeditor.js')) {
+                \CAT\Helper\Assets::addJS('/CAT/Addon/WYSIWYG/ckeditor4/wysiwyg.js','footer');
+            }
         }
     }
 }

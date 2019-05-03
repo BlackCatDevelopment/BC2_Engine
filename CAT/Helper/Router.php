@@ -32,6 +32,9 @@ if (!class_exists('Router', false)) {
         public static $loglevel   = \Monolog\Logger::DEBUG;
         // instance
         private static $instance   = null;
+        // tables
+        private static $routes_table = ':prefix:pages_routes';
+
         private static $reroutes   = 0;
         // full route
         private $route      = null;
@@ -51,7 +54,7 @@ if (!class_exists('Router', false)) {
             'css','js','images','eot','fonts'
         );
         private static $assets = array(
-            'css','js','eot','svg','ttf','woff','woff2','map','jpg','jpeg','gif','png'
+            'css','js','eot','svg','ttf','woff','woff2','map','jpg','jpeg','gif','png','html'
         );
         private static $asset_subdirs = array(
             'modules','templates'
@@ -107,6 +110,30 @@ if (!class_exists('Router', false)) {
                 return;
             }
 
+            // ----- forward to modules ----------------------------------------
+            // Note: This may be dangerous, but for now, we do not have a
+            //       whitelist for allowed file names
+            // -----------------------------------------------------------------
+            if (self::match('~^modules/~i')) {
+                self::log()->addDebug(sprintf('forwarding to module [%s]',$this->route));
+                if($suffix=='php') {
+                    self::log()->addDebug('>>>>> dispatch() ENDE <<<<<');
+                    require CAT_ENGINE_PATH.'/'.self::router()->getRoute();
+                    return;
+                } else {
+                    // get the module class
+                    $directory = self::router()->getRoutePart(1);
+                    $method    = self::router()->getRoutePart(2);
+                    $module    = $directory;
+                    list($handler,$classname) = \CAT\Helper\Addons::getHandler($directory,$module);
+
+                    if ($handler) {
+                        self::log()->addDebug(sprintf('found class file [%s]', $handler));
+                        \CAT\Helper\Addons::executeHandler($handler,$classname,$method);
+                    }
+                }
+            }
+
             $this->controller = "\\CAT\\".($this->backend ? 'Backend' : 'Frontend'); // \CAT\Backend || \CAT\Frontend
             $this->function   = ((is_array($this->parts) && count($this->parts)>0) ? $this->parts[0] : 'index');
 
@@ -137,24 +164,13 @@ if (!class_exists('Router', false)) {
                     'serving frontend page',
                     $this->route
                 ));
-                $page = HPage::getPageForRoute($this->route);
+                $page = $this->getPage($this->route);
                 if ($page && is_int($page)) {
                     $pg = \CAT\Page::getInstance($page);
                     self::log()->addDebug('>>>>> dispatch() ENDE <<<<<');
                     $pg->show();
                     exit;
                 }
-            }
-
-            // ----- forward to modules ----------------------------------------
-            // Note: This may be dangerous, but for now, we do not have a
-            //       whitelist for allowed file names
-            // -----------------------------------------------------------------
-            if (self::router()->match('~^modules/~i') && $suffix=='php') {
-                self::log()->addDebug(sprintf('forwarding to module [%s]',self::$route));
-                self::log()->addDebug('>>>>> dispatch() ENDE <<<<<');
-                require CAT_ENGINE_PATH.'/'.self::router()->getRoute();
-                return;
             }
 
             #echo "is callable controller[", $this->controller, "] function [", $this->function,"] result [", is_callable(array($this->controller,$this->function)), "]<br />";
@@ -306,6 +322,47 @@ if (!class_exists('Router', false)) {
             }
             return $this->handler;
         }   // end function getHandler()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public function getPage($route)
+        {
+            if (\CAT\Backend::isBackend()) {
+                return 0;
+            }
+            $route  = urldecode($route);
+            // remove suffix from route
+            $route  = str_ireplace(\CAT\Registry::get('PAGE_EXTENSION'), '', $route);
+            // remove trailing /
+            $route  = rtrim($route, "/");
+            // add / to front
+            if (substr($route, 0, 1) !== '/') {
+                $route = '/'.$route;
+            }
+            // find page in DB
+            $result = self::db()->query(
+                'SELECT `page_id` FROM `'.self::$routes_table.'` WHERE `route`=?',
+                array($route)
+            );
+            $data   = $result->fetch();
+            if (!$data || !is_array($data) || !count($data)) {
+                $result = self::db()->query(
+                    'SELECT `page_id` FROM `:prefix:module_routes` WHERE `route`=?',
+                    array(ltrim($route,"/"))
+                );
+                $data   = $result->fetch();
+                if (!$data || !is_array($data) || !count($data)) {
+                    return false;
+                } else {
+                    return (int)$data['page_id'];
+                }
+            } else {
+                return (int)$data['page_id'];
+            }
+        }   // end function getPage()
 
         /**
          *
@@ -545,14 +602,24 @@ if (!class_exists('Router', false)) {
          **/
         public function match($pattern)
         {
+            self::log()->addDebug(sprintf(
+                'match() route [%s] pattern [%s]',
+                $this->getRoute(),
+                $pattern
+            ));
             // if the pattern has brackets, we return the first match
             // if not, we return boolean true
             if (preg_match($pattern, $this->getRoute(), $m)) {
-                if (count($m) && strlen($m[0])) {
+                if (count($m)>1 && strlen($m[0])) {
+                    self::log()->addDebug(sprintf(
+                        'returning first match [%s]',$m[0]
+                    ));
                     return $m[0];
                 }
+                self::log()->addDebug('match() returning true');
                 return true;
             }
+            self::log()->addDebug('match() returning false');
             return false;
         }   // end function match()
 
@@ -591,6 +658,16 @@ if (!class_exists('Router', false)) {
             $this->perm      = $needed_perm;
         }   // end function protect()
         
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public function register(string $route, int $pageID, $addon_id=null, $section_id=null)
+        {
+        
+        }   // end function register()
+
         /**
          *
          **/

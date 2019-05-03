@@ -142,7 +142,7 @@ if (!class_exists('Base', false)) {
                 || !is_object(Base::$objects['getid3'])
                 || !Base::$objects['getid3'] instanceof \getID3
             ) {
-                require_once CAT_ENGINE_PATH.'/vendor/james-heinrich/getid3/getid3/getid3.php';
+                require_once CAT_ENGINE_PATH.'/CAT/vendor/james-heinrich/getid3/getid3/getid3.php';
                 Base::$objects['getid3'] = new \getID3;
             }
             return Base::$objects['getid3'];
@@ -194,7 +194,14 @@ if (!class_exists('Base', false)) {
             ) {
                 \wblib\wbLang::addPath(CAT_ENGINE_PATH.'/languages');
                 \wblib\wbLang::addPath(CAT_ENGINE_PATH.'/CAT/Backend/languages');
-                self::storeObject('lang', \wblib\wbLang::getInstance(Registry::get('LANGUAGE', null, null)));
+                $obj = null;
+                try {
+                    $obj = \wblib\wbLang::getInstance(Registry::get('LANGUAGE', null, null));
+                } catch ( Exception $e ) {
+
+                } finally {
+                    self::storeObject('lang', $obj);
+                }
             }
             return Base::$objects['lang'];
         }   // end function lang()
@@ -275,7 +282,7 @@ if (!class_exists('Base', false)) {
 
             if ($loglevel != Base::$loglevel || $loglevel == \Monolog\Logger::DEBUG) {
                 $logger  = Registry::get('CAT.logger.'.$class);
-                $logfile = 'core_'.$class.'_'.date('m-d-Y').'.log';
+                $logfile = 'core_'.str_replace('\\','_',$class).'_'.date('m-d-Y').'.log';
                 if ($reset && file_exists(CAT_ENGINE_PATH.'/temp/logs/'.$logfile)) {
                     unlink(CAT_ENGINE_PATH.'/temp/logs/'.$logfile);
                 }
@@ -514,6 +521,47 @@ if (!class_exists('Base', false)) {
             }
             return $result;
         }   // end function getEncodings()
+
+        /**
+         * tries to retrieve id by checking (in this order):
+         *
+         *    - $_POST[$attr]
+         *    - $_GET[$attr]
+         *    - Route param[$attr]
+         *
+         * also checks for string value
+         *
+         * @access public
+         * @param  string $attr
+         * @return string
+         **/
+        public static function getItem($attr=null,$exists_func=null)
+        {
+            $item = null;
+
+            if($attr) {
+                $item  = \CAT\Helper\Validate::sanitizePost($attr,'string');
+                if(!$item) {
+                    $item  = \CAT\Helper\Validate::sanitizeGet($attr,'string');
+                }
+            }
+
+            if(!$item)
+                $item = self::router()->getParam(-1);
+
+            if(!$item)
+                $item = self::router()->getRoutePart(-1);
+
+            if(!$item || !is_string($item)) {
+                $item = NULL;
+            }
+            if($exists_func) {
+                if(!$exists_func($item)) {
+                    $item = NULL;
+                }
+            }
+            return $item;
+        }   // end function getItem()
 
         /**
          * tries to retrieve id by checking (in this order):
@@ -879,9 +927,12 @@ ORDER BY
             }
 
             if(!self::router()->isBackend()) {
+                $pageID  = \CAT\Page::getID();
+                if($pageID !== false) {
                 $tplpath = \CAT\Helper\Template::getPath(\CAT\Page::getID());
                 if(file_exists($tplpath.'/errorpage.tpl')) {
                     self::tpl()->output($tplpath.'/errorpage.tpl', array('state'=>500,'message'=>$message,'info'=>$errinfo));
+                    }
                 }
             }
 

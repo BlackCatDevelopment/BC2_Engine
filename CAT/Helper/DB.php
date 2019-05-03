@@ -263,12 +263,14 @@ if(!class_exists('DB'))
                     $e->getMessage()
                 ));
             }
+
             if($this->isError())
             {
                 $logger = self::$conn->getConfiguration()->getSQLLogger();
                 if(count($logger->queries))
                 {
                     $last = array_pop($logger->queries);
+
                     if(is_array($last) && count($last))
                     {
                         $err_msg = sprintf(
@@ -605,7 +607,12 @@ if(!class_exists('DB'))
          **/
         public function get_one($sql,$type=\PDO::FETCH_ASSOC)
         {
-            return $this->query($sql)->fetchColumn();
+            $stmt = $this->query($sql);
+            if(is_resource($stmt)) {
+                return $stmt->fetchColumn();
+            } else {
+                return null;
+            }
         }
 
         public function is_error()  { return $this->isError();      }

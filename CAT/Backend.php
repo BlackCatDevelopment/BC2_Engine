@@ -310,14 +310,11 @@ if (!class_exists('Backend', false)) {
             $token = self::user()->login();
             if (false!==$token) {
                 self::log()->addDebug(sprintf(
-                    'Authentication succeeded, username [%s], id [%s]',
+                    'Authentication succeeded, username [%s], id [%s], token [%s]',
                     self::user()->get('username'),
-                    self::user()->get('user_id')
+                    self::user()->get('user_id'),
+                    $token
                 ));
-
-                self::log()->addDebug('starting session');
-                #self::session()->start();
-                #self::session()->set('USER_ID',self::user()->get('user_id'));
 
                 // forward
                 if (self::asJSON()) {

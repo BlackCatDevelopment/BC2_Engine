@@ -19,8 +19,15 @@ namespace CAT\Addon\WYSIWYG;
 
 interface IEditor
 {
+    /**
+     * use the asset helper to add the editor JS to the header; return void
+     **/
+    public static function addJS();
+    public static function getClass();
     public static function getEditorJS();
     public static function getHeight();
-    public static function getJS();
     public static function getWidth();
+    public static function setHeight($height);
+    public static function setWidth($width);
+    public static function setClass($class);
 }

@@ -36,6 +36,7 @@ $LANG = array(
     'All' => 'Alle',
     "An internal error occured. We're sorry for inconvenience." => 'Es ist ein interner Fehler aufgetreten. Wir bitten um Entschuldigung.',
     'Authentication failed!' => 'Autorisierung fehlgeschlagen!',
+    'Authentication failed! Please accept the session cookie to proceed.' => 'Autorisierung fehlgeschlagen! Bitte den Session-Cookie akzeptieren um fortzufahren.',
     'Click to dismiss' => 'Zum Schließen anklicken',
     'No such user, user not active, or invalid password!' => 'Benutzer nicht vorhanden, nicht aktiv, oder Kennwort falsch!',
     'Parse error. Maybe caused by invalid JSON data.' => 'Parsefehler. Möglicherweise verursacht durch ungültige JSON Daten.',
@@ -94,6 +95,7 @@ $LANG = array(
     'Submit changes'  => 'Absenden',
     'Success'         => 'Erfolgreich',
     'Title'           => 'Titel',
+    'Total size'      => 'Gesamtgröße',
     'Type'            => 'Typ',
     'View'            => 'Ansicht',
     'Welcome'         => 'Willkommen',
@@ -104,6 +106,7 @@ $LANG = array(
     'This page is also available in other languages.' => 'Diese Seite ist in weiteren Sprachen verfügbar.',
 
     // --------------- Login page ---------------
+    'Accept cookie'   => 'Cookie akzeptieren',
     'Login'           => 'Anmelden',
     'Your username'   => 'Benutzername',
     'Your password'   => 'Kennwort',
@@ -113,8 +116,12 @@ $LANG = array(
     'Scan the following image with your app and enter the code below' => 'Bitte das Image mit einer entsprechenden App scannen und den Code unten eintragen',
     'Two-Step Authentication' => 'Zwei-Faktor-Authentifizierung',
     'Your OTP code (PIN)' => 'OTP Code (PIN)',
+    'After this point, a session cookie is used to maintain your login from page to page. When you log out or close the browser this cookie is destroyed (in your browser and on the server).'
+        => 'Nach der Anmeldung wird ein Session-Cookie verwendet, um das Login beim Navigieren zwischen den Seiten zu erhalten. Beim Ausloggen oder Schließen des Browsers wird dieses Cookie gelöscht (im Browser und auf dem Server).',
 
     // ----- Socialmedia -----
     'Follow us on' => 'Folgen Sie uns auf',
     'Share this page on' => 'Teilen Sie diese Seite auf',
+    'If you follow this link, you will be redirected to XXX. If you agree, please click [OK], otherwise click [Cancel].'
+        => 'Wenn Sie diesem Link folgen, werden Sie an XXX weitergeleitet. Wenn Sie damit einverstanden sind, klicken Sie bitte auf [OK], andernfalls auf [Abbrechen].',
 );

@@ -30,6 +30,7 @@ if (!class_exists('\CAT\Page', false))
         private static $instances  = array();
         // loglevel
         protected static $loglevel   = \Monolog\Logger::EMERGENCY;
+        #protected static $loglevel   = \Monolog\Logger::DEBUG;
         //
         protected $page_id    = null;
 
@@ -71,14 +72,14 @@ if (!class_exists('\CAT\Page', false))
                             'SELECT `value` FROM `:prefix:settings` WHERE `name`="maintenance_page"'
                         );
                         $value = $result->fetch();
-                        self::$curr_page = $value['value'];
+                        self::$curr_page = intval($value['value']);
                     } else {
                         $route = self::router()->getRoute();
                         // no route -> get default page
                         if ($route == '' || $route == 'index') {
-                            self::$curr_page = \CAT\Helper\Page::getDefaultPage();
+                            self::$curr_page = intval(\CAT\Helper\Page::getDefaultPage());
                         } else { // find page by route
-                            self::$curr_page = self::router()->getPage($route);
+                            self::$curr_page = intval(self::router()->getPage($route));
                         }
                     }
                     if(!defined('CAT_PAGE_ID')) {
@@ -165,6 +166,7 @@ if (!class_exists('\CAT\Page', false))
                         Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$module.'/languages/');
                         self::setTemplatePaths($module);
                         include_once $handler;
+                        $classname = '\CAT\Addon\\'.$classname;
                         $classname::initialize($section);
                         $content = $classname::view($section);
                     } else {
@@ -268,6 +270,29 @@ if (!class_exists('\CAT\Page', false))
                 }
             }
 
+            // cookie consent
+            if(self::getSetting('cc_enabled') == "true") {
+                // defaults
+                $cc_default_settings = array(
+                    'type' => 'info',
+                    'position' => 'top',
+                    'theme' => 'block'
+                );
+                $result = self::db()->query(
+                    'SELECT * FROM `:prefix:cookieconsent_settings` WHERE `site_id`=?',
+                    array(CAT_SITE_ID)
+                );
+                $cc_settings = $result->fetch();
+                $cc_settings = array_merge($cc_default_settings,$cc_settings);
+                $code = self::tpl()->get(
+                    CAT_ENGINE_PATH.'/CAT/templates/cc_code.txt',
+                    $cc_settings
+                );
+                \CAT\Helper\Assets::addJS('/modules/lib_javascript/plugins/cookieconsent/cookieconsent.min.js','header');
+                \CAT\Helper\Assets::addCSS('/modules/lib_javascript/plugins/cookieconsent/cookieconsent.min.css');
+                \CAT\Helper\Assets::addCode($code,'header');
+            }
+
             // including the template; it may calls different functions
             // like page_content() etc.
             $this->log()->addDebug('including template');
@@ -276,17 +301,24 @@ if (!class_exists('\CAT\Page', false))
                 require \CAT\Registry::get('CAT_TEMPLATE_DIR').'/index.php';
                 $output = ob_get_contents();
                 ob_clean();
-                echo $output;
             } else {
                 $variant = \CAT\Helper\Template::getVariant($this->page_id);
                 self::tpl()->setGlobals('template_options',\CAT\Helper\Template::getOptions($this->page_id));
                 if (file_exists(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/'.$variant.'/index.tpl')) {
-                    self::tpl()->output(
+                    $output = self::tpl()->get(
                         \CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/'.$variant.'/index.tpl',
                         array()
                     );
                 }
             }
+
+            // replace headers placeholder
+            preg_match('~<!-- pageheader (\d) -->~', $output, $m);
+            $ignore_inc = ( isset($m[1]) && $m[1]==1 ) ? true : false;
+            $headers = \CAT\Helper\Assets::renderAssets('header',$this->page_id,$ignore_inc,false);
+            $output = str_replace('<!-- pageheader '.($ignore_inc===true?1:0). ' -->', $headers, $output);
+
+            echo $output;
         }   // end function show()
 
         /**

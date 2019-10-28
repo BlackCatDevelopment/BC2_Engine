@@ -149,7 +149,7 @@ if(!class_exists('\CAT\Helper\Socialmedia'))
                 $btns = self::getFollowButtons($pageID);
                 if(is_array($btns) && !empty($btns)) {
                     if(empty($tpl)) {
-                        $string = '<li><a href="{$follow_url}" target="_blank" title="{$name}"><span>{$name}</span></a></li>';
+                        $string = '<li><a href="{$follow_url}" target="_blank" title="{$name}" onClick="return confirm(\'Sie verlassen diese Seite und besuchen Facebook!\')"><span>{$name}</span></a></li>';
                     }
                     if($tpl) {
                         \CAT\Base::tpl()->setPath(pathinfo($tpl,PATHINFO_BASENAME));

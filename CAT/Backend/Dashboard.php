@@ -144,10 +144,8 @@ if (!class_exists('\CAT\Backend\Dashboard')) {
                 'MAIN_MENU' => Backend::getMainMenu(),
             );
 
+            Backend::show('backend_dashboard', $tpl_data);
 
-            Backend::printHeader();
-            self::tpl()->output('backend_dashboard', $tpl_data);
-            Backend::printFooter();
         }   // end function index()
         
         /**

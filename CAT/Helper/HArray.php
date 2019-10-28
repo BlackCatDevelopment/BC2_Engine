@@ -227,6 +227,31 @@ if (!class_exists('\CAT\Helper\HArray')) {
         }   // end function filter()
 
         /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function flatten(array $array)
+        {
+            $flat = array(); // initialize return array
+            $stack = array_values($array); // initialize stack
+            while($stack) // process stack until done
+            {
+                $value = array_shift($stack);
+                if (is_array($value)) // a value to further process
+                {
+                    $stack = array_merge(array_values($value), $stack);
+                }
+                else // a value to take
+                {
+                   $flat[] = $value;
+                }
+            }
+            return $flat;
+        }   // end function flatten()
+        
+
+        /**
          * recursive function to check if a given array key exists
          *
          * @access public

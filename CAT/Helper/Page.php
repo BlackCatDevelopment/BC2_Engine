@@ -278,6 +278,8 @@ if (!class_exists('Page')) {
             $sql     = 'SELECT * FROM `'.self::$page_refs_table.'` AS t1'
                      . ' RIGHT OUTER JOIN `'.self::$pages_table.'` AS t2'
                      . ' ON `t1`.`link_page_id`=`t2`.`page_id`'
+                     . ' JOIN `:prefix:pages_routes` AS t3'
+                     . ' ON `t1`.`page_id`=`t3`.`page_id`'
                      . ' WHERE `t1`.`page_id` = :id'
                      ;
 

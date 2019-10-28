@@ -78,9 +78,13 @@ if (!class_exists('FormBuilder'))
                     // list of values for checkbox and radio
                     if(in_array($item['fieldtype'],array('checkbox','radio','select')))
                     {
-                        if(isset($item['data']) && strlen($item['data']) && substr_count($item['data'],","))
+                        if(isset($item['data']) && strlen($item['data']))
                         {
-                            $e->setData(explode(",",$item['data']));
+                            if(substr_count($item['data'],",")) {
+                            	$e->setData(explode(",",$item['data']));
+                            } else {
+                                $e->setData($item['data']);
+                            }
                         }
                     }
 

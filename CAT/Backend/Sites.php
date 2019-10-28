@@ -106,14 +106,12 @@ Array
                 return;
             }
 
-            \CAT\Backend::printHeader();
-            self::tpl()->output(
+            Backend::show(
                 'backend_sites',
                 array(
                     'new_site_form' => (isset($form) ? $form->render(1) : ''),
                 )
             );
-            \CAT\Backend::printFooter();
         }   // end function add()
 
         /**
@@ -160,14 +158,12 @@ Array
                 return;
             }
 
-            \CAT\Backend::printHeader();
-            self::tpl()->output(
+            Backend::show(
                 'backend_sites',
                 array(
                     'edit_site_form' => (isset($form) ? $form->render(1) : ''),
                 )
             );
-            \CAT\Backend::printFooter();
         }   // end function edit()
 
         /**
@@ -205,8 +201,7 @@ Array
                 $form = self::populateForm();
             }
 
-            \CAT\Backend::printHeader();
-            self::tpl()->output(
+            Backend::show(
                 'backend_sites',
                 array(
                     'sites'         => $sites,
@@ -214,7 +209,6 @@ Array
                     'new_site_form' => (isset($form) ? $form->render(1) : ''),
                 )
             );
-            \CAT\Backend::printFooter();
         }   // end function index()
 
         /**

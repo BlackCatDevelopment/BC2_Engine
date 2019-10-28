@@ -32,7 +32,12 @@ if (!class_exists('\CAT\Backend\Addons')) {
     {
         protected static $instance = null;
         protected static $known_types = array(
-            'Page','Language','Library','Template','Tool','WYSIWYG'
+            'Page'      => 'module',
+            'Language'  => 'language',
+            'Library'   => 'module',
+            'Template'  => 'template',
+            'Tool'      => 'module',
+            'WYSIWYG'   => 'module'
         );
 
         /**
@@ -75,9 +80,8 @@ if (!class_exists('\CAT\Backend\Addons')) {
                 'notinstalled_json' => json_encode($ftp, JSON_NUMERIC_CHECK),
                 'current'      => 'installed',
             );
-            Backend::printHeader();
-            self::tpl()->output('backend_addons', $tpl_data);
-            Backend::printFooter();
+            
+            Backend::show('backend_addons', $tpl_data);
         }   // end function index()
 
         /**
@@ -112,7 +116,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
                     $catalog['modules'][$i]['is_installed'] = true;
                     $catalog['modules'][$i]['removable']    =
                         ($installed[$m['directory']]['removable'] == 'N' ? false : true);
-                    if(isset($m['version']) && isset($installed[$m['directory']]['version'])) {
+                    if (isset($m['version']) && isset($installed[$m['directory']]['version'])) {
                     $catalog['modules'][$i]['installed_version'] = $installed[$m['directory']]['version'];
                     if (version_compare($m['version'], $installed[$m['directory']]['version'], '>')) {
                         $catalog['modules'][$i]['upgradable'] = true;
@@ -157,9 +161,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
                 'version'      => $catalog['version'],
             );
 
-            Backend::printHeader();
-            self::tpl()->output('backend_addons', $tpl_data);
-            Backend::printFooter();
+            Backend::show('backend_addons', $tpl_data);
         }   // end function catalog()
 
         /**
@@ -189,9 +191,10 @@ if (!class_exists('\CAT\Backend\Addons')) {
                         $form->addError('There already exists a directory with this name');
                     } else {
                         $data['addon_type'] = strtolower($data['addon_type']);
-                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        // !!!!! TODO: sanitize addon_directory (don't allow umlauts, diacritics, ...)
-                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        $data['year']       = date('Y');
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!! TODO: sanitize addon_directory (don't allow umlauts, diacritics, ...)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                         // create database entry
                         self::db()->query(
                               'INSERT INTO `:prefix:addons` '
@@ -216,7 +219,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
                                     Directory::createDirectory($basedir.'/js');
                                     Directory::createDirectory($basedir.'/templates');
                                     Directory::createDirectory($basedir.'/templates/default');
-                                    if ($data['addon_type']=='page') {
+                                    if ($data['addon_type']=='page' || $data['addon_type']=='template') {
                                         $data['for']='frontend';
                                     } elseif ($data['addon_type']=='tool') {
                                         $data['for']='backend';
@@ -232,17 +235,27 @@ if (!class_exists('\CAT\Backend\Addons')) {
                                                     $data
                                                 )
                                             );
-                                            $fh = fopen($basedir.'/inc/'.$pos.'.inc.php', 'w');
+                                            $fh = fopen($basedir.'/'.$pos.'.inc.php', 'w');
                                             fwrite($fh, '<'.'?'.'php'."\n");
                                             fwrite($fh, $tpl);
                                             fclose($fh);
                                         }
                                     }
+                                    if($data['addon_type']=='template') {
+                                        $tpl = self::tpl()->get(
+                                            CAT_ENGINE_PATH.'/CAT/templates/index_templates.tpl',
+                                            $data
+                                        );
+                                        $fh = fopen($basedir.'/index.php', 'w');
+                                        fwrite($fh, '<'.'?'.'php'."\n");
+                                        fwrite($fh, $tpl);
+                                        fclose($fh);
+                                    }
                                 }
                             } else {
-                                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                                // !!!!! TODO: check language shortcut
-                                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!! TODO: check language shortcut
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                                 $basedir = CAT_ENGINE_PATH.'/languages';
                                 $file    = $data['addon_directory'];
                                 $fh = fopen($basedir.'/'.$file.'.php', 'w');
@@ -257,12 +270,10 @@ if (!class_exists('\CAT\Backend\Addons')) {
                 }
             }
 
-            Backend::printHeader();
-            self::tpl()->output('backend_addons_create', array(
+            Backend::show('backend_addons_create', array(
                     'form'    => $form->render(true),
                     'current' => 'create',
                 ));
-            Backend::printFooter();
         }   // end function create()
         
 
@@ -278,15 +289,19 @@ if (!class_exists('\CAT\Backend\Addons')) {
             }
 
             $addon     = self::getItem('addon');
-            $type      = self::router()->getParam(-2)."s";
-            $path      = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.$type.'/'.$addon);
+            $type      = self::router()->getRoutePart(-2);
+
+            // map type to path
+            $mod_type  = self::$known_types[ucfirst($type)];
+            $path      = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.$mod_type.'s/'.$addon);
             $handler   = null;
             $classname = null;
 
             // already there? (uploaded via FTP)
             if (is_dir($path)) {
-                $info = HAddons::getInfo($addon,$type);
+                $info = HAddons::getInfo($addon, $type);
                 $names = array($addon);
+
                 if (isset($info['name']) && $info['name']!=$addon) {
                     $names[] = $info['name'];
                 }
@@ -294,7 +309,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
                     $names[] = $info['directory'];
                 }
                 $namespace = '\CAT\Addon';
-                if($type=='templates') {
+                if ($type=='templates') {
                     $namespace .= '\Template';
                 }
                 foreach (array_values($names) as $name) {
@@ -318,9 +333,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
                             'errors'       => $errors,
                         );
 
-                        Backend::printHeader();
-                        self::tpl()->output('backend_addons', $tpl_data);
-                        Backend::printFooter();
+                        Backend::show('backend_addons', $tpl_data);
                     }
                 }
             }
@@ -349,9 +362,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
                 'current'      => 'notinstalled',
             );
 
-            Backend::printHeader();
-            self::tpl()->output('backend_addons', $tpl_data);
-            Backend::printFooter();
+            Backend::show('backend_addons', $tpl_data);
         }   // end function notinstalled()
 
         /**

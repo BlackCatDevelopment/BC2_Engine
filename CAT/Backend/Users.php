@@ -18,6 +18,8 @@
 namespace CAT\Backend;
 
 use \CAT\Base as Base;
+use \CAT\Helper\FormBuilder as FormBuilder;
+use \CAT\Helper\JSON as JSON;
 
 if (!class_exists('\CAT\Backend\Users')) {
     class Users extends Base
@@ -50,10 +52,10 @@ if (!class_exists('\CAT\Backend\Users')) {
         public static function bygroup()
         {
             if (!self::user()->hasPerm('users_membership')) {
-                \CAT\Helper\Json::printError('You are not allowed for the requested action!');
+                JSON::printError('You are not allowed for the requested action!');
             }
-            $id   = self::router()->getParam();
-            $data = \CAT\Groups::getInstance()->getMembers($id);
+            $id   = self::getItem('bygroup');
+            $data = \CAT\Helper\Groups::getMembers($id);
             if (self::asJSON()) {
                 echo header('Content-Type: application/json');
                 echo json_encode($data, true);
@@ -71,12 +73,58 @@ if (!class_exists('\CAT\Backend\Users')) {
             if (!self::user()->hasPerm('user_delete')) {
                 \CAT\Helper\Json::printError('You are not allowed for the requested action!');
             }
-            $userID = self::getUserID();
-            $form   = self::renderForm(\CAT\Helper\Users::getDetails($userID));
+            $userID = self::getItem('user_id','is_numeric');
+            $userData = \CAT\Helper\Users::getDetails($userID);
+
+            $form = FormBuilder::generateForm('be_edit_user');
+            $form->setAttribute('auto_buttons',false);
+            $form->setAttribute('action', CAT_ADMIN_URL.'/users/edit');
+            $form->addElement(new \wblib\wbForms\Element\Hidden('user_id',array('value'=>$userID)));
+            
+            $form->setData($userData);
+#echo "is sent? [", $form->isSent(), "]<br />";
+            // form already sent?
+            if ($form->isSent()) {
+                // check data
+                if ($form->isValid()) {
+                    // save data
+                    $data = $form->getData();
+                    $query = self::db()->qb();
+                    $query->update(self::db()->prefix().'rbac_users')
+                          ->where($query->expr()->eq('user_id', $userData['user_id']));
+
+                    foreach($form->getElements() as $e) {
+                        $fieldname = $e->getName();
+                        if($fieldname=='user_id') {
+                            continue;
+                        }
+
+                        if(isset($data[$fieldname])) {
+                            // checkbox
+                            if(is_array($data[$fieldname])) {
+                                $data[$fieldname] = $data[$fieldname][0];
+                            }
+                            $query->set($fieldname, $query->expr()->literal($data[$fieldname]));
+                        }
+                    }
+                    $sth   = $query->execute();
+                    if (self::db()->isError()) {
+                        if (self::asJSON()) {
+                            JSON::printError(self::db()->getError());
+                        }
+                    } else {
+                        if (self::asJSON()) {
+                            JSON::printSuccess('success');
+                        }
+                    }
+                    return;
+                }
+            }
+
             if (self::asJSON()) {
                 echo header('Content-Type: application/json');
                 echo json_encode(array(
-                    'form' => $form,
+                    'form' => $form->render(true),
                 ), true);
                 return;
             }
@@ -130,9 +178,7 @@ if (!class_exists('\CAT\Backend\Users')) {
                 'users' => $data,
                 'userform' => self::renderForm($data),
             );
-            \CAT\Backend::printHeader();
-            self::tpl()->output('backend_users', $tpl_data);
-            \CAT\Backend::printFooter();
+            Backend::show('backend_users', $tpl_data);
         }   // end function index()
 
         /**
@@ -153,6 +199,26 @@ if (!class_exists('\CAT\Backend\Users')) {
                 return;
             }
         }   // end function notingroup()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function save()
+        {
+            $userID = self::getItemID('user_id', '\CAT\Helper\Users::exists');
+            if(empty($userID)) {
+                Base::printFatalError('Invalid data!');
+            }
+
+            if (!self::user()->hasPerm('users_edit')) {
+                self::printFatalError('You are not allowed for the requested action!');
+            }
+
+
+        }   // end function save()
+        
 
         /**
          *
@@ -199,38 +265,6 @@ if (!class_exists('\CAT\Backend\Users')) {
             }
             return self::$avail_settings;
         }   // end function getSettings()
-
-        /**
-         * tries to retrieve 'user_id' by checking (in this order):
-         *
-         *    - $_POST['user_id']
-         *    - $_GET['user_id']
-         *    - Route param['user_id']
-         *
-         * also checks for numeric value
-         *
-         * @access private
-         * @return integer
-         **/
-        protected static function getUserID()
-        {
-            $userID  = \CAT\Helper\Validate::sanitizePost('user_id', 'numeric');
-
-            if (!$userID) {
-                $userID  = \CAT\Helper\Validate::sanitizeGet('user_id', 'numeric');
-            }
-
-            if (!$userID) {
-                $userID = self::router()->getParam(-1);
-            }
-
-            if (!$userID || !is_numeric($userID) || !\CAT\Helper\Users::exists($userID)) {
-                Base::printFatalError('Invalid data')
-                . (self::$debug ? '(\CAT\Backend\Users::getUserID())' : '');
-            };
-
-            return $userID;
-        }   // end function getUserID()
 
         /**
          *

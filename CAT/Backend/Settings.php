@@ -101,6 +101,30 @@ if (!class_exists('\CAT\Backend\Settings')) {
          * @access public
          * @return
          **/
+        public static function cookieconsent()
+        {
+            if (!self::user()->hasPerm('settings_list')) {
+                self::printFatalError('You are not allowed for the requested action!');
+            }
+
+            $cc_form = \CAT\Helper\FormBuilder::generateForm(
+                'be_cookie_consent'
+            );
+
+            Backend::show(
+                'backend_settings',
+                array(
+                    'form' => $cc_form->render(1)
+                )
+            );
+
+        }   // end function cookieconsent()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
         public static function index()
         {
             if (!self::user()->hasPerm('settings_list')) {
@@ -195,14 +219,12 @@ if (!class_exists('\CAT\Backend\Settings')) {
             }
 
             if (!self::asJSON()) {
-                Backend::printHeader();
-                self::tpl()->output(
+                Backend::show(
                     'backend_settings',
                     array(
                         'form'   => $form->render(true),
                     )
                 );
-                Backend::printFooter();
             }
         }   // end function index()
 

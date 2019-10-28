@@ -158,7 +158,7 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
                     'columns'    => $contents,
                     'options'    => (isset($section['options']) ? $section['options'] : null),
                     'editor'     => self::tpl()->get(
-                        new \Dwoo\Template\Str(\CAT\Helper\WYSIWYG::editor()->showEditor($id))
+                        self::tpl()->fromString(\CAT\Helper\WYSIWYG::editor()->showEditor($id))
                     ),
                 )
             );

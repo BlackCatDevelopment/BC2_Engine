@@ -38,7 +38,7 @@ if(!class_exists('\CAT\Backend\Permissions',false))
             if(!self::user()->hasPerm('roles_perms'))
                 Json::printError('You are not allowed for the requested action!');
 
-            $id    = self::getPermID();
+            $id    = self::getItem('perm_id','is_numeric');
             $perms = self::perms()->getPerms($id);
 
             if(!is_array($perms)) {
@@ -53,31 +53,13 @@ if(!class_exists('\CAT\Backend\Permissions',false))
         }   // end function byrole()
 
         /**
-         * tries to retrieve 'page_id' by checking (in this order):
          *
-         *    - $_POST['page_id']
-         *    - $_GET['page_id']
-         *    - Route param['page_id']
-         *
-         * also checks for numeric value
-         *
-         * @access private
-         * @return integer
+         * @access public
+         * @return
          **/
-        protected static function getPermID()
+        public static function index()
         {
-            $permID  = \CAT\Helper\Validate::sanitizePost('perm_id','numeric');
-
-            if(!$permID)
-                $permID  = \CAT\Helper\Validate::sanitizeGet('perm_id','numeric');
-
-            if(!$permID)
-                $permID = self::router()->getParam(-1);
-
-            if(!$permID)
-                $permID = self::router()->getRoutePart(-1);
-
-            return intval($permID);
-        }   // end function getPermID()
+            echo "not here yet...";
+        }
     }
 }

@@ -129,7 +129,7 @@ if (!class_exists('Router', false)) {
 
                     if ($handler) {
                         self::log()->addDebug(sprintf('found class file [%s]', $handler));
-                        \CAT\Helper\Addons::executeHandler($handler,$classname,$method);
+                        return \CAT\Helper\Addons::executeHandler($handler,$classname,$method);
                     }
                 }
             }
@@ -167,7 +167,8 @@ if (!class_exists('Router', false)) {
                 $page = $this->getPage($this->route);
                 if ($page && is_int($page)) {
                     $pg = \CAT\Page::getInstance($page);
-                    self::log()->addDebug('>>>>> dispatch() ENDE <<<<<');
+                    self::log()->addDebug(sprintf('showing page with id [%s]',$page));
+                    self::log()->addDebug('>>>>> dispatch() END <<<<<');
                     $pg->show();
                     exit;
                 }
@@ -379,7 +380,7 @@ if (!class_exists('Router', false)) {
             }
             if ($index < 0) { // last param
                 $reversed = array_reverse($this->params);
-                $index    = abs($index)-1;
+                $index    = abs($index);
                 $value    = isset($reversed[$index]) ? $reversed[$index] : null;
                 return $value;
             }
@@ -442,16 +443,21 @@ if (!class_exists('Router', false)) {
          **/
         public function getRoutePart($index)
         {
-            if ($this->route) {
-                $parts = explode('/', $this->route);
-                if (is_array($parts) && count($parts)) {
-                    if ($index == -1) { // last param
-                        end($parts);
-                        $index = key($parts);
-                    }
-                    if (isset($parts[$index])) {
-                        return $parts[$index];
-                    }
+            if ($this->parts) {
+                if($index<0) {
+                    $index = abs($index)-1;
+                    $reversed = array_reverse($this->parts);
+                    return (
+                        isset($reversed[$index]) ?
+                        $reversed[$index] :
+                        null
+                    );
+                } else {
+                    return (
+                        isset($this->parts[$index]) ?
+                        $this->parts[$index] :
+                        null
+                    );
                 }
             }
             return false;
@@ -471,6 +477,19 @@ if (!class_exists('Router', false)) {
             return false;
         }   // end function getQuery()
         
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public function getQueryParam(string $name)
+        {
+            if ($this->query) {
+                parse_str($this->query, $query);
+                return ( isset($query[$name]) ? $query[$name] : '');
+            }
+            return false;
+        }   // end function getQueryParam()
 
         /**
          * retrieve the route

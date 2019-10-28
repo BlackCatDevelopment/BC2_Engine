@@ -51,14 +51,29 @@ spl_autoload_register(function ($class) {
             @require $file;
         }
     } else {                                       // BC components
-        $file = '/'.str_replace(array('_','\\'), '/', $class);
-        $file = CAT_ENGINE_PATH.'/'.$file.'.php';
+#echo "class: $class<br />";
+        $file = CAT_ENGINE_PATH.'/'.$class.'.php';
         if (class_exists('\CAT\Helper\Directory', false) && $class!='\CAT\Helper\Directory') {
             $file = \CAT\Helper\Directory::sanitizePath($file);
         }
-        #echo "FILE: $file<br />";
+#echo "FILE: $file<br />";
         if (file_exists($file)) {
             require_once $file;
+        } else {
+#class: CAT\Addon\external_content\IManager
+#FILE: P:/BlackCat2/cat_engine/CAT/Addon/external_content/IManager.php
+            // it may be a module class
+            if(substr_compare($class,'CAT\Addon',0,9) == 0) {
+                $temp = explode('\\',$class);
+                $dir  = $temp[2];
+                $file = CAT_ENGINE_PATH.'/modules/'.$dir.'/inc/'.pathinfo($file,PATHINFO_FILENAME).'.php';
+                if (class_exists('\CAT\Helper\Directory', false) && $class!='\CAT\Helper\Directory') {
+                    $file = \CAT\Helper\Directory::sanitizePath($file);
+                }
+                if (file_exists($file)) {
+                    require_once $file;
+                }
+            }
         }
     }
     // next in stack

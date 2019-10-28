@@ -82,6 +82,15 @@ if ( !class_exists( 'Addons' ) )
                 $classname::$method();
                 return;
             }
+            $classname = '\CAT\Addon\\'.$classname;
+            if(is_callable(array($classname,$method))) {
+                self::log()->addDebug(sprintf(
+                    'calling method [%s] in class [%s]',
+                    $method, $classname
+                ));
+                $classname::$method();
+                return;
+            }
         }   // end function executeHandler()
         
 
@@ -196,6 +205,13 @@ if ( !class_exists( 'Addons' ) )
                             }
                             if($addon['type']!='language') {
                                 $info = self::getInfo($addon['directory']);
+                                Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$addon['directory'].'/languages/');
+                                $info['description']  = (
+                                      isset( $info['description'])
+                                    ? self::lang()->translate($info['description'])
+                                    : 'n/a'
+                                );
+
                                 $addon = array_merge($addon,$info);
                             }
                         }
@@ -206,16 +222,16 @@ if ( !class_exists( 'Addons' ) )
                         $seen   = HArray::extractList($data,'directory');
                         $result = array();
                         // scan modules path for modules not seen yet
-                        foreach(array('modules','templates') as $t)
+                        foreach(array('module','template') as $t)
                         {
-                            $subdirs = Directory::findDirectories(CAT_ENGINE_PATH.'/'.$t);
+                            $subdirs = Directory::findDirectories(CAT_ENGINE_PATH.'/'.$t.'s');
                             if(count($subdirs))
                             {
                                 foreach($subdirs as $dir)
                                 {
                                     // skip paths starting with __ (sometimes used for deactivating addons)
-                                    if(substr($dir,0,2) == '__') continue;
-                                    $info = self::getInfo($dir, $t);
+                                    if(substr(pathinfo($dir,PATHINFO_BASENAME),0,2) == '__') continue;
+                                    $info = self::getInfo(pathinfo($dir,PATHINFO_BASENAME), $t);
                                     if(is_array($info) && count($info) && !in_array($dir,$seen)) {
                                         $result[] = $info;
                                     }
@@ -292,7 +308,7 @@ if ( !class_exists( 'Addons' ) )
         public static function getInfo($directory,$type='module')
         {
             $info    = array();
-            $fulldir = CAT_ENGINE_PATH.'/'.$type.'/'.$directory.'/inc';
+            $fulldir = CAT_ENGINE_PATH.'/'.$type.'s/'.$directory.'/inc';
             $namespace = '\CAT\Addon';
             if($type=='templates') {
                 $namespace .= '\Template';

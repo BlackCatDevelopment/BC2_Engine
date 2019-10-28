@@ -169,9 +169,7 @@ print_r($_REQUEST);
                 $tpl_data['groups'][$i]['member_count'] = count($members);
                 $tpl_data['groups'][$i]['role_count']   = count($roles);
             }
-            \CAT\Backend::printHeader();
-            self::tpl()->output('backend_groups', $tpl_data);
-            \CAT\Backend::printFooter();
+            Backend::show('backend_groups', $tpl_data);
         }   // end function index()
 
         /**
@@ -195,9 +193,7 @@ print_r($_REQUEST);
             $tpl_data = array(
                 'members' => $users
             );
-            \CAT\Backend::printHeader();
-            self::tpl()->output('backend_groups_members', $tpl_data);
-            \CAT\Backend::printFooter();
+            Backend::show('backend_groups_members', $tpl_data);
         }   // end function users()
 
     } // class \CAT\Helper\Groups

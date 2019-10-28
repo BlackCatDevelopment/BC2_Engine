@@ -100,9 +100,7 @@ if (!class_exists('\CAT\Backend\Roles'))
                 'perms' => $list,
             );
 
-            \CAT\Backend::printHeader();
-            self::tpl()->output('backend_roles', $tpl_data);
-            \CAT\Backend::printFooter();
+            Backend::show('backend_roles', $tpl_data);
         }   // end function index()
 
         /**

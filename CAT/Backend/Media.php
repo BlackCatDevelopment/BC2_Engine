@@ -92,11 +92,9 @@ if (!class_exists('\CAT\Backend\Media'))
                 // this function may be used by the WYSIWYG module; if this is
                 // the case, we do not print the backend header/footer
                 if(!isset($_POST['FM'])) {
-                    \CAT\Backend::printHeader();
-                }
+                    Backend::show('filemanager.tpl', $tpl_data);
+                } else {
                 self::tpl()->output('filemanager.tpl', $tpl_data);
-                if(!isset($_POST['FM'])) {
-                    \CAT\Backend::printFooter();
                 }
             }
         }   // end function index()

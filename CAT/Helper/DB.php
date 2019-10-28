@@ -23,19 +23,18 @@ use \CAT\Helper\DB\CPDOExceptionHandler as CPDOExceptionHandler;
 
 use Doctrine\Common\ClassLoader as ClassLoader;
 
-if(!class_exists('DB'))
-{
+if (!class_exists('DB')) {
     class DB extends \PDO
     {
-        public  static $exc_trace   = true;
+        public static $exc_trace   = true;
 
-        private static $instance    = NULL;
-        private static $conn        = NULL;
-        private static $prefix      = NULL;
-        private static $qb          = NULL;
+        private static $instance    = null;
+        private static $conn        = null;
+        private static $prefix      = null;
+        private static $qb          = null;
         private static $conn_failed = false;
 
-        private $lasterror          = NULL;
+        private $lasterror          = null;
         #private $classLoader        = NULL;
 
         /**
@@ -45,7 +44,7 @@ if(!class_exists('DB'))
          * @access public
          * @return void
          **/
-    	public function __construct($opt=array())
+        public function __construct($opt=array())
         {
             self::$prefix = defined('CAT_TABLE_PREFIX') ? CAT_TABLE_PREFIX : '';
             #if(!$this->classLoader)
@@ -63,7 +62,9 @@ if(!class_exists('DB'))
          **/
         public static function getInstance($opt=array())
         {
-            if(!self::$instance) self::$instance = new self($opt);
+            if (!self::$instance) {
+                self::$instance = new self($opt);
+            }
             return self::$instance;
         }   // end function getInstance()
         
@@ -74,14 +75,11 @@ if(!class_exists('DB'))
          **/
         public static function check()
         {
-            if(self::$conn && is_object(self::$conn))
-            {
+            if (self::$conn && is_object(self::$conn)) {
                 try {
                     self::$conn->query('SHOW TABLES');
                     return true;
-                }
-                catch ( Exception $e )
-                {
+                } catch (Exception $e) {
                     return false;
                 }
             }
@@ -117,49 +115,45 @@ if(!class_exists('DB'))
          * @access public
          * @return object
          **/
-    	public static function connect($opt=array())
+        public static function connect($opt=array())
         {
             self::setExceptionHandler();
-            if(!self::$conn)
-            {
+            if (!self::$conn) {
                 $config = new \Doctrine\DBAL\Configuration();
                 $config->setSQLLogger(new \Doctrine\DBAL\Logging\DebugStack());
-                if(!defined('CAT_DB_NAME') && ( !count($opt) || !isset($opt['DB_NAME']) ) )
-                {
+                if (!defined('CAT_DB_NAME') && (!count($opt) || !isset($opt['DB_NAME']))) {
                     $opt = self::getConfig($opt);
                 }
                 $connectionParams = array(
                     'charset'  => 'utf8',
                     'driver'   => 'pdo_mysql',
-                    'dbname'   => (isset($opt['DB_NAME'])     ? $opt['DB_NAME']     : 'blackcat' ),
+                    'dbname'   => (isset($opt['DB_NAME'])     ? $opt['DB_NAME']     : 'blackcat'),
                     'host'     => (isset($opt['DB_HOST'])     ? $opt['DB_HOST']     : 'localhost'),
-                    'password' => (isset($opt['DB_PASSWORD']) ? $opt['DB_PASSWORD'] : ''         ),
-                    'user'     => (isset($opt['DB_USERNAME']) ? $opt['DB_USERNAME'] : 'root'     ),
-                    'port'     => (isset($opt['DB_PORT'])     ? $opt['DB_PORT']     : 3306       ),
+                    'password' => (isset($opt['DB_PASSWORD']) ? $opt['DB_PASSWORD'] : ''),
+                    'user'     => (isset($opt['DB_USERNAME']) ? $opt['DB_USERNAME'] : 'root'),
+                    'port'     => (isset($opt['DB_PORT'])     ? $opt['DB_PORT']     : 3306),
                 );
 
-                if(function_exists('xdebug_is_enabled'))
+                if (function_exists('xdebug_is_enabled')) {
                     $xdebug_state = xdebug_is_enabled();
-                else
+                } else {
                     $xdebug_state = false;
+                }
                 #if(function_exists('xdebug_disable'))
                 #    xdebug_disable();
-                try
-                {
+                try {
                     self::$conn = \Doctrine\DBAL\DriverManager::getConnection($connectionParams, $config);
-                }
-                catch( \PDO\PDOException $e )
-                {
+                } catch (\PDO\PDOException $e) {
                     self::$conn_failed = true;
                     $this->setError($e->message);
                     Base::printFatalError($e->message);
                 }
-                if(function_exists('xdebug_enable') && $xdebug_state)
+                if (function_exists('xdebug_enable') && $xdebug_state) {
                     xdebug_enable();
-                if(isset($opt['DB_PREFIX']))
-                {
+                }
+                if (isset($opt['DB_PREFIX'])) {
                     self::$prefix = $opt['DB_PREFIX'];
-                    define('CAT_TABLE_PREFIX',self::$prefix);
+                    define('CAT_TABLE_PREFIX', self::$prefix);
                 }
             }
             self::restoreExceptionHandler();
@@ -182,9 +176,9 @@ if(!class_exists('DB'))
          * @access protected
          * @return void
          **/
-    	final protected static function disconnect()
+        final protected static function disconnect()
         {
-            self::$conn = NULL;
+            self::$conn = null;
         }   // end function disconnect()
 
         /**
@@ -192,15 +186,15 @@ if(!class_exists('DB'))
          * @access public
          * @return
          **/
-        public function lastInsertId($seqname = NULL)
+        public function lastInsertId($seqname = null)
         {
             return self::$conn->lastInsertId($seqname);
         }   // end function lastInsertId()
         
-        public function prepare($statement,$driver_options=array())
+        public function prepare($statement, $driver_options=array())
         {
-            $statement = str_replace(':prefix:',self::$prefix,$statement);
-            return self::$conn->prepare($statement,$driver_options);
+            $statement = str_replace(':prefix:', self::$prefix, $statement);
+            return self::$conn->prepare($statement, $driver_options);
         }
 
         /**
@@ -209,22 +203,19 @@ if(!class_exists('DB'))
          * @params string $SQL
          * @return object
          **/
-    	public function query($sql,$bind=array())
+        public function query($sql, $bind=array())
         {
-            $this->setError(NULL);
+            $this->setError(null);
             self::setExceptionHandler();
             try {
-                if(is_array($bind))
-                {
+                if (is_array($bind)) {
                     // allows to replace field names in statements
                     // Example:
                     // SELECT :field: FROM...
                     // array('field'=>'myfield')
                     // => SELECT `myfield` FROM...
-                    foreach($bind as $_field => $_value)
-                    {
-                        if(substr_count($sql,':'.$_field.':'))
-                        {
+                    foreach ($bind as $_field => $_value) {
+                        if (substr_count($sql, ':'.$_field.':')) {
                             $sql = preg_replace(
                                 '~(`?)(:'.$_field.':)(`?)~i',
                                 '`'.$_value.'`',
@@ -233,60 +224,57 @@ if(!class_exists('DB'))
                             unset($bind[$_field]);
                         }
                     }
-                    $sql  = str_replace(':prefix:',self::$prefix,$sql);
+                    $sql  = str_replace(':prefix:', self::$prefix, $sql);
                     $stmt = $this->prepare($sql);
                     $stmt->execute($bind);
-                }
-                else
-                {
-                    $sql  = str_replace(':prefix:',self::$prefix,$sql);
+                } else {
+                    $sql  = str_replace(':prefix:', self::$prefix, $sql);
                     $stmt = self::$conn->query($sql);
                 }
                 self::restoreExceptionHandler();
                 return new CAT_PDOStatementDecorator($stmt);
-            } catch ( \Doctrine\DBAL\DBALException $e ) {
+            } catch (\Doctrine\DBAL\DBALException $e) {
                 $error = self::$conn->errorInfo();
                 $this->setError(sprintf(
                     '[DBAL Error #%d] %s<br /><strong>Executed Query:</strong><br /><i>%s</i><br /><strong>Exception:</strong><br /><i>%s</i><br />',
-					$error[1],
-					$error[2],
-					$sql,
+                    $error[1],
+                    $error[2],
+                    $sql,
                     $e->getMessage()
                 ));
-            } catch ( \PDOException $e ) {
+            } catch (\PDOException $e) {
                 $error = self::$conn->errorInfo();
                 $this->setError(sprintf(
                     '[PDO Error #%d] %s<br /><b>Executed Query:</b><br /><i>%s</i><br /><strong>Exception:</strong><br /><i>%s</i><br />',
-					$error[1],
-					$error[2],
-					$sql,
+                    $error[1],
+                    $error[2],
+                    $sql,
                     $e->getMessage()
                 ));
             }
 
-            if($this->isError())
-            {
+            if ($this->isError()) {
                 $logger = self::$conn->getConfiguration()->getSQLLogger();
-                if(count($logger->queries))
-                {
+                if (count($logger->queries)) {
                     $last = array_pop($logger->queries);
 
-                    if(is_array($last) && count($last))
-                    {
+                    if (is_array($last) && count($last)) {
                         $err_msg = sprintf(
                             "[SQL Error] %s<br />\n",
                             $last['sql']
                         );
-                        if(is_array($bind) && count($bind))
+                        if (is_array($bind) && count($bind)) {
                             $err_msg .= "\n[PARAMS] "
-                                     .  var_export($bind,1);
+                                     .  var_export($bind, 1);
+                        }
                         $this->setError($err_msg);
 
-                        if(isset($_REQUEST['_cat_ajax']))
+                        if (isset($_REQUEST['_cat_ajax'])) {
                             return $this->getError();
-                        else
+                        } else {
                             throw new \PDOException($this->getError());
-                            #Base::printFatalError($this->getError());
+                        }
+                        #Base::printFatalError($this->getError());
                     }
                 }
             }
@@ -302,17 +290,18 @@ if(!class_exists('DB'))
          * @param  string  $import
          *
          **/
-        public static function sqlImport($import,$replace_prefix=NULL,$replace_with=NULL)
+        public static function sqlImport($import, $replace_prefix=null, $replace_with=null)
         {
             $errors = array();
-            $import = preg_replace( "%/\*(.*)\*/%Us", ''          , $import );
-            $import = preg_replace( "%^--(.*)\n%mU" , ''          , $import );
-            $import = preg_replace( "%^$\n%mU"      , ''          , $import );
-            if($replace_prefix)
-                $import = preg_replace( "%".$replace_prefix."%", $replace_with, $import );
-            $import = preg_replace( "%\r?\n%"       , ''          , $import );
-            $import = str_replace ( '\\\\r\\\\n'    , "\n"        , $import );
-            $import = str_replace ( '\\\\n'         , "\n"        , $import );
+            $import = preg_replace("%/\*(.*)\*/%Us", '', $import);
+            $import = preg_replace("%^--(.*)\n%mU", '', $import);
+            $import = preg_replace("%^$\n%mU", '', $import);
+            if ($replace_prefix) {
+                $import = preg_replace("%".$replace_prefix."%", $replace_with, $import);
+            }
+            $import = preg_replace("%\r?\n%", '', $import);
+            $import = str_replace('\\\\r\\\\n', "\n", $import);
+            $import = str_replace('\\\\n', "\n", $import);
             // split into chunks
             $sql = preg_split(
                 '~(insert\s+(?:ignore\s+)into\s+|update\s+|replace\s+into\s+|create\s+table|truncate\s+table|delete\s+from)~i',
@@ -320,22 +309,21 @@ if(!class_exists('DB'))
                 -1,
                 PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY
             );
-            if(!count($sql) || !count($sql)%2)
+            if (!count($sql) || !count($sql)%2) {
                 return false;
+            }
             // index 1,3,5... is the matched delim, index 2,4,6... the remaining string
             $stmts = array();
-            for($i=0;$i<count($sql);$i++)
+            for ($i=0;$i<count($sql);$i++) {
                 $stmts[] = $sql[$i] . $sql[++$i];
-            foreach ($stmts as $imp){
-                if ($imp != '' && $imp != ' '){
-                    $ret = $this->query($imp);
-                    if($this->isError())
-                        $errors[] = $this->getError();
+            }
+// !!!!!!!!!! TODO: check errors !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            foreach ($stmts as $imp) {
+                if ($imp != '' && $imp != ' ') {
+                    $stmt = self::conn()->query($imp);
+                    $ret  = $stmt->execute();
                 }
             }
-            if($errors)
-                $this->errors = $errors;
-            return ( count($errors) ? false : true );
         }   // end function sqlImport()
 
         /**
@@ -343,19 +331,18 @@ if(!class_exists('DB'))
          * @access public
          * @return
          **/
-        public function getLastStatement($bind=NULL)
+        public function getLastStatement($bind=null)
         {
-            $statement = NULL;
+            $statement = null;
             $params    = array();
             $logger    = self::$conn->getConfiguration()->getSQLLogger();
-            if(count($logger->queries))
-            {
+            if (count($logger->queries)) {
                 $last = array_pop($logger->queries);
-                if(is_array($last) && count($last))
-                {
+                if (is_array($last) && count($last)) {
                     $statement = $last['sql'];
-                    if(is_array($bind) && count($bind))
-                        $params = var_export($bind,1);
+                    if (is_array($bind) && count($bind)) {
+                        $params = var_export($bind, 1);
+                    }
                 }
             }
             return array($statement, $params);
@@ -370,34 +357,36 @@ if(!class_exists('DB'))
         {
             // find file
             // note: .bc.php as suffix filter does not work!
-            $configfiles = Directory::findFiles(dirname(__FILE__).'/DB',array('extension'=>'.php'));
-            if(!is_array($configfiles) || !count($configfiles)>0)
-            {
+            $configfiles = Directory::findFiles(dirname(__FILE__).'/DB', array('extension'=>'.php'));
+            if (!is_array($configfiles) || !count($configfiles)>0) {
                 self::$conn_failed = true;
                 Base::printFatalError('Missing database configuration');
                 exit;
             }
 
             // the first file with suffix .bc.php will be used
-            foreach($configfiles as $file)
-            {
-                if($file=='index.php') continue;
-                if(substr_compare($file,'.bc.php',-1,7))
-                {
+            foreach ($configfiles as $file) {
+                if ($file=='index.php') {
+                    continue;
+                }
+                if (substr_compare($file, '.bc.php', -1, 7)) {
                     break;
                 }
             }
             // read the file
             $configuration = parse_ini_file($file);
 
-            if(!is_array($configuration) || !count($configuration))
+            if (!is_array($configuration) || !count($configuration)) {
                 Base::printFatalError('Database configuration error');
+            }
 
-            foreach($configuration as $key => $value)
-                if(!isset($opt['DB_'.$key]))
+            foreach ($configuration as $key => $value) {
+                if (!isset($opt['DB_'.$key])) {
                     $opt['DB_'.$key] = $value;
+                }
+            }
 
-            self::$prefix = ( isset($opt['DB_PREFIX']) ? $opt['DB_PREFIX'] : '' );
+            self::$prefix = (isset($opt['DB_PREFIX']) ? $opt['DB_PREFIX'] : '');
 
             return $opt;
         }   // end function getConfig()
@@ -416,13 +405,13 @@ if(!class_exists('DB'))
         {
             $qb = self::qb()
                 ->select('max(:field) AS `next`')
-                ->from(self::$prefix.$table,'t1')
+                ->from(self::$prefix.$table, 't1')
                 ->where($parent_field.'=:id')
-                ->setParameter('id',$id)
-                ->setParameter('field',$order_field);
+                ->setParameter('id', $id)
+                ->setParameter('field', $order_field);
             $sth = $qb->execute();
             $data = $sth->fetch();
-            if(is_int($data['next'])) {
+            if (is_int($data['next'])) {
                 return $data['next']++;
             }
             return 1; // ignore errors
@@ -437,7 +426,7 @@ if(!class_exists('DB'))
          **/
         public function isError()
         {
-            return ( $this->lasterror ) ? true : false;
+            return ($this->lasterror) ? true : false;
         }   // end function isError()
 
         /**
@@ -453,26 +442,27 @@ if(!class_exists('DB'))
          **/
         public function reorder(string $table, int $id, int $newpos, string $order_field='position', string $id_field='id', string $parent_field='parent') : bool
         {
-            $tablename = sprintf('%s%s',self::$prefix,$table);
+            $tablename = sprintf('%s%s', self::$prefix, $table);
 
             // get original position
             $qb = self::qb()
                 ->select('*')
-                ->from($tablename,'t1')
+                ->from($tablename, 't1')
                 ->where($id_field.'=:id')
-                ->setParameter('id',$id);
+                ->setParameter('id', $id);
             $sth = $qb->execute();
             $data = $sth->fetch();
 
-            if(is_array($data) && count($data))
-            {
+            if (is_array($data) && count($data)) {
                 $pos = $data[$order_field];
 
                 // save new position
                 self::query(
                     sprintf(
                         "UPDATE `%s` SET `%s`=? WHERE `%s`=?",
-                        $tablename, $order_field, $id_field
+                        $tablename,
+                        $order_field,
+                        $id_field
                     ),
                     array($newpos,$id)
                 );
@@ -481,7 +471,12 @@ if(!class_exists('DB'))
                 self::query(
                     sprintf(
                         "UPDATE `%s` SET `%s`=`%s`-1 WHERE `%s`=? AND `%s`<? AND `%s`<>?",
-                        $tablename, $order_field, $order_field, $parent_field, $order_field, $id_field
+                        $tablename,
+                        $order_field,
+                        $order_field,
+                        $parent_field,
+                        $order_field,
+                        $id_field
                     ),
                     array($data[$parent_field],$newpos,$id)
                 );
@@ -490,17 +485,19 @@ if(!class_exists('DB'))
                 self::query(
                     sprintf(
                         "UPDATE `%s` SET `%s`=`%s`+1 WHERE `%s`=? AND `%s`>=? AND `%s`<>?",
-                        $tablename, $order_field, $order_field, $parent_field, $order_field, $id_field
+                        $tablename,
+                        $order_field,
+                        $order_field,
+                        $parent_field,
+                        $order_field,
+                        $id_field
                     ),
                     array($data[$parent_field],$newpos,$id)
                 );
                 return true;
-            }
-            else
-            {
+            } else {
                 return false;
             }
-
         }   // end function reorder()
         
 
@@ -526,7 +523,7 @@ if(!class_exists('DB'))
          **/
         public function resetError()
         {
-            $this->lasterror = NULL;
+            $this->lasterror = null;
         }   // end function resetError()
 
         /**
@@ -538,12 +535,14 @@ if(!class_exists('DB'))
          */
         public function tableExists($table)
         {
-            if(function_exists('xdebug_is_enabled'))
+            if (function_exists('xdebug_is_enabled')) {
                 $xdebug_state = xdebug_is_enabled();
-            else
+            } else {
                 $xdebug_state = false;
-            if(function_exists('xdebug_disable'))
+            }
+            if (function_exists('xdebug_disable')) {
                 xdebug_disable();
+            }
 
             // Try a select statement against the table
             // Run it in try/catch in case PDO is in ERRMODE_EXCEPTION.
@@ -566,7 +565,7 @@ if(!class_exists('DB'))
          * @param  string    error message
          * @return void
          **/
-    	protected function setError($error = '')
+        protected function setError($error = '')
         {
             $this->lasterror = $error;
         }   // end function setError
@@ -581,8 +580,9 @@ if(!class_exists('DB'))
         protected static function setExceptionHandler()
         {
             $prevhandler = set_exception_handler(array("\CAT\Helper\DB\CPDOExceptionHandler", "exceptionHandler"));
-            if(isset($prevhandler[0]) && $prevhandler[0] == 'CPDOExceptionHandler')
+            if (isset($prevhandler[0]) && $prevhandler[0] == 'CPDOExceptionHandler') {
                 restore_exception_handler();
+            }
         }   // end function setExceptionHandler()
 
         /**
@@ -594,30 +594,41 @@ if(!class_exists('DB'))
         protected static function restoreExceptionHandler()
         {
             // set dummy handler to get prev
-            $prev = set_exception_handler(function(){});
+            $prev = set_exception_handler(function () {
+            });
             // reset
             restore_exception_handler();
             // if the previous one was ours...
-            if(isset($prev[0]) && $prev[0] == 'CAT_PDOExceptionHandler')
+            if (isset($prev[0]) && $prev[0] == 'CAT_PDOExceptionHandler') {
                 restore_exception_handler();
+            }
         }   // end function restoreExceptionHandler()
 
         /***********************************************************************
          * old function names wrap new ones
          **/
-        public function get_one($sql,$type=\PDO::FETCH_ASSOC)
+        public function get_one($sql, $type=\PDO::FETCH_ASSOC)
         {
             $stmt = $this->query($sql);
-            if(is_resource($stmt)) {
+            if (is_resource($stmt)) {
                 return $stmt->fetchColumn();
             } else {
                 return null;
             }
         }
 
-        public function is_error()  { return $this->isError();      }
-        public function get_error() { return $this->getError();     }
-        public function insert_id() { return $this->lastInsertId(); }
+        public function is_error()
+        {
+            return $this->isError();
+        }
+        public function get_error()
+        {
+            return $this->getError();
+        }
+        public function insert_id()
+        {
+            return $this->lastInsertId();
+        }
     }
 }
 
@@ -627,7 +638,7 @@ if(!class_exists('DB'))
  **/
 class CAT_PDOStatementDecorator
 {
-    private $pdo_stmt = NULL;
+    private $pdo_stmt = null;
     public function __construct($stmt)
     {
         $this->pdo_stmt = $stmt;
@@ -644,7 +655,9 @@ class CAT_PDOStatementDecorator
     public function fetchRow($type=\PDO::FETCH_ASSOC)
     {
         // this is for backward compatibility
-        if(defined('MYSQL_ASSOC') && $type===MYSQL_ASSOC) $type = \PDO::FETCH_ASSOC;
+        if (defined('MYSQL_ASSOC') && $type===MYSQL_ASSOC) {
+            $type = \PDO::FETCH_ASSOC;
+        }
         return $this->pdo_stmt->fetch($type);
     }
 }
@@ -656,7 +669,6 @@ use \CAT\Helper\DB as DB;
 
 class CPDOExceptionHandler
 {
-
     public function __call($method, $args)
     {
         return call_user_func_array(array($this, $method), $args);
@@ -667,8 +679,7 @@ class CPDOExceptionHandler
      **/
     public static function exceptionHandler($exception)
     {
-        if(DB::$exc_trace === true)
-        {
+        if (DB::$exc_trace === true) {
             $traceline = "#%s %s(%s): %s(%s)";
             $msg   = "Uncaught exception '%s' with message '%s'<br />"
                    . "<div style=\"font-size:smaller;width:80%%;margin:5px auto;text-align:left;\">"
@@ -677,19 +688,17 @@ class CPDOExceptionHandler
                    ;
             $trace = $exception->getTrace();
 
-            foreach ($trace as $key => $stackPoint)
-            {
+            foreach ($trace as $key => $stackPoint) {
                 $trace[$key]['args'] = array_map('gettype', $trace[$key]['args']);
             }
             // build tracelines
             $result = array();
-            foreach ($trace as $key => $stackPoint)
-            {
+            foreach ($trace as $key => $stackPoint) {
                 $result[] = sprintf(
                     $traceline,
                     $key,
-                    ( isset($stackPoint['file']) ? $stackPoint['file'] : '-' ),
-                    ( isset($stackPoint['line']) ? $stackPoint['line'] : '-' ),
+                    (isset($stackPoint['file']) ? $stackPoint['file'] : '-'),
+                    (isset($stackPoint['line']) ? $stackPoint['line'] : '-'),
                     $stackPoint['function'],
                     implode(', ', $stackPoint['args'])
                 );
@@ -707,9 +716,7 @@ class CPDOExceptionHandler
                 $exception->getFile(),
                 $exception->getLine()
             );
-        }
-        else
-        {
+        } else {
             // template
             $msg = "[DB Exception] %s<br />";
             // filter message
@@ -717,7 +724,7 @@ class CPDOExceptionHandler
             preg_match('~SQLSTATE\[[^\]].+?\]\s+\[[^\]].+?\]\s+(.*)~i', $message, $match);
             $msg     = sprintf(
                 $msg,
-                ( isset($match[1]) ? $match[1] : $message )
+                (isset($match[1]) ? $match[1] : $message)
             );
         }
 
@@ -725,10 +732,13 @@ class CPDOExceptionHandler
             $logger = Base::log();
             $logger->emergency(sprintf(
                 'Exception with message [%s] emitted in [%s] line [%s]',
-                $exception->getMessage(),$exception->getFile(),$exception->getLine()
+                $exception->getMessage(),
+                $exception->getFile(),
+                $exception->getLine()
             ));
             $logger->emergency($msg);
-        } catch ( Exception $e ) {}
+        } catch (Exception $e) {
+        }
 
         // log or echo as you please
         Base::printFatalError($msg);

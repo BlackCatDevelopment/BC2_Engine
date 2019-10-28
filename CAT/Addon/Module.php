@@ -111,7 +111,7 @@ if (!class_exists('\CAT\Addon\Module', false)) {
 
             // add database entry
             self::db()->query(
-                'REPLACE INTO `:prefix:addons` VALUES( null, :type, :directory, :name, :time, :time, "Y","N")',
+                'REPLACE INTO `:prefix:addons` VALUES( null, :directory, :type, :name, :time, :time, "Y","N")',
                 array(
                     'type' => $class::$type,
                     'directory' => $class::$directory,
@@ -126,7 +126,7 @@ if (!class_exists('\CAT\Addon\Module', false)) {
             
             $sqlfile = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.static::$directory.'/inc/install.sql');
             if (file_exists($sqlfile)) {
-                $errors = self::sqlProcess();
+                self::db()->sqlImport(\CAT\Helper\Directory::readFile($sqlfile,false),'cat_',self::db()->prefix());
             }
 
             return $errors;

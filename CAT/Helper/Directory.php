@@ -553,6 +553,19 @@ if (!class_exists('\CAT\Helper\Directory')) {
         }   // end function isWin()
 
         /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function readFile(string $file, bool $asArray)
+        {
+            if(file_exists($file)) {
+                $in   = file($file);
+                return ( $asArray ? $in : implode('',$in) );
+            }
+        }   // end function readFile()
+
+        /**
          * remove directory recursively
          *
          * @access public

@@ -54,9 +54,7 @@ if (!class_exists('Backend\Admintools')) {
         public static function index()
         {
             $d = self::list();
-            Backend::printHeader();
-            self::tpl()->output('backend_dashboard', array('id'=>0,'dashboard'=>$d));
-            Backend::printFooter();
+            Backend::show('backend_dashboard', array('id'=>0,'dashboard'=>$d));
         }   // end function index()
 
         /**
@@ -91,6 +89,10 @@ if (!class_exists('Backend\Admintools')) {
                     $count = count($tools);
                     foreach ($tools as $tool) {
                         Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/languages/');
+                        $image = ( file_exists(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/icon.png') ?
+                            CAT_SITE_URL.'/modules/'.$tool['directory'].'/icon.png' :
+                            null
+                        );
                         // init widget
                         $d['widgets'][] = array(
                             'column'        => $col,
@@ -99,6 +101,7 @@ if (!class_exists('Backend\Admintools')) {
                             'link'          => '<a href="'.CAT_ADMIN_URL.'/admintools/tool/'.$tool['directory'].'">'.$tool['name'].'</a>',
                             'position'      => 1,
                             'open'          => true,
+                            'image'         => $image,
                         );
                         $col++;
                         if ($col > $d['columns']) {
@@ -183,9 +186,7 @@ if (!class_exists('Backend\Admintools')) {
                 exit;
             }
 
-            Backend::printHeader();
-            self::tpl()->output('backend_admintool', $tpl_data);
-            Backend::printFooter();
+            Backend::show('backend_admintool', $tpl_data);
         }   // end function tool()
         
         /**

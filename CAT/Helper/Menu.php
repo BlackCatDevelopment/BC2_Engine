@@ -326,7 +326,12 @@ if(!class_exists('\CAT\Helper\Menu',false))
                         break;
                     default:
                         $menu   = \CAT\Backend::getMainMenu();
-                        $pid    = \CAT\Page::getID();
+                        $pid    = 0;
+                        foreach($menu as $index => $item) {
+                            if(isset($item['current']) && $item['current']==1) {
+                                $pid = $item['id'];
+                            }
+                        }
                         break;
                 }
 

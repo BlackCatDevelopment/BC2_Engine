@@ -74,7 +74,7 @@ if (!class_exists('\CAT\Backend\Section')) {
         {
             $pageID = self::getPageID();
             self::checkPerm($pageID, 'pages_section_delete');
-            $sectionID = self::getSectionID();
+            $sectionID = self::getItemID('section_id');
             if (!\CAT\Sections::exists($sectionID)) {
                 Base::printFatalError('Invalid data!')
                 . (self::$debug ? '(CAT_Backend_Section::delete())' : '');
@@ -272,6 +272,9 @@ if (!class_exists('\CAT\Backend\Section')) {
             $section = \CAT\Sections::getSection($sectionID, true);
             // get page ID
             $pageID  = $section['page_id'];
+            // count errors
+            $errors  = 0;
+            // check permissions
             self::checkPerm($pageID, null);
             // set variant?
             if (null!=($variant=\CAT\Helper\Validate::sanitizePost('variant'))) {
@@ -291,6 +294,8 @@ if (!class_exists('\CAT\Backend\Section')) {
                                 . 'VALUES(?,?,?,?)',
                                 array($pageID,$sectionID,strip_tags($key),strip_tags($val))
                             );
+                            if(self::db()->isError()) {
+                                $errors++;
                         }
                     }
                 }
@@ -309,11 +314,17 @@ if (!class_exists('\CAT\Backend\Section')) {
                             . 'VALUES(?,?,?,?)',
                             array($pageID,$sectionID,strip_tags($key),strip_tags($value))
                         );
+                        if(self::db()->isError()) {
+                            $errors++;
+                        }
                     } else {
                         self::db()->query(
                             'DELETE FROM `:prefix:section_options` WHERE `page_id`=? AND `section_id`=? and `option`=?',
                             array($pageID,$sectionID,$key)
                         );
+                        if(self::db()->isError()) {
+                            $errors++;
+                        }
                     }
                 }
             }
@@ -338,6 +349,7 @@ if (!class_exists('\CAT\Backend\Section')) {
                 if ($handler) {
                     self::log()->addDebug(sprintf('found class file [%s]', $handler));
                     include_once $handler;
+                    $classname = '\CAT\Addon\\'.$classname;
                     $classname::initialize($section);
                     self::setTemplatePaths($module, $variant);
                     $result = $classname::save($sectionID);

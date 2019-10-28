@@ -16,10 +16,10 @@
 */
 
 namespace CAT\Backend;
+
 use \CAT\Base as Base;
 
-if(!class_exists('\CAT\Backend\Favicon'))
-{
+if (!class_exists('\CAT\Backend\Favicon')) {
     class Favicon extends Base
     {
         protected static $loglevel     = \Monolog\Logger::EMERGENCY;
@@ -62,21 +62,19 @@ if(!class_exists('\CAT\Backend\Favicon'))
          **/
         public static function index()
         {
-            if(!self::user()->hasPerm('manage_favicons'))
+            if (!self::user()->hasPerm('manage_favicons')) {
                 \CAT\Helper\JSON::printError('You are not allowed for the requested action!');
+            }
 
             $seen = self::findFiles();
 
-            if(!self::asJSON())
-            {
-                \CAT\Backend::printHeader();
-                self::tpl()->output(
+            if (!self::asJSON()) {
+                (
                     'backend_settings_favicons',
                     array(
                         'seen' => $seen
                     )
                 );
-                \CAT\Backend::printFooter();
             }
         }   // end function index()
 
@@ -88,18 +86,20 @@ if(!class_exists('\CAT\Backend\Favicon'))
         public static function findFiles($filter=false)
         {
             $seen = array();
-            foreach(self::$sizes as $group => $prefixes) {
-                foreach($prefixes as $prefix => $suffixes) {
-                    foreach($suffixes as $suffix => $sizes) {
-                        foreach($sizes as $size) {
+            foreach (self::$sizes as $group => $prefixes) {
+                foreach ($prefixes as $prefix => $suffixes) {
+                    foreach ($suffixes as $suffix => $sizes) {
+                        foreach ($sizes as $size) {
                             $s  = (is_array($size) ? $size[0].'x'.$size[1] : $size.'x'.$size);
                             $filename
                                 = $prefix.'-'.$s.'.'.$suffix;
-                            if(!isset($seen[$group])) $seen[$group] = array();
-                            if(file_exists(CAT_PATH.'/'.$filename)) {
+                            if (!isset($seen[$group])) {
+                                $seen[$group] = array();
+                            }
+                            if (file_exists(CAT_PATH.'/'.$filename)) {
                                 $seen[$group][$filename] = $s;
                             } else {
-                                if(!$filter) {
+                                if (!$filter) {
                                     $seen[$group][$filename] = false;
                                 }
                             }
@@ -107,12 +107,12 @@ if(!class_exists('\CAT\Backend\Favicon'))
                     }
                 }
             }
-            foreach(self::$configfiles as $group => $items) {
-                foreach($items as $name) {
-                    if(file_exists(CAT_PATH.'/'.$name)) {
+            foreach (self::$configfiles as $group => $items) {
+                foreach ($items as $name) {
+                    if (file_exists(CAT_PATH.'/'.$name)) {
                         $seen[$group][$name] = true;
                     } else {
-                        if(!$filter) {
+                        if (!$filter) {
                             $seen[$group][$name] = false;
                         }
                     }

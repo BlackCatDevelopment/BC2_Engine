@@ -921,7 +921,7 @@ ORDER BY
                     self::err_page_header();
                 } else {
                     if (self::router()->isBackend()) {
-                        \CAT\Backend::printHeader();
+                        $headers = \CAT\Backend::getHeader();
                     }
                 }
             }

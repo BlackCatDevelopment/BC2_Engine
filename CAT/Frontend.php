@@ -57,7 +57,7 @@ if (!class_exists('Frontend', false)) {
             // no page found
             if (!$page_id) {
                 ob_start();
-                $empty_page_bg = Assets::serve('images', array("CAT/templates/empty_page_bg.jpg"));
+                $empty_page_bg = Assets::serve('images', 'CAT/templates/empty_page_bg.jpg', true);
                 ob_end_clean();
                 require dirname(__FILE__).'/templates/empty.php';
                 exit;

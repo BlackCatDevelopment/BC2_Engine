@@ -55,6 +55,16 @@ if (!class_exists('\CAT\Helper\Assets'))
             'html'  => 'text/html',
         );
 
+        // default CSP Rules
+        protected static $csp_rules = array(
+            'default-src' => array( '\'self\'' ),
+            'style-src'   => array( '\'self\'', '\'unsafe-inline\'' ),
+            'script-src'  => array( '\'self\'', '\'unsafe-inline\'', '\'unsafe-eval\'' ),
+            'img-src'     => array( '\'self\'' ),
+            'object-src'  => array( '\'none\'' ),
+            'frame-src'   => array( '\'self\'' ),
+        );
+
         // collections to fill
         protected static $JSSet        = array('header'=>null,'footer'=>null);
         protected static $JSCond       = array('header'=>null,'footer'=>null);
@@ -92,6 +102,22 @@ if (!class_exists('\CAT\Helper\Assets'))
             self::init();
             self::$code[$pos]->add($code);
         }   // end function addCode()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function addCSPRule(string $rule_name, string $value)
+        {
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# TODO: Auf gueltige Eintraege pruefen
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if(!array_key_exists($rule_name, self::$csp_rules)) {
+                self::$csp_rules[$rule_name] = array();
+            }
+            self::$csp_rules[$rule_name][] = $value;
+        }   // end function addCSPRule()
 
         /**
          *
@@ -587,12 +613,22 @@ self::log()->addDebug(print_r($files,1));
             $title  = null;
             $host   = $_SERVER['SERVER_NAME'];
 
+            // CSP Rules
+            /*
             $output[] = '<meta http-equiv="Content-Security-Policy" content="'
                       . 'default-src \'self\' ' . $host . '; '
                       . 'style-src \'self\' \'unsafe-inline\' ' . $host . '; '
                       . 'script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' ' . $host . '; '
                       . 'img-src \'self\' data: ; '
                       . 'object-src \'none\' " />';
+            */
+
+            $rule = '<meta http-equiv="Content-Security-Policy" content="';
+            foreach(self::$csp_rules as $rulename => $values) {
+                $rule .= $rulename . ' ' . implode(' ',$values) . '; ';
+            }
+            $rule .= ' " />';
+            $output[] = $rule;
 
             $meta = self::$Meta->toArray();
 
@@ -660,6 +696,7 @@ self::log()->addDebug(print_r($files,1));
             if ($description!='') {
                 $output[] = '<meta name="description" content="' . $description . '" />';
             }
+
             return implode("\n", $output);
         }   // end function renderMeta()
 
@@ -686,10 +723,14 @@ self::log()->addDebug(print_r($files,1));
             if(\CAT\Helper\Media::isImage($file)) {
                 self::log()->addDebug(sprintf('serving image (isImage()) [%s]',$file));
                 copy(CAT_ENGINE_PATH.'/'.$file, CAT_PATH.'/assets/'.pathinfo($file, PATHINFO_BASENAME));
-                // the content-type defaults to 'application/octet-stream' if the suffix is not present in the mime table
-                header('Content-Type: '.Media::getContentType(pathinfo($file, PATHINFO_EXTENSION)));
-                readfile(CAT_PATH.'/assets/'.pathinfo($file, PATHINFO_BASENAME));
-                return;
+                if(!$return_url) {
+	                // the content-type defaults to 'application/octet-stream' if the suffix is not present in the mime table
+	                header('Content-Type: '.Media::getContentType(pathinfo($file, PATHINFO_EXTENSION)));
+	                readfile(CAT_PATH.'/assets/'.pathinfo($file, PATHINFO_BASENAME));
+	                return;
+                } else {
+                    return \CAT\Helper\Validate::path2uri(CAT_PATH.'/assets/'.pathinfo($file, PATHINFO_BASENAME));
+                }
             }
 
             if ($type=='images'||$type=='svg') {

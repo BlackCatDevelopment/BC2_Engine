@@ -130,14 +130,12 @@ if(!class_exists('\CAT\Backend\Socialmedia'))
 
             if(!self::asJSON())
             {
-                \CAT\Backend::printHeader();
-                self::tpl()->output(
+                Backend::show(
                     'backend_settings_socialmedia',
                     array(
                         'services' => $services
                     )
                 );
-                \CAT\Backend::printFooter();
             }
         }   // end function index()
 

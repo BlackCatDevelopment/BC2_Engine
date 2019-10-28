@@ -18,6 +18,7 @@
 namespace CAT\Backend;
 
 use \CAT\Base as Base;
+use \CAT\Backend as Backend;
 use \CAT\Helper\Validate as Validate;
 
 if (!class_exists('\CAT\Backend\Menus')) {
@@ -60,9 +61,7 @@ if (!class_exists('\CAT\Backend\Menus')) {
 
             if(!self::asJSON())
             {
-                \CAT\Backend::printHeader();
                 echo "not implemented yet";
-                \CAT\Backend::printFooter();
             }
 
         }   // end function edit()
@@ -82,14 +81,12 @@ if (!class_exists('\CAT\Backend\Menus')) {
 
             if(!self::asJSON())
             {
-                \CAT\Backend::printHeader();
-                self::tpl()->output(
+                Backend::show(
                     'backend_menus',
                     array(
                         'menus' => $menus
                     )
                 );
-                \CAT\Backend::printFooter();
             }
         }   // end function index()
 

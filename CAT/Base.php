@@ -370,6 +370,22 @@ if (!class_exists('Base', false)) {
                 || !is_object(Base::$objects['session'])
                 || !Base::$objects['session'] instanceof \CAT\Helper\Session
             ) {
+                // make sure we have an unique session name for each site
+                $session_name = self::getSetting('session_name');
+                if($session_name=='') {
+                    $prefix = rand();
+                    $session_name = strtoupper(md5(uniqid($prefix,true)));
+                    self::db()->query(
+                        'INSERT INTO `:prefix:settings_site` (`site_id`,`name`,`value`) ' .
+                        'VALUES (?,"session_name",?)',
+                        array(CAT_SITE_ID,$session_name)
+                    );
+                    self::log()->addDebug(sprintf(
+                        'generated unique session name for site [%s] - [%s]',
+                        CAT_SITE_ID,$session_name
+                    ));
+                }
+                // create session handler
                 self::storeObject('session', new \CAT\Helper\Session(\CAT\Registry::get('use_encrypted_sessions')));
             }
             return Base::$objects['session'];
@@ -949,7 +965,7 @@ ORDER BY
                     self::err_page_footer();
                 }
                 if (self::router()->isBackend()) {
-                    \CAT\Backend::printFooter();
+                    echo \CAT\Backend::getFooter();
                 }
             }
         }   // end function printError()

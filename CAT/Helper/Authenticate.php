@@ -19,7 +19,6 @@ namespace CAT\Helper;
 
 use \CAT\Base as Base;
 use \CAT\Registry as Registry;
-use \Firebase\JWT\JWT;
 
 if (!class_exists('\CAT\Helper\Authenticate', false))
 {
@@ -35,11 +34,6 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
          * last error
          **/
         private static $lasterror     = null;
-        /**
-         * JWT settings
-         **/
-        protected static $SECRET_KEY = '4gdr#hp2W\JNcEO$';
-        protected static $ALGORITHM  = 'HS512';
 
         /**
          * Compare user's password with given password
@@ -63,7 +57,7 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
 
             if (password_verify($passwd, $storedHash)) { // user found and password ok
                 self::log()->addDebug('authentication succeeded');
-                return self::generateToken($uid);
+                return true;
             }
 
             self::setError(sprintf('Login attempt failed for user with ID [%s]',$uid));
@@ -72,136 +66,13 @@ if (!class_exists('\CAT\Helper\Authenticate', false))
         }   // end function authenticate()
 
         /**
-         *
-         * @access public
-         * @return
+         * save error message for later use
+         * @access protected
+         * @param string $msg
+         * @param string $logmsg
+         * @return void
          **/
-        public static function generateToken(int $uid, string $tokenId = '')
-        {
-            $lifetime   = 60*60*24;          // one day
-                $issuedAt   = time();
-                $notBefore  = $issuedAt;
-            $expire     = $issuedAt+$lifetime;
-                $serverName = CAT_SITE_URL;
-            $isFresh    = false;
-
-            if(empty($tokenId)) {
-                $tokenId    = base64_encode(random_bytes(32));
-                $isFresh    = true;
-                // save the tokenId
-                self::db()->query(
-                    'UPDATE `:prefix:rbac_users` SET `login_token`=? WHERE `user_id`=?',
-                    array($tokenId, $uid)
-                );
-            }
-
-                $data = array(
-                    'iat'  => $issuedAt,         // Issued at: time when the token was generated
-                    'jti'  => $tokenId,          // Json Token Id: an unique identifier for the token
-                    'iss'  => $serverName,       // Issuer
-                    'nbf'  => $notBefore,        // Not before
-                    'exp'  => $expire,           // Expire
-                    'data' => array(             // Data related to the logged user you can set your required data
-		            'user_id'  => $uid,      // id from the users table,
-                    'fresh'    => $isFresh,  // not used at the moment
-                    'expires'  => $issuedAt+ini_get('session.gc_maxlifetime'),
-                    )
-                );
-
-                $secretKey = base64_decode(self::$SECRET_KEY);
-
-                $jwt = JWT::encode(
-                    $data,            // Data to be encoded in the JWT
-                    $secretKey,       // The signing key
-                    self::$ALGORITHM
-                );
-
-            // set cookie
-            self::log()->addDebug(sprintf('creating cookie with name [%s]',self::getCookieName()));
-            $lifetime = time()+ini_get('session.gc_maxlifetime');
-            setcookie(
-                self::getCookieName(),
-                $jwt,
-                $lifetime,
-                '/',
-                CAT_SITE_URL,
-                true,
-                true
-            );
-
-                return $jwt;
-        }   // end function generateToken()
-        
-
-        /**
-         *
-         * @access public
-         * @return
-         **/
-        public static function validate($token)
-        {
-            self::log()->addDebug(sprintf('validate() - %s',$token));
-
-            $secretKey = base64_decode(self::$SECRET_KEY);
-            $decoded   = array();
-
-            // note: there will be no $decoded data if the token is invalid
-            //       or expired
-
-            try {
-                $decoded = (array) JWT::decode($token, $secretKey, array(self::$ALGORITHM));
-            } catch (\InvalidArgumentException $e) {
-                // 500 internal server error - my fault
-                self::log()->addDebug('InvalidArgumentException: '.$e->getMessage());
-                self::invalidate();
-                return false;
-            } catch (\Firebase\JWT\ExpiredException $e ) {
-                self::log()->addDebug('ExpiredException: '.$e->getMessage());
-                self::invalidate();
-                return false;
-            } catch (\Exception $e) {
-                // 401 unauthorized - clients fault
-                self::log()->addDebug('Exception: '.$e->getMessage());
-                self::invalidate();
-                return false;
-            }
-
-            if(isset($decoded['data']))
-            {
-                if(isset($decoded['data']->expires) && time()>$decoded['data']->expires) {
-                    self::log()->addDebug(sprintf('the token has expired - curr [%s] > exp [%s]',time(),$decoded['data']->expires));
-                    self::invalidate();
-                    return false;
-            }
-
-                $uid = $decoded['data']->user_id;
-
-                // check database for correct token
-                $storedToken = self::db()->query(
-                    'SELECT `login_token` FROM `:prefix:rbac_users` WHERE `user_id`=:uid',
-                    array( 'uid' => $uid )
-                )->fetchColumn();
-
-                self::log()->addDebug(sprintf('stored jti [%s] decoded jti [%s]',$storedToken,$decoded['jti']));
-
-                if($storedToken==$decoded['jti']) {
-                    self::log()->addDebug(sprintf('storedToken == token, returning user_id',$uid));
-                    // update
-self::generateToken($uid,$storedToken);
-                    return $uid;
-                } else {
-                    // invalidate
-                    self::log()->addDebug('invalidate - storedToken != token');
-                    return false;
-                }
-            } else {
-                self::log()->addDebug('no key [data] in array [decoded]');
-            }
-
-            return false;
-        }   // end function validate()
-
-        protected static function setError($msg, $logmsg=null)
+        protected static function setError(string $msg, string $logmsg='')
         {
             self::log()->addDebug($logmsg?$logmsg:$msg);
             self::$lasterror = $msg;
@@ -243,20 +114,5 @@ self::generateToken($uid,$storedToken);
                 return $storedHash;
             }
         }   // end function getPasswd()
-
-        /**
-         *
-         * @access private
-         * @return
-         **/
-        private static function invalidate()
-        {
-            self::log()->addDebug('invalidate()');
-            if(isset($_COOKIE[self::getCookieName()])) {
-                unset($_COOKIE[self::getCookieName()]);
-                setcookie(self::getCookieName(), '', time() - 3600, '/');
-            }
-        }   // end function invalidate()
-        
     }
 }

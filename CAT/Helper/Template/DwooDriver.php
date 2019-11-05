@@ -99,5 +99,15 @@ if(!class_exists('DwooDriver',false))
             }
         }   // end function get()
 
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public function fromString($string)
+        {
+            return new \Dwoo\Template\Str($string);
+        }   // end function fromString()
+
     }   // end class DwooDriver
 }

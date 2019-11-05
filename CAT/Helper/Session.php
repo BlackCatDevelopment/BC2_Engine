@@ -32,18 +32,6 @@ if (!class_exists('\CAT\Helper\Session', false))
             'aes-128-gcm',
         );
         /**
-         * @var
-         **/
-        private static $hash = null;
-        /**
-         * @var
-         **/
-        private static $hash_algo_preferred = array(
-            'sha512',
-            'sha384',
-            'sha256'
-        );
-        /**
          * @var bool
          */
         protected $started = false;
@@ -77,6 +65,13 @@ if (!class_exists('\CAT\Helper\Session', false))
          **/
         private static $stmt;
 
+        /**
+         * constructor
+         *
+         * @access public
+         * @param bool $crypt - wether to encrypt session data (default:false)
+         * @return object
+         **/
         public function __construct(bool $crypt = false)
         {
             $this->crypt = $crypt;
@@ -91,17 +86,16 @@ if (!class_exists('\CAT\Helper\Session', false))
             ini_set('session.hash_bits_per_character', 5);
             // Force the session to only use cookies, not URL variables.
             ini_set('session.use_only_cookies', 1);
-            // Hash algorithm to use for the session.
-            // (use hash_algos() to get a list of available hashes.)
-            $session_hash = null;
-            // Check if hash is available
-            foreach (self::$hash_algo_preferred as $i => $session_hash) {
-                if (in_array($session_hash, hash_algos())) {
-                    ini_set('session.hash_function', $session_hash);
-                    self::$hash = $session_hash;
-                    break;
-                }
-            }
+            // protect from JavaScript
+            ini_set('session.cookie_httponly',1);
+            // same site directive
+            ini_set('session.cookie_samesite',1);
+            //
+            ini_set('session.use_trans_sid',0);
+            // do not start session automatically
+            ini_set('session.auto_start',0);
+            // default cookie lifetime
+            ini_set('session.cookie_lifetime',99);
         }
 
         /**
@@ -113,6 +107,10 @@ if (!class_exists('\CAT\Helper\Session', false))
          **/
         public function clear($destroy=false)
         {
+            // invalidate session cookie
+            if (isset($_COOKIE[session_name()])) {
+                setcookie(session_name(), session_id(), 1, $this->path, $this->domain);
+            }
             // clear out the session
             $_SESSION = array();
             $this->data    = array();
@@ -125,58 +123,32 @@ if (!class_exists('\CAT\Helper\Session', false))
         }
 
         /**
-         * start a new session; throws exception if an active session is
-         * determined
          *
          * @access public
-         * @return bool
+         * @return
          **/
-        public function start()
+        public function exists(string $sessID) : bool
         {
-            self::log()->addDebug('start()');
-            if ($this->started) {
+            $sql = self::getStatement('exists');
+            if (false!==$sql) {
+                try {
+                    $stmt = self::db()->prepare($sql);
+                    $stmt->bindValue(':id', $sessID, \PDO::PARAM_STR);
+                    $stmt->execute();
+                    $session = $stmt->fetch();
+                    if (is_array($session) && count($session)>0) {
                 return true;
             }
-            if (\PHP_SESSION_ACTIVE === session_status()) {
-                throw new \RuntimeException('Failed to start the session: already started by PHP.');
+                } catch (\Exception $e) {
+                    self::log()->addDebug(sprintf(
+                        'catched exception [%s]',
+                        $e->getMessage()
+                    ));
+                    return false;
             }
-            if (ini_get('session.use_cookies') && headers_sent($file, $line)) {
-                throw new \RuntimeException(sprintf('Failed to start the session because headers have already been sent by "%s" at line %d.', $file, $line));
-            }
-            // get domain
-            $parse  = parse_url(CAT_SITE_URL);
-            if (isset($parse['host'])) {
-                $this->domain = $parse['host'];
-            } else {
-                $this->domain = CAT_SITE_URL;
-            }
-            if (isset($parse['path'])) {
-                $this->path   = $parse['path'];
-            }
-            // Set the parameters
-            session_set_cookie_params(
-                time()+ini_get('session.gc_maxlifetime'),
-                $this->path,                                // path
-                $this->domain,                              // domain
-                (isset($_SERVER['HTTPS']) ? true : false),  // secure
-                true                                        // httponly
-            );
-            // generate unique session name for this site
-            $name = '_cat_sess_'.base64_encode(CAT_SITE_URL); //.'_'.random_bytes(8);
-            // Change the session name
-            session_name($name);
-            // ok to try and start the session
-            if (!session_start()) {
-                throw new \RuntimeException('Failed to start the session');
-            }
-
-            // connect session hash to internal hash
-            $this->data =& $_SESSION;
-
-            $this->started = true;
-
-            return true;
         }
+            return $false;
+        }   // end function exists()
 
         /**
          * read data from session
@@ -189,8 +161,8 @@ if (!class_exists('\CAT\Helper\Session', false))
         public function get($name, $default=null)
         {
             self::log()->addDebug(sprintf(
-                'get() name [%s] default [%s]',
-                $name,$default
+                'get() name [%s] default value [%s] current session id [%s]',
+                $name,$default,session_id()
             ));
             $data = $this->read(session_id());
             if(strlen($data)) {
@@ -205,27 +177,20 @@ if (!class_exists('\CAT\Helper\Session', false))
         }   // end function get()
 
         /**
-         * store session data
-         *
-         * @access public
-         * @param  string  $name - session key to set
-         * @param  mixed   $val  - value to set
-         * @return void
-         **/
-        public function set($name,$val)
-        {
-            $this->data[$name] = $val;
-        }   // end function set()
-
-        /**
          *
          * @access public
          * @return
          **/
-        public function started()
+        public function refresh()
         {
-            return $this->started;
-        }   // end function started()
+            $sql = self::getStatement('refresh');
+            if (false!==$sql) {
+                $stmt = \CAT\Base::db()->prepare($sql);
+                $stmt->bindValue(':id', session_id(), \PDO::PARAM_STR);
+                $stmt->bindValue(':time', time(), \PDO::PARAM_STR);
+                $stmt->execute();
+            }
+        }   // end function refresh()
 
         /**
          * regenerate a session by changing the ID
@@ -287,6 +252,107 @@ if (!class_exists('\CAT\Helper\Session', false))
             return true;
         }
 
+
+        /**
+         * store session data
+         *
+         * @access public
+         * @param  string  $name - session key to set
+         * @param  mixed   $val  - value to set
+         * @return void
+         **/
+        public function set($name,$val)
+        {
+            $this->data[$name] = $val;
+        }   // end function set()
+
+        /**
+         * start a new session; throws exception if an active session is
+         * determined
+         *
+         * @access public
+         * @return bool
+         **/
+        public function start(string $session_name='')
+        {
+            self::log()->addDebug(sprintf('start() - given name [%s]',$session_name));
+            if ($this->started) {
+                self::log()->addDebug(sprintf(
+                    'session already started, session name [%s]', session_name()
+                ));
+                return true;
+            }
+            if (\PHP_SESSION_ACTIVE === session_status()) {
+                self::log()->addDebug(sprintf(
+                    'session already started by PHP, session name [%s]', session_name()
+                ));
+                return true;
+            }
+            if (ini_get('session.use_cookies') && headers_sent($file, $line)) {
+                self::log()->addDebug(sprintf(
+                    'Failed to start the session, headers already sent by "%s" at line %d.', $file, $line
+                ));
+                throw new \RuntimeException(sprintf(
+                    'Failed to start the session, headers already sent by "%s" at line %d.', $file, $line
+                ));
+            }
+            // get domain
+            // also use  isset($_SERVER['SERVER_NAME']) ???
+            $parse  = parse_url(CAT_SITE_URL);
+            if (isset($parse['host'])) {
+                $this->domain = $parse['host'];
+            } else {
+                $this->domain = CAT_SITE_URL;
+            }
+            // path
+            if (isset($parse['path'])) {
+                $this->path   = $parse['path'];
+            }
+            // Set the parameters
+            session_set_cookie_params(array(
+                'lifetime' => time()+ini_get('session.gc_maxlifetime'),
+                'path'     => $this->path,
+                'domain'   => $this->domain,
+                'secure'   => (isset($_SERVER['HTTPS']) ? true : false),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ));
+            self::log()->addDebug('cookie settings: '.print_r(session_get_cookie_params(),1));
+            if(empty($session_name)) {
+                // get session name
+                $session_name = self::getSetting('session_name');
+            }
+            self::log()->addDebug(sprintf(
+                'changing session name to [%s]',$session_name
+            ));
+            session_name($session_name);
+            // ok to try and start the session
+            if (!session_start()) {
+                throw new \RuntimeException('Failed to start the session');
+            } else {
+                // connect session hash to internal hash
+                $this->data =& $_SESSION;
+                // remember that we already have a session
+                $this->started = true;
+                // return result
+                return true;
+            }
+            // should never be reached, but just in case...
+            return false;
+        }   // end function start()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public function started()
+        {
+            self::log()->addDebug(sprintf('started() - [%s]', $this->started));
+            return $this->started;
+        }   // end function started()
+
+
 /*******************************************************************************
  *    SessionHandlerInterface
  ******************************************************************************/
@@ -307,7 +373,7 @@ if (!class_exists('\CAT\Helper\Session', false))
                 'destroy() - destroying session %s',
                 $sessionId
             ));
-            $this->cleanup($sessionId);
+            $this->cleanup($sessionId,1);
             return true;
         }
 
@@ -330,8 +396,8 @@ if (!class_exists('\CAT\Helper\Session', false))
         public function open($savePath,$session_name) : bool
         {
             self::log()->addDebug(sprintf(
-                'open() - session name [%s]',
-                $session_name
+                'open() - save path [%s] session name [%s]',
+                $savePath,$session_name
             ));
             $this->cleanup();
             return true;
@@ -425,15 +491,23 @@ if (!class_exists('\CAT\Helper\Session', false))
          * @access private
          * @return
          **/
-        private function cleanup($sessionID='')
+        private function cleanup($sessionID='',$delete=false)
         {
+            if($delete) {
+                $sql = self::getStatement('destroy');
+            } else {
             $sql = self::getStatement('cleanup');
+            }
+
             if (false!==$sql) {
                 $stmt = \CAT\Base::db()->prepare($sql);
                 $stmt->bindValue(':id', $sessionID, \PDO::PARAM_STR);
+                if(!$delete) {
                 $stmt->bindValue(':time', time(), \PDO::PARAM_STR);
+                }
                 $stmt->execute();
             }
+
         }   // end function cleanup()
 
         /**
@@ -565,9 +639,11 @@ if (!class_exists('\CAT\Helper\Session', false))
                                .  'OR `sess_id`=:id '
                                .  'OR `sess_obsolete`="Y"',
                     'destroy'  => 'DELETE FROM `:prefix:sessions` WHERE `sess_id` = :id',
+                    'exists'   => 'SELECT COUNT(`sess_id`) FROM  `:prefix:sessions` WHERE `sess_id`=:id',
                     'getkey'   => 'SELECT `sess_key` FROM `:prefix:sessions` WHERE `sess_id` = :id',
                     'obsolete' => 'UPDATE `:prefix:sessions` SET `sess_obsolete`="Y", `sess_lifetime`=10 WHERE `sess_id` = :id',
                     'read'     => 'SELECT `sess_data`, `sess_lifetime`, `sess_time`, `sess_obsolete` FROM `:prefix:sessions` WHERE `sess_id` = :id FOR UPDATE',
+                    'refresh'  => 'UPDATE `:prefix:sessions` SET `sess_time`=:time WHERE `sess_id`=:id',
                     'write'    => 'INSERT INTO `:prefix:sessions` (`sess_id`,`sess_data`,`sess_lifetime`,`sess_time`,`sess_key`) '
                                .  'VALUES (:id, :data, :lifetime, :time, :key) '
                                .  'ON DUPLICATE KEY UPDATE `sess_data` = VALUES(`sess_data`), '

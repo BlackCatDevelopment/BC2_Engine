@@ -28,8 +28,8 @@ if (!class_exists('Router', false)) {
     class Router extends Base
     {
         // log level
-        #public    static $loglevel   = \Monolog\Logger::EMERGENCY;
-        public static $loglevel   = \Monolog\Logger::DEBUG;
+        public    static $loglevel   = \Monolog\Logger::EMERGENCY;
+        #public static $loglevel   = \Monolog\Logger::DEBUG;
         // instance
         private static $instance   = null;
         // tables

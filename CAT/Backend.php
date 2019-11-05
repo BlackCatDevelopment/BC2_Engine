@@ -46,10 +46,20 @@ if (!class_exists('Backend', false)) {
         );
 
         /**
+         * handle the /backend/authenticate path
+         **/
+        public static function authenticate()
+        {
+            self::log()->addDebug('handling /backend/authenticate path (forward to \CAT\Helper\Users)');
+            return \CAT\Helper\Users::authenticate();
+        }
+
+        /**
          * dispatch backend route
          **/
         public static function dispatch()
         {
+            self::log()->addDebug('dispatch()');
             return self::router()->dispatch('Backend');
         }   // end function dispatch()
 
@@ -62,6 +72,9 @@ if (!class_exists('Backend', false)) {
         public static function getArea(bool $getID = false)
         {
             $route = self::router()->getRoute();
+            self::log()->addDebug(sprintf(
+                'getArea() - route [%s]', $route
+            ));
             // example route: backend/pages/edit/1
             $parts = explode('/', $route);
             if ($parts[0]==CAT_BACKEND_PATH) {
@@ -86,6 +99,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function getBreadcrumb() : array
         {
+            self::log()->addDebug('getBreadcrumb()');
             $menu   = \CAT\Backend::getMainMenu();
             $parts  = self::router()->getParts();
             $bread  = array();
@@ -123,6 +137,111 @@ if (!class_exists('Backend', false)) {
         }   // end function getBreadcrumb()
 
         /**
+        * Print the admin footer
+        *
+        * @access public
+        **/
+        public static function getFooter()
+        {
+            $data = array();
+            self::initPaths();
+
+            self::session()->refresh();
+
+            $t = ini_get('session.gc_maxlifetime');
+            $data['SESSION_TIME'] = sprintf('%02d:%02d:%02d', ($t/3600), ($t/60%60), $t%60);
+
+            // =================================================================
+            // ! Try to get the actual version of the backend-theme
+            // =================================================================
+            $backend_theme_version = '-';
+            $theme                 = Registry::get('DEFAULT_THEME');
+            if ($theme) {
+                $classname = '\CAT\Addon\Template\\'.$theme;
+                $filename  = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.$theme.'/inc/class.'.$theme.'.php');
+                if (file_exists($filename)) {
+                    $handler = $filename;
+                    include_once $handler;
+                    $data['THEME_INFO'] = $classname::getInfo();
+                }
+            }
+            $data['WEBSITE_TITLE'] = Registry::get('website_title');
+
+            global $_be_mem, $_be_time;
+            $data['system_information'] = array(
+                array(
+                    'name'      => self::lang()->translate('PHP version'),
+                    'status'    => phpversion(),
+                ),
+                array(
+                    'name'      => self::lang()->translate('Memory usage'),
+                    'status'    => '~ ' . sprintf('%0.2f', ((memory_get_usage() - $_be_mem) / (1024 * 1024))) . ' MB'
+                ),
+                array(
+                    'name'      => self::lang()->translate('Script run time'),
+                    'status'    => '~ ' . sprintf('%0.2f', (microtime(true) - $_be_time)) . ' sec'
+                ),
+            );
+
+            return self::tpl()->get('footer', $data);
+        }   // end function getFooter()
+
+        /**
+         *  Print the admin header
+         *
+         *  @access public
+         *  @return void
+         */
+        public static function getHeader(bool $with_menu=true)
+        {
+            $tpl_data = array();
+
+            // init template search paths
+            self::initPaths();
+
+            if($with_menu) {
+                $menu     = self::getMainMenu();
+
+                if(!self::showPageTree()) {
+                    self::tpl()->setGlobals('pageTree',false);
+                }
+
+                // the original list, ordered by parent -> children (if the
+                // templates renders the HTML output)
+                $lb = Base::lb();
+                $lb->set('id', 'id');
+                $lb->set('title', 'title');
+
+                $tpl_data['MAIN_MENU'] = $lb->sort($menu, 0);
+
+                // recursive list
+                $tpl_data['MAIN_MENU_RECURSIVE'] = $lb->buildRecursion($menu);
+
+                // render list (ul)
+                $lb->set(array(
+                    'top_ul_class'     => 'nav',
+                    'ul_class'         => 'nav',
+                    'current_li_class' => 'active',
+                    'space'            => '',
+                ));
+                $tpl_data['MAIN_MENU_UL'] = $lb->buildList($menu);
+
+                // reset listbuilder
+                $lb->set('id', 'page_id');
+                $lb->set('title', 'menu_title');
+            }
+
+            // set the page title
+            $controller = explode('\\', self::router()->getController());
+            \CAT\Helper\Page::setTitle(sprintf(
+                'BlackCat CMS Backend / %s',
+                self::lang()->translate($controller[count($controller)-1])
+            ));
+
+            return $tpl_data;
+        }   // end function getHeader()
+
+        /**
          * get the main menu (backend sections)
          * checks the user privileges
          *
@@ -132,6 +251,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function getMainMenu($parent=null) : array
         {
+            self::log()->addDebug('getMainMenu');
             // get current scope ID by name
             $scope = self::getScope(self::$scope);
             // make sure the menu is loaded
@@ -163,6 +283,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function getMenuForScope(string $scope)
         {
+            self::log()->addDebug(sprintf('getMenuForScope(%s)',$scope));
             if(!is_numeric($scope)) {
                 $scope = self::getScope($scope);
             }
@@ -178,6 +299,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function getMenuItems()
         {
+            self::log()->addDebug('getMenuItems()');
             if (!self::$menu) {
                 // current area
                 $area = self::getArea();
@@ -262,6 +384,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function getPublicRoutes()
         {
+            self::log()->addDebug('getPublicRoutes()');
             return self::$public;
         }    // end function getPublicRoutes()
 
@@ -270,14 +393,17 @@ if (!class_exists('Backend', false)) {
          * @access public
          * @return
          **/
-        public static function show(string $tpl, array $data)
+        public static function show(string $tpl, array $data, bool $header=true, bool $footer=true)
         {
-            $header_data = self::getHeader();
+            self::log()->addDebug(sprintf(
+                'show() - tpl [%s] print header [%s] print footer [%s]',
+                $tpl, $header, $footer
+            ));
+            $header_data = self::getHeader(false);
             $tpl_data    = array_merge($data,$header_data);
-            $output      = self::tpl()->get('header',$tpl_data)
+            $output      = ( $header===true ? self::tpl()->get('header',$tpl_data) : '' )
                          . self::tpl()->get($tpl,$tpl_data)
-                         . self::getFooter();
-
+                         . ( $footer===true ? self::getFooter() : '');
 
             $headers = \CAT\Helper\Assets::renderAssets('header',null,false,false);
             $output = str_replace('<!-- pageheader 0 -->', $headers, $output);
@@ -291,8 +417,8 @@ if (!class_exists('Backend', false)) {
                 }
             }
 
-            echo $output ;
-
+            echo $output;
+            exit;
         }   // end function show()
 
 
@@ -303,6 +429,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function getScope()
         {
+            self::log()->addDebug('getScope()');
             $name = self::getArea();
 
             // find scope by area name (not all areas are found in the db)
@@ -338,6 +465,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function showPageTree()
         {
+            self::log()->addDebug('showPageTree()');
             $scope = self::getScope();
             $r = self::db()->query(
                 'SELECT `page_tree` FROM `:prefix:backend_scopes` '.
@@ -361,8 +489,8 @@ if (!class_exists('Backend', false)) {
          **/
         public static function index()
         {
-            // forward to dashboard
-            header('Location: '.CAT_ADMIN_URL.'/dashboard');
+            self::log()->addDebug(sprintf('index() - forward to [%s]',self::user()->getDefaultPage()));
+            header('Location: '.CAT_ADMIN_URL.'/'.self::user()->getDefaultPage());
         }   // end function index()
 
         /**
@@ -470,57 +598,6 @@ if (!class_exists('Backend', false)) {
             );
         }   // end function administration()
 
-        /**
-         * handle user authentication
-         *
-         * @access public
-         * @return mixed
-         **/
-        public static function authenticate()
-        {
-            if(!isset($_REQUEST['acc']) || $_REQUEST['acc'] != 'true') {
-                self::printFatalError('Authentication failed! Please accept the session cookie to proceed.');
-            }
-            $token = self::user()->login();
-            if (false!==$token) {
-                self::log()->addDebug(sprintf(
-                    'Authentication succeeded, username [%s], id [%s], token [%s]',
-                    self::user()->get('username'),
-                    self::user()->get('user_id'),
-                    $token
-                ));
-
-                // forward
-                if (self::asJSON()) {
-                    self::log()->addDebug(sprintf(
-                        'sending json result, forward to URL [%s]',
-                        CAT_ADMIN_URL.'/dashboard'
-                    ));
-                    Json::printData(array(
-                        'success' => true,
-                        'url'     => CAT_ADMIN_URL.'/dashboard',
-                        'token'   => urlencode($token),
-                        'cookie'  => self::getCookieName(),
-                    ));
-                } else {
-                    self::log()->addDebug(sprintf(
-                        'forwarding to URL [%s]',
-                        CAT_ADMIN_URL.'/dashboard'
-                    ));
-                    header('Authorization: Bearer '.$token);
-                    header('Location: '.CAT_ADMIN_URL.'/dashboard');
-                }
-            } else {
-                self::log()->addDebug('Authentication failed!');
-                if (self::asJSON()) {
-                    Json::printError('Authentication failed!');
-                } else {
-                    self::printFatalError('Authentication failed!');
-                }
-            }
-            exit;
-        }   // end function authenticate()
-
         public static function content()
         {
             self::$scope = 'content';
@@ -570,7 +647,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function login($msg=null)
         {
-            self::log()->addDebug('printing login page');
+            self::log()->addDebug(sprintf('login() - msg [%s]',$msg));
             self::initPaths();
             // we need this twice, so we use a var here
             $username_fieldname = Validate::createFieldname('username_');
@@ -583,7 +660,7 @@ if (!class_exists('Backend', false)) {
                 'error_message'         => ($msg ? self::lang()->translate($msg) : null),
             );
             self::log()->addDebug('printing login page');
-            self::show('login', $tpl_data);
+            return self::show('login', $tpl_data, false, false);
         }   // end function login()
 
         /**
@@ -595,106 +672,6 @@ if (!class_exists('Backend', false)) {
         {
             self::user()->logout();
         }
-
-        /**
-         *  Print the admin header
-         *
-         *  @access public
-         *  @return void
-         */
-        public static function getHeader()
-        {
-            $tpl_data = array();
-            $menu     = self::getMainMenu();
-
-            if(!self::showPageTree()) {
-                self::tpl()->setGlobals('pageTree',false);
-            }
-
-            // init template search paths
-            self::initPaths();
-
-            // the original list, ordered by parent -> children (if the
-            // templates renders the HTML output)
-            $lb = Base::lb();
-            $lb->set('id', 'id');
-            $lb->set('title', 'title');
-
-            $tpl_data['MAIN_MENU'] = $lb->sort($menu, 0);
-
-            // recursive list
-            $tpl_data['MAIN_MENU_RECURSIVE'] = $lb->buildRecursion($menu);
-
-            // render list (ul)
-            $lb->set(array(
-                'top_ul_class'     => 'nav',
-                'ul_class'         => 'nav',
-                'current_li_class' => 'active',
-                'space'            => '',
-            ));
-            $tpl_data['MAIN_MENU_UL'] = $lb->buildList($menu);
-
-            // set the page title
-            $controller = explode('\\', self::router()->getController());
-            \CAT\Helper\Page::setTitle(sprintf(
-                'BlackCat CMS Backend / %s',
-                self::lang()->translate($controller[count($controller)-1])
-            ));
-
-            // reset listbuilder
-            $lb->set('id', 'page_id');
-            $lb->set('title', 'menu_title');
-
-            return $tpl_data;
-        }   // end function getHeader()
-
-        /**
-        * Print the admin footer
-        *
-        * @access public
-        **/
-        public static function getFooter()
-        {
-            $data = array();
-            self::initPaths();
-
-            $t = ini_get('session.gc_maxlifetime');
-            $data['SESSION_TIME'] = sprintf('%02d:%02d:%02d', ($t/3600), ($t/60%60), $t%60);
-
-            // =================================================================
-            // ! Try to get the actual version of the backend-theme
-            // =================================================================
-            $backend_theme_version = '-';
-            $theme                 = Registry::get('DEFAULT_THEME');
-            if ($theme) {
-                $classname = '\CAT\Addon\Template\\'.$theme;
-                $filename  = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.$theme.'/inc/class.'.$theme.'.php');
-                if (file_exists($filename)) {
-                    $handler = $filename;
-                    include_once $handler;
-                    $data['THEME_INFO'] = $classname::getInfo();
-                }
-            }
-            $data['WEBSITE_TITLE'] = Registry::get('website_title');
-
-            global $_be_mem, $_be_time;
-            $data['system_information'] = array(
-                array(
-                    'name'      => self::lang()->translate('PHP version'),
-                    'status'    => phpversion(),
-                ),
-                array(
-                    'name'      => self::lang()->translate('Memory usage'),
-                    'status'    => '~ ' . sprintf('%0.2f', ((memory_get_usage() - $_be_mem) / (1024 * 1024))) . ' MB'
-                ),
-                array(
-                    'name'      => self::lang()->translate('Script run time'),
-                    'status'    => '~ ' . sprintf('%0.2f', (microtime(true) - $_be_time)) . ' sec'
-                ),
-            );
-
-            return self::tpl()->get('footer', $data);
-        }   // end function getFooter()
 
         /**
          * check if TFA is enabled for current user

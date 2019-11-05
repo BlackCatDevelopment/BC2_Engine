@@ -77,7 +77,7 @@ if (!class_exists('\CAT\Backend\Users')) {
             $userData = \CAT\Helper\Users::getDetails($userID);
 
             $form = FormBuilder::generateForm('be_edit_user');
-            $form->setAttribute('auto_buttons',false);
+            $form->setAttribute('_auto_buttons',false);
             $form->setAttribute('action', CAT_ADMIN_URL.'/users/edit');
             $form->addElement(new \wblib\wbForms\Element\Hidden('user_id',array('value'=>$userID)));
             
@@ -199,6 +199,45 @@ if (!class_exists('\CAT\Backend\Users')) {
                 return;
             }
         }   // end function notingroup()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function profile()
+        {
+            if (!self::user()->hasPerm('my_profile')) {
+                \CAT\Helper\Json::printError('You are not allowed for the requested action!');
+            }
+
+            $userID = self::session()->get('userID');
+            $userData = \CAT\Helper\Users::getDetails($userID);
+
+            $form = FormBuilder::generateForm('my_profile');
+            $form->setData($userData);
+
+// !!!!! TODO: Die erlaubten Routen eines Benutzers auslesen und als
+// !!!!!       default_page anbieten
+            $pages_list = array();
+            foreach(array_values(array(
+                'profile',        // edit own profile
+                'dashboard',      // see dashboard
+                'administration', // see admin area
+                'content',        // see content area
+            )) as $perm) {
+                if(self::user()->hasPerm($perm)) {
+                    $pages_list[$perm] = self::lang()->t($perm);
+                }
+            }
+            $form->getElement('default_page')->setData($pages_list);
+            #$form->getElement('default_page')->setValue($userData['default_page']);
+
+            \CAT\Backend::show('profile',array(
+                'form' => $form->render(true),
+            ));
+
+        }   // end function profile()
 
         /**
          *

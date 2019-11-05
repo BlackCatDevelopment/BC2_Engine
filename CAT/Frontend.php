@@ -23,8 +23,8 @@ use \CAT\Helper\Assets as Assets;
 if (!class_exists('Frontend', false)) {
     class Frontend extends Base
     {
-        #protected static $loglevel    = \Monolog\Logger::EMERGENCY;
-        protected static $loglevel    = \Monolog\Logger::DEBUG;
+        protected static $loglevel    = \Monolog\Logger::EMERGENCY;
+        #protected static $loglevel    = \Monolog\Logger::DEBUG;
         private static $instance    = array();
         private static $maintenance = null;
 

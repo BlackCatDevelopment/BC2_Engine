@@ -30,11 +30,14 @@ if (!class_exists('\CAT\Helper\Assets'))
     class Assets extends Base
     {
         // set debug level
-        #protected static $loglevel      = \Monolog\Logger::EMERGENCY;
-        protected static $loglevel     = \Monolog\Logger::DEBUG;
+        protected static $loglevel      = \Monolog\Logger::EMERGENCY;
+        #protected static $loglevel     = \Monolog\Logger::DEBUG;
 
         public    static $sourcemaps   = array();
         public    static $defaultmedia = 'screen,projection';
+
+        protected static $isBackend    = false;
+        protected static $backendArea  = null;
 
         protected static $autoload     = array(
             'jq' => false,
@@ -294,11 +297,12 @@ if (!class_exists('\CAT\Helper\Assets'))
             // paths to scan; $paths and $incpaths will be \Ds\Set objects
             list($paths, $incpaths, $filter) = self::getPaths($id, $pos);
 
+            // figure out page_id
             $page_id = false;
             if (is_numeric($id) && $id>0) {
                 $page_id = $id;
             }
-            if (Backend::isBackend() && Backend::getArea()=='page') {
+            if(self::$isBackend && self::$backendArea=='page') {
                 $page_id = self::getItemID('page_id', '\CAT\Helper\Page::exists');
             }
 
@@ -329,17 +333,16 @@ if (!class_exists('\CAT\Helper\Assets'))
             }
 
             // add area specific assets
-            if (Backend::isBackend()) {
-                $area = Backend::getArea();
+            if (self::$isBackend) {
                 self::log()->addDebug(sprintf(
                     '>>> looking for area specific js/css, current area: [%s]',
-                    $area
+                    self::$backendArea
                 ));
-                if($area=='login') {
-                    $filter = $area;
+                if(self::$backendArea=='login') {
+                    $filter = self::$backendArea;
                 }
                 else {
-                    $filter .= '|'.$area;
+                    $filter .= '|'.self::$backendArea;
                     if ($pos=='footer') {
                         $filter .= '_body';
                     }
@@ -794,13 +797,15 @@ self::log()->addDebug(print_r($files,1));
                 $id
             ));
 
+            self::init();
+
             $for    = 'frontend';
             $filter = 'frontend';
 
             if (empty($id)) {
                 self::log()->addDebug('empty id');
                 if (Backend::isBackend()) {
-                    $id = 'backend_'.Backend::getArea();
+                    $id = 'backend_'.self::$backendArea;
                     $filter = $for = 'backend';
                 } else {
                     $id = \CAT\Page::getID();
@@ -1122,6 +1127,7 @@ self::log()->addDebug(sprintf('adding condition for [%s] to $CSSCond',$f));
          **/
         protected static function init()
         {
+            if(!defined('CAT_HELPER_ASSETS_INIT')) {
             // header and/or footer
             foreach(array_values(array('header','footer')) as $pos) {
                 if(!self::$JSSet[$pos] instanceof \Ds\Set) {
@@ -1144,6 +1150,15 @@ self::log()->addDebug(sprintf('adding condition for [%s] to $CSSCond',$f));
             }
             if(!self::$Meta instanceof \Ds\Set) {
                 self::$Meta    = new Set(); // META
+                }
+
+                // Backend
+                if(Backend::isBackend()) {
+                    self::$isBackend = true;
+                    self::$backendArea = Backend::getArea();
+                }
+
+                define('CAT_HELPER_ASSETS_INIT',1);
             }
         }   // end function init()
         

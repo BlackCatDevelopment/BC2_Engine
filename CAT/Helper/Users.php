@@ -45,6 +45,24 @@ if ( ! class_exists( 'Users', false ) )
             return self::$instance;
         }   // end function getInstance()
 
+        /**
+         *
+         * @access public
+         * @return string
+         **/
+        public function getDefaultPage()
+        {
+            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+                return false;
+            }
+            return self::$curruser->getDefaultPage();
+        }   // end function getDefaultPage()
+        
+        /**
+         *
+         * @access public
+         * @return string
+         **/
         public function getHomeFolder()
         {
             if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
@@ -122,44 +140,26 @@ if ( ! class_exists( 'Users', false ) )
         {
             self::log()->addDebug('isAuthenticated()');
 
-            $token = Validate::get('_cat_access_token'); // check form data
-
-            if(empty($token)) {
-                self::log()->addDebug('no token sent as form data');
-                $headers = self::getResponseHeaders(); // token from header
-                if(isset($headers['Authorization'])) {
-                    $token = str_ireplace('Bearer ','',$headers['Authorization']);
-                    self::log()->addDebug('got token from response headers');
-                } else {
-                    self::log()->addDebug('no token sent as header');
-                }
-            } else {
-                self::log()->addDebug('got token from form data');
-                unset($_REQUEST['_cat_access_token']);
+            if(!isset($_COOKIE) || !count($_COOKIE)) {
+                self::log()->addDebug('no cookie = not authenticated');
+                return false;
             }
 
-            if(empty($token)) {
-                if(isset($_COOKIE[self::getCookieName()])) {
-                    $token = $_COOKIE[self::getCookieName()];
-                    self::log()->addDebug(sprintf('got token from cookie [%s]',self::getCookieName()));
-                } else {
-                    self::log()->addDebug(sprintf('no token in cookie data [%s]',self::getCookieName()));
-                }
-            }
+            // first call of self::session() will generate a unique session
+            // name
+            self::session()->start();
 
-            if(!empty($token)) {
-                $user_id = Authenticate::validate($token);
-                self::log()->addDebug(sprintf('got userID [%s]',$user_id));
+            // validate session data
+            if(
+                   self::session()->get('IPaddress') != $_SERVER['REMOTE_ADDR']
+                || self::session()->get('userAgent') != $_SERVER['HTTP_USER_AGENT']
+            ) {
+                self::log()->addDebug('check of IP and/or userAgent failed!');
+                self::session()->clear(1);
+                return false;
             }
-
-            if(!empty($user_id)) {
-                self::$curruser = new \CAT\Objects\User($user_id);
-                self::log()->addDebug('>>> setting auth header');
-                header('Authorization: Bearer '.$token);
-                $_COOKIE[self::getCookieName()] = $token;
+            self::$curruser = new \CAT\Objects\User(self::session()->get('user_id'));
                 return true;
-            }
-            return false;
         }   // end function isAuthenticated()
 
         /**
@@ -346,6 +346,62 @@ if ( ! class_exists( 'Users', false ) )
         }   // end function getUserGroups()
 
         /**
+         * handle user authentication
+         *
+         * @access public
+         * @return mixed
+         **/
+        public static function authenticate()
+        {
+            if(!isset($_REQUEST['acc']) || $_REQUEST['acc'] != 'true') {
+                self::printFatalError('Authentication failed! Please accept the session cookie to proceed.');
+            }
+            $auth_result = self::user()->login();
+            if (false!==$auth_result) {
+                // session
+                if(!self::session()->started()===true) {
+                    self::session()->start();
+                }
+                self::session()->set('user_id',self::user()->get('user_id'));
+                self::session()->set('IPaddress',$_SERVER['REMOTE_ADDR']);
+                self::session()->set('userAgent',$_SERVER['HTTP_USER_AGENT']);
+                // debugging
+                self::log()->addDebug(sprintf(
+                    'Authentication succeeded, username [%s], id [%s]',
+                    self::user()->get('username'),
+                    self::user()->get('user_id')
+                ));
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!! TODO: user specific default page !!!!!
+                // forward
+                if (self::asJSON()) {
+                    self::log()->addDebug(sprintf(
+                        'sending json result, forward to URL [%s]',
+                        CAT_ADMIN_URL.'/'.self::user()->getDefaultPage()
+                    ));
+                    Json::printData(array(
+                        'success' => true,
+                        'url'     => CAT_ADMIN_URL.'/'.self::user()->getDefaultPage(),
+                    ));
+                } else {
+                    self::log()->addDebug(sprintf(
+                        'forwarding to URL [%s]',
+                        CAT_ADMIN_URL.'/'.self::user()->getDefaultPage()
+                    ));
+                    header('Location: '.CAT_ADMIN_URL.'/'.self::user()->getDefaultPage());
+                }
+            } else {
+                self::log()->addDebug('Authentication failed!');
+                if (self::asJSON()) {
+                    Json::printError('Authentication failed!');
+                } else {
+                    self::printFatalError('Authentication failed!');
+                }
+            }
+            exit;
+        }   // end function authenticate()
+
+        /**
          * authenticate user
          *
          * @access public
@@ -370,19 +426,19 @@ if ( ! class_exists( 'Users', false ) )
                 $field	= Validate::sanitizePost('password_fieldname');
                 $passwd	= Validate::sanitizePost($field);
 
-                // Get the token
+                // Get the TFA token
                 $field = Validate::sanitizePost('token_fieldname');
-                $token = htmlspecialchars(Validate::sanitizePost($field), ENT_QUOTES);
+                $tfaToken = htmlspecialchars(Validate::sanitizePost($field), ENT_QUOTES);
 
                 // check whether the password is correct
-                $token = Authenticate::authenticate($uid, $passwd, $token);
-                if($token) {
+                $success = Authenticate::authenticate($uid, $passwd, $tfaToken);
+                if($success) {
                     self::db()->query(
                         'UPDATE `:prefix:rbac_users` SET `login_when`=?, `login_ip`=? WHERE `user_id`=?',
                         array(time(), $_SERVER['REMOTE_ADDR'], $uid)
                     );
                     self::$curruser = new \CAT\Objects\User($uid);
-                    return $token;
+                    return true;
                 } else {
                     self::printFatalError('No such user, user not active, or invalid password!');
                 }
@@ -401,14 +457,6 @@ if ( ! class_exists( 'Users', false ) )
                 'UPDATE `:prefix:rbac_users` SET `login_when`=?, `login_ip`=?, `login_token`=? WHERE `user_id`=?',
                 array(0, 0, null, self::user()->getID())
             );
-
-            // invalidate session cookie
-            if (isset($_COOKIE[session_name()])) {
-                setcookie(session_name(), '', time() - 42000, '/');
-            }
-
-            // invalidate token
-            setcookie(self::getCookieName(), '', time() - 42000, '/');
 
             // redirect to admin login
             if (!self::asJSON()) {

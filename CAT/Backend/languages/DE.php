@@ -21,16 +21,24 @@ $LANG = array_merge($LANG,array(
     // --------------- Backend ---------------
     'Close all'         => 'Alle schließen',
     'Content'           => 'Inhalte bearbeiten',
+    'Default page'      => 'Einstiegsseite',
     'disabled'          => 'deaktiviert',
     'enabled'           => 'aktiviert',
     'Home'              => 'Dashboard',
     'Keep open'         => 'Offenhalten',
     'Logout'            => 'Abmelden',
     'Open all'          => 'Alle öffnen',
+    'Profile'           => 'Benutzerprofil',
     'Recover'           => 'Wiederherstellen',
     'User Profile'      => 'Benutzerprofil',
     'Built-in objects must not be removed' => 'Standard-Objekte können nicht gelöscht werden',
     'Roles_and_permissions' => 'Rollen und Rechte',
+
+    // --------------- Backend -> own profile ---------------
+    'profile'           => 'Eigenes Benutzerprofil',
+    'dashboard'         => 'Dashboard',
+    'administration'    => 'Administrationsbereich',
+    'content'           => 'Inhaltsbereich',
 
     // --------------- Backend -> Session ---------------
     'Close Backend' => 'Backend schließen',

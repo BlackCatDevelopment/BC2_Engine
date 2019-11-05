@@ -90,6 +90,22 @@ if (!class_exists('\CAT\Objects\User'))
         }   // end function get()
 
         /**
+         * TODO: Aus den Benutzereinstellungen auslesen
+         *
+         * @access public
+         * @return
+         **/
+        public function getDefaultPage()
+        {
+            $path = $this->get('default_page');
+            if(empty($path)) {
+                $path = "dashboard";
+            }
+            return $path;
+        }   // end function getDefaultPage()
+        
+
+        /**
          *
          * @access public
          * @return
@@ -340,7 +356,7 @@ if (!class_exists('\CAT\Objects\User'))
 
             // read user from DB
             $get_user = self::db()->query(
-                'SELECT `user_id`, `username`, `display_name`, `email`, `language`, `home_folder`, `tfa_enabled`, `tfa_secret` '.
+                'SELECT * '.
                 'FROM `:prefix:rbac_users` WHERE `'.$fieldname.'`=:id',
                 array('id'=>$id)
             );

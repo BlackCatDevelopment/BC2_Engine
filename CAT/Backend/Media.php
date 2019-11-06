@@ -17,6 +17,7 @@
 
 namespace CAT\Backend;
 use \CAT\Base as Base;
+use \CAT\Backend as Backend;
 use \CAT\Helper\Directory as Directory;
 use \CAT\Helper\Media as FM;
 

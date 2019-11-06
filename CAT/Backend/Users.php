@@ -231,7 +231,7 @@ if (!class_exists('\CAT\Backend\Users')) {
                 }
             }
             $form->getElement('default_page')->setData($pages_list);
-            #$form->getElement('default_page')->setValue($userData['default_page']);
+            $form->getElement('default_page')->setValue($userData['default_page']);
 
             \CAT\Backend::show('profile',array(
                 'form' => $form->render(true),

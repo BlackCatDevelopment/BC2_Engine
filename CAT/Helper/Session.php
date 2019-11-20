@@ -32,6 +32,11 @@ if (!class_exists('\CAT\Helper\Session', false))
             'aes-128-gcm',
         );
         /**
+         * @var hash for use with OpenSSL
+         * !!!!! TODO: generate on installation !!!!!
+         **/
+        private static $hash = null;
+        /**
          * @var bool
          */
         protected $started = false;
@@ -181,6 +186,16 @@ if (!class_exists('\CAT\Helper\Session', false))
          * @access public
          * @return
          **/
+        public function lifetime()
+        {
+            return ini_get('session.gc_maxlifetime');
+        }   // end function lifetime()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
         public function refresh()
         {
             $sql = self::getStatement('refresh');
@@ -263,6 +278,7 @@ if (!class_exists('\CAT\Helper\Session', false))
          **/
         public function set($name,$val)
         {
+            self::log()->addDebug(sprintf('set() - name [%s] value [%s]',$name,$val));
             $this->data[$name] = $val;
         }   // end function set()
 
@@ -284,7 +300,8 @@ if (!class_exists('\CAT\Helper\Session', false))
             }
             if (\PHP_SESSION_ACTIVE === session_status()) {
                 self::log()->addDebug(sprintf(
-                    'session already started by PHP, session name [%s]', session_name()
+                    'session already started by PHP, session name [%s] session id [%s]',
+                    session_name(), session_id()
                 ));
                 return true;
             }

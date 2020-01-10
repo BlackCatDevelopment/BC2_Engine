@@ -31,11 +31,9 @@ if (!class_exists('DB')) {
         private static $instance    = null;
         private static $conn        = null;
         private static $prefix      = null;
-        private static $qb          = null;
         private static $conn_failed = false;
 
         private $lasterror          = null;
-        #private $classLoader        = NULL;
 
         /**
          * constructor; initializes Doctrine ClassLoader and sets up a database
@@ -47,11 +45,6 @@ if (!class_exists('DB')) {
         public function __construct($opt=array())
         {
             self::$prefix = defined('CAT_TABLE_PREFIX') ? CAT_TABLE_PREFIX : '';
-            #if(!$this->classLoader)
-            #{
-            #    $this->classLoader = new ClassLoader('Doctrine', CAT_ENGINE_PATH.'/vendor/doctrine');
-            #    $this->classLoader->register();
-            #}
             $this->connect($opt);
         }   // end function __construct()
 
@@ -145,7 +138,6 @@ if (!class_exists('DB')) {
                     self::$conn = \Doctrine\DBAL\DriverManager::getConnection($connectionParams, $config);
                 } catch (\PDO\PDOException $e) {
                     self::$conn_failed = true;
-                    $this->setError($e->message);
                     Base::printFatalError($e->message);
                 }
                 if (function_exists('xdebug_enable') && $xdebug_state) {
@@ -274,7 +266,6 @@ if (!class_exists('DB')) {
                         } else {
                             throw new \PDOException($this->getError());
                         }
-                        #Base::printFatalError($this->getError());
                     }
                 }
             }

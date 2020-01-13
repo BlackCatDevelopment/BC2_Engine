@@ -160,6 +160,7 @@ if (!class_exists('\CAT\Backend\Dashboard')) {
             $id   = Validate::sanitizePost('id');
             $col  = Validate::sanitizePost('col');
             $pos  = Validate::sanitizePost('row');
+
             if (!$col>0) {
                 $col = 1;
             }
@@ -198,16 +199,14 @@ if (!class_exists('\CAT\Backend\Dashboard')) {
                     . 'ORDER BY `position` ASC;',
                     array($pos,$col,$pos,$id,$dash)
                 );
-                $result = Json::printSuccess('ok');
+                $result = true;
             } else {
                 self::log()->addWarn(sprintf('no such dashboard: [%s]', $dash));
-                $result = Json::printError('not ok');
+                $result = false;
             }
 
             if (self::asJSON()) {
-                echo header('Content-Type: application/json');
-                echo $result;
-                return;
+                Json::printResult($result,($result?'ok':'not ok'));
             }
         }   // end function order()
 
@@ -234,8 +233,7 @@ if (!class_exists('\CAT\Backend\Dashboard')) {
                     $widget  = Widget::getWidget($widget);
                     $content = Widget::execute($widget, $dash);
                     if (self::asJSON()) {
-                        echo header('Content-Type: application/json');
-                        echo Json::printSuccess($content);
+                        Json::printSuccess($content);
                         return;
                     } else {
                     }
@@ -309,14 +307,12 @@ if (!class_exists('\CAT\Backend\Dashboard')) {
                     'UPDATE `:prefix:dashboard_has_widgets` SET `open`=? WHERE `dashboard_id`=? AND `widget_id`=?',
                     array($vis,$dash,$id)
                 );
-                $result = Json::printSuccess('ok');
+                $result = true;
             } else {
-                $result = Json::printError('not ok');
+                $result = false;
             }
             if (self::asJSON()) {
-                echo header('Content-Type: application/json');
-                echo $result;
-                return;
+                Json::printResult($result,($result?'ok':'not ok'));
             }
         }   // end function toggle()
 

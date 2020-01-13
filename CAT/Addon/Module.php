@@ -32,17 +32,6 @@ if (!class_exists('\CAT\Addon\Module', false)) {
         protected static $author      = "";
         protected static $guid        = "";
         protected static $license     = "";
-        /**
-         *
-         */
-        public function __construct()
-        {
-            parent::__construct();
-        }
-        public function __destruct()
-        {
-            parent::__destruct();
-        }
 
         /**
          * gets the details of an addon
@@ -53,9 +42,6 @@ if (!class_exists('\CAT\Addon\Module', false)) {
          */
         public static function getInfo(string $value=null) : array
         {
-            if ($value) {
-                return static::$$value;
-            }
             // get 'em all
             $info = array();
             foreach (array_values(array(
@@ -64,6 +50,9 @@ if (!class_exists('\CAT\Addon\Module', false)) {
                 if (isset(static::$$key) && strlen(static::$$key)) {
                     $info[$key] = static::$$key;
                 }
+            }
+            if(!empty($value)) {
+                return ( isset($info[$value]) ? $info[$value] : null );
             }
             return $info;
         }   // end function getInfo()
@@ -82,19 +71,19 @@ if (!class_exists('\CAT\Addon\Module', false)) {
          **/
         public static function initialize(array $section)
         {
-            if (!empty($section)) {
-                if (!isset($section['variant'])) {
-                    $section['variant'] = 'default';
-                }
-                $tpl_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$section['module'].'/templates/'.$section['variant']);
-                $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$section['module'].'/templates/'.$section['variant'].'/languages');
+            if (!empty($section) && isset($section['module'])) {
+                $module    = $section['module'];
+                $variant = isset($section['variant']) ? $section['variant'] : 'default';
+                $basepath  = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$module.'/templates/');
+                $tpl_path  = $basepath.$variant;
+                $lang_path = $basepath.$variant.'/languages';
                 if (is_dir($tpl_path)) {
                     self::tpl()->setPath($tpl_path);
                 }
                 if (is_dir($lang_path)) {
                     self::addLangFile($lang_path);
                 }
-                $def_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$section['module'].'/templates/default');
+                $def_path = $basepath.'default';
                 if (is_dir($def_path)) {
                     self::tpl()->setFallbackPath($def_path);
                 }

@@ -28,7 +28,7 @@ if (!class_exists('Router', false)) {
     class Router extends Base
     {
         // log level
-        public    static $loglevel   = \Monolog\Logger::EMERGENCY;
+        public static $loglevel   = \Monolog\Logger::EMERGENCY;
         #public static $loglevel   = \Monolog\Logger::DEBUG;
         // instance
         private static $instance   = null;
@@ -115,8 +115,8 @@ if (!class_exists('Router', false)) {
             //       whitelist for allowed file names
             // -----------------------------------------------------------------
             if (self::match('~^modules/~i')) {
-                self::log()->addDebug(sprintf('forwarding to module [%s]',$this->route));
-                if($suffix=='php') {
+                self::log()->addDebug(sprintf('forwarding to module [%s]', $this->route));
+                if ($suffix=='php') {
                     self::log()->addDebug('>>>>> dispatch() ENDE <<<<<');
                     require CAT_ENGINE_PATH.'/'.self::router()->getRoute();
                     return;
@@ -125,11 +125,11 @@ if (!class_exists('Router', false)) {
                     $directory = self::router()->getRoutePart(1);
                     $method    = self::router()->getRoutePart(2);
                     $module    = $directory;
-                    list($handler,$classname) = \CAT\Helper\Addons::getHandler($directory,$module);
+                    list($handler, $classname) = \CAT\Helper\Addons::getHandler($directory, $module);
 
                     if ($handler) {
                         self::log()->addDebug(sprintf('found class file [%s]', $handler));
-                        return \CAT\Helper\Addons::executeHandler($handler,$classname,$method);
+                        return \CAT\Helper\Addons::executeHandler($handler, $classname, $method);
                     }
                 }
             }
@@ -146,7 +146,7 @@ if (!class_exists('Router', false)) {
                 $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.\CAT\Registry::get('DEFAULT_TEMPLATE').'/languages');
             }
             if (is_dir($lang_path)) {
-                self::log()->addDebug(sprintf('adding lang path [%s]',$lang_path));
+                self::log()->addDebug(sprintf('adding lang path [%s]', $lang_path));
                 self::addLangFile($lang_path);
             }
 
@@ -156,7 +156,7 @@ if (!class_exists('Router', false)) {
                 $this->function
             ));
 
-            $this->params = \CAT\Helper\HArray::filter($this->params,null,$this->function);
+            $this->params = \CAT\Helper\HArray::filter($this->params, null, $this->function);
 
             // ----- frontend page ---------------------------------------------
             if (!$this->backend) {
@@ -167,7 +167,7 @@ if (!class_exists('Router', false)) {
                 $page = $this->getPage($this->route);
                 if ($page && is_int($page)) {
                     $pg = \CAT\Page::getInstance($page);
-                    self::log()->addDebug(sprintf('showing page with id [%s]',$page));
+                    self::log()->addDebug(sprintf('showing page with id [%s]', $page));
                     self::log()->addDebug('>>>>> dispatch() END <<<<<');
                     $pg->show();
                     exit;
@@ -188,7 +188,6 @@ if (!class_exists('Router', false)) {
                     #if ($this->function=='index' && count($this->params)>0) {
                     #    $this->function = array_shift($this->params);
                     #}
-
                 }
             }
 
@@ -209,7 +208,7 @@ if (!class_exists('Router', false)) {
                     }
                 }
 
-                $this->params = \CAT\Helper\HArray::filter($this->params,null,$this->function);
+                $this->params = \CAT\Helper\HArray::filter($this->params, null, $this->function);
 
                 // check for protected route
                 if ($this->protected && !self::user()->isAuthenticated()) {
@@ -352,7 +351,7 @@ if (!class_exists('Router', false)) {
             if (!$data || !is_array($data) || !count($data)) {
                 $result = self::db()->query(
                     'SELECT `page_id` FROM `:prefix:module_routes` WHERE `route`=?',
-                    array(ltrim($route,"/"))
+                    array(ltrim($route, "/"))
                 );
                 $data   = $result->fetch();
                 if (!$data || !is_array($data) || !count($data)) {
@@ -375,7 +374,7 @@ if (!class_exists('Router', false)) {
             if (!is_array($this->params)) {
                 return null;
             }
-            if(!is_numeric($index)) {
+            if (!is_numeric($index)) {
                 return null;
             }
             if ($index < 0) { // last param
@@ -444,7 +443,7 @@ if (!class_exists('Router', false)) {
         public function getRoutePart($index)
         {
             if ($this->parts) {
-                if($index<0) {
+                if ($index<0) {
                     $index = abs($index)-1;
                     $reversed = array_reverse($this->parts);
                     return (
@@ -476,7 +475,7 @@ if (!class_exists('Router', false)) {
             }
             return false;
         }   // end function getQuery()
-        
+
         /**
          *
          * @access public
@@ -486,7 +485,7 @@ if (!class_exists('Router', false)) {
         {
             if ($this->query) {
                 parse_str($this->query, $query);
-                return ( isset($query[$name]) ? $query[$name] : '');
+                return (isset($query[$name]) ? $query[$name] : '');
             }
             return false;
         }   // end function getQueryParam()
@@ -513,24 +512,32 @@ if (!class_exists('Router', false)) {
                         'found key [%s] in $_SERVER',
                         $key
                     ));
-                    $route = parse_url($_SERVER[$key], PHP_URL_PATH);
-                    self::log()->addDebug(sprintf(
-                        'route [%s]',
-                        $route
-                    ));
+                    // Remove all illegal characters from url
+                    $url = filter_var($url, FILTER_SANITIZE_URL);
+                    // Validate website url
+                    if(filter_var($url, FILTER_VALIDATE_URL)){
+                        $route = parse_url($url, PHP_URL_PATH);
+                        self::log()->addDebug(sprintf(
+                            'route [%s]',
+                            $route
+                        ));
+                    }
+                    // Validate website url for query string
+                    if(filter_var($url, FILTER_VALIDATE_URL, FILTER_FLAG_QUERY_REQUIRED)){
+                        $q = filter_input(INPUT_SERVER, 'QUERY_STRING', FILTER_SANITIZE_STRING);
+                        if(!$q && !empty($q)) {
+                            $this->query = $q;
+                            self::log()->addDebug(sprintf(
+                                'query string [%s]',
+                                $this->query
+                            ));
+                        }
+                    }
                     break;
                 }
             }
             if (!$route) {
                 $route = '/';
-            }
-
-            if (isset($_SERVER['QUERY_STRING'])) {
-                $this->query = $_SERVER['QUERY_STRING'];
-                self::log()->addDebug(sprintf(
-                        'query string [%s]',
-                    $this->query
-                    ));
             }
 
             // remove params
@@ -567,26 +574,26 @@ if (!class_exists('Router', false)) {
             // remove site subfolder; this may not work for asset files as the
             // config.php of the site is not loaded
             $site_folder = self::site()['site_folder'];
-            if(strlen($site_folder)==0) {
+            if (strlen($site_folder)==0) {
                 // try to extract the site subfolder from the path
-                $preg = implode('|',self::$asset_subdirs);
+                $preg = implode('|', self::$asset_subdirs);
                 preg_match('~\/('.$preg.')\/~i', $route, $m);
-                if(count($m)>0) {
-                    $parts = explode('/',$route);
+                if (count($m)>0) {
+                    $parts = explode('/', $route);
                     $temp = array();
-                    foreach($parts as $part) {
-                        if($part != $m[1]) {
+                    foreach ($parts as $part) {
+                        if ($part != $m[1]) {
                             $temp[] = $part;
                         } else {
                             break;
                         }
                     }
-                    if(count($temp)>0) {
-                        $site_folder = implode('/',$temp);
+                    if (count($temp)>0) {
+                        $site_folder = implode('/', $temp);
                     }
                 }
             }
-            self::log()->addDebug(sprintf('site folder [%s]',$site_folder));
+            self::log()->addDebug(sprintf('site folder [%s]', $site_folder));
             $route = preg_replace('~^\/?'.$site_folder.'\/?~i', '', $route);
 
             if ($route) {
@@ -631,7 +638,8 @@ if (!class_exists('Router', false)) {
             if (preg_match($pattern, $this->getRoute(), $m)) {
                 if (count($m)>1 && strlen($m[0])) {
                     self::log()->addDebug(sprintf(
-                        'returning first match [%s]',$m[0]
+                        'returning first match [%s]',
+                        $m[0]
                     ));
                     return $m[0];
                 }
@@ -676,7 +684,7 @@ if (!class_exists('Router', false)) {
             $this->protected = true;
             $this->perm      = $needed_perm;
         }   // end function protect()
-        
+
         /**
          *
          * @access public
@@ -684,7 +692,6 @@ if (!class_exists('Router', false)) {
          **/
         public function register(string $route, int $pageID, $addon_id=null, $section_id=null)
         {
-        
         }   // end function register()
 
         /**
@@ -693,7 +700,7 @@ if (!class_exists('Router', false)) {
         public function reroute($newroute)
         {
             self::$reroutes++;
-            if(self::$reroutes>=3) {
+            if (self::$reroutes>=3) {
                 self::log()->addError(sprintf(
                     'too many reroute attempts, unable to reroute [%s]',
                     $newroute

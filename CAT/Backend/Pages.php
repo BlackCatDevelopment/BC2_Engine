@@ -546,8 +546,7 @@ if (!class_exists('Pages')) {
             }
 
             if (!$as_array && self::asJSON()) {
-                echo header('Content-Type: application/json');
-                echo json_encode($pages, true);
+                Json::printData($pages);
                 return;
             }
 
@@ -574,7 +573,7 @@ if (!class_exists('Pages')) {
             );
 
             if (self::asJSON()) {
-                echo Json::printSuccess('Page recovered');
+                Json::printSuccess('Page recovered');
                 exit;
             }
 
@@ -914,7 +913,7 @@ if (!class_exists('Pages')) {
         {
             $pageID = self::getItemID('page_id', '\CAT\Helper\Page::exists');
             if (self::asJSON()) {
-                Json::printSuccess($form->getForm());
+                Json::printSuccess(\CAT\Sections::getSections($pageID, null, false));
             } else {
                 Backend::show('backend_page_sections', array(
                     'page'     => HPage::properties($pageID),
@@ -940,8 +939,7 @@ if (!class_exists('Pages')) {
             $pages = self::lb()->buildRecursion($pages);
 
             if (self::asJSON()) {
-                echo header('Content-Type: application/json');
-                echo json_encode($pages, true);
+                Json::printData($pages);
                 return;
             }
 

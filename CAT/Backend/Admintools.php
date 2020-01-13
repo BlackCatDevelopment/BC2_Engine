@@ -73,26 +73,34 @@ if (!class_exists('Backend\Admintools')) {
 
             // no configuration yet
             if (!isset($d['widgets']) || !is_array($d['widgets']) || !count($d['widgets'])) {
+                $count = 0;
                 $tools = Addons::getAddons('tool', 'name', false);
 
+                if (count($tools)) {
+                    // order tools by name
+                    $tools = \CAT\Helper\HArray::sort($tools, 'name', 'asc', true);
+                    $count = count($tools);
+                    for($n=0;$n<$count;$n++) {
+                        $tool = $tools[$n];
+                        Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/languages/');
+                        $tools[$n]['image'] = (
+                            file_exists(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/icon.png') ?
+                            CAT_SITE_URL.'/modules/'.$tool['directory'].'/icon.png' :
+                            null
+                        );
+                    }
+                }
+
                 if (!$as_array && self::asJSON()) {
-                    echo header('Content-Type: application/json');
-                    echo json_encode($tools, true);
+                    \CAT\Helper\JSON::printData($tools);
                     return;
                 }
 
                 $col          = 1; // init column
                 $d['columns'] = (isset($d['columns']) ? $d['columns'] : 2); // init col number
-                if (count($tools)) {
-                    // order tools by name
-                    $tools = \CAT\Helper\HArray::sort($tools, 'name', 'asc', true);
-                    $count = count($tools);
+
+                if ($count>0) {
                     foreach ($tools as $tool) {
-                        Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/languages/');
-                        $image = ( file_exists(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/icon.png') ?
-                            CAT_SITE_URL.'/modules/'.$tool['directory'].'/icon.png' :
-                            null
-                        );
                         // init widget
                         $d['widgets'][] = array(
                             'column'        => $col,
@@ -101,7 +109,7 @@ if (!class_exists('Backend\Admintools')) {
                             'link'          => '<a href="'.CAT_ADMIN_URL.'/admintools/tool/'.$tool['directory'].'">'.$tool['name'].'</a>',
                             'position'      => 1,
                             'open'          => true,
-                            'image'         => $image,
+                            'image'         => $tool['image'],
                         );
                         $col++;
                         if ($col > $d['columns']) {
@@ -112,7 +120,6 @@ if (!class_exists('Backend\Admintools')) {
                     //$d = \CAT\Helper\Dashboard::getDashboard('backend/admintools');
                 }
             }
-
             return $d;
         }   // end function list()
 

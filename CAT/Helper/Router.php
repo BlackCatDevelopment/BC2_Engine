@@ -509,14 +509,15 @@ if (!class_exists('Router', false)) {
             foreach (array_values(array('REQUEST_URI','REDIRECT_SCRIPT_URL','SCRIPT_URL','ORIG_PATH_INFO','PATH_INFO')) as $key) {
                 if (isset($_SERVER[$key])) {
                     self::log()->addDebug(sprintf(
-                        'found key [%s] in $_SERVER',
-                        $key
+                        'found key [%s] in $_SERVER, validating [%s]',
+                        $key,$_SERVER[$key]
                     ));
                     // Remove all illegal characters from url
-                    $url = filter_var($url, FILTER_SANITIZE_URL);
+                    $url = filter_var($_SERVER[$key], FILTER_SANITIZE_URL);
+                    $url = parse_url($url, PHP_URL_PATH);
                     // Validate website url
-                    if(filter_var($url, FILTER_VALIDATE_URL)){
-                        $route = parse_url($url, PHP_URL_PATH);
+                    if(!empty($url)) {
+                        $route = $url;
                         self::log()->addDebug(sprintf(
                             'route [%s]',
                             $route
@@ -536,7 +537,7 @@ if (!class_exists('Router', false)) {
                     break;
                 }
             }
-            if (!$route) {
+            if (!isset($route)) {
                 $route = '/';
             }
 

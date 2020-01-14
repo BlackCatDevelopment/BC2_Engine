@@ -28,15 +28,6 @@ class Page extends Module implements IAddon, IPage
     protected static $addonID  = 0;
     protected static $template = '';
 
-    public function __construct()
-    {
-        parent::__construct();
-    }
-    public function __destruct()
-    {
-        parent::__destruct();
-    }
-
     /**
      * default add function; override to add your own actions
      **/
@@ -78,8 +69,7 @@ class Page extends Module implements IAddon, IPage
      **/
     public static function remove()
     {
-        // Remove from database
-        if (self::db()->query(
+        self::db()->query(
             'DELETE FROM `:prefix:mod_' . static::$directory . '` ' .
                 'WHERE `page_id` =:page_id ' .
                 'AND `section_id` =:section_id',
@@ -87,10 +77,7 @@ class Page extends Module implements IAddon, IPage
                 'page_id'		=> self::$page_id,
                 'section_id'	=> self::$section_id
             )
-        )) {
-            return true;
-        } else {
-            return false;
-        }
+        );
+        return !self::db()->isError();
     }
 }

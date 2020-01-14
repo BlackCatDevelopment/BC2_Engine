@@ -16,16 +16,16 @@
 */
 
 namespace CAT\Helper;
+
 use \CAT\Base as Base;
 use \CAT\Registry as Registry;
 
-if (!class_exists('\CAT\Helper\GitHub'))
-{
+if (!class_exists('\CAT\Helper\GitHub')) {
     class GitHub extends Base
     {
         protected static $loglevel = \Monolog\Logger::EMERGENCY;
-        private static $ch         = NULL;
-        private static $curl_error = NULL;
+        private static $ch         = null;
+        private static $curl_error = null;
 
         /**
          * initializes CUrl
@@ -34,13 +34,16 @@ if (!class_exists('\CAT\Helper\GitHub'))
          * @param  string  $url - optional
          * @return object  curl connection
          **/
-        public static function init_curl($url=NULL)
+        public static function init_curl($url=null)
         {
-            if(self::$ch) return self::$ch;
+            if (self::$ch) {
+                return self::$ch;
+            }
             self::$ch = curl_init();
             self::reset_curl();
-            if($url)
+            if ($url) {
                 curl_setopt(self::$ch, CURLOPT_URL, $url);
+            }
             return self::$ch;
         }   // end function init_curl()
 
@@ -52,21 +55,25 @@ if (!class_exists('\CAT\Helper\GitHub'))
          **/
         public static function reset_curl()
         {
-            if(self::$ch) curl_close(self::$ch);
+            if (self::$ch) {
+                curl_close(self::$ch);
+            }
             self::$ch = curl_init();
             $headers  = array(
                 'User-Agent: php-curl'
             );
-            curl_setopt(self::$ch, CURLOPT_FOLLOWLOCATION, true    );
-            curl_setopt(self::$ch, CURLOPT_RETURNTRANSFER, true    );
-            curl_setopt(self::$ch, CURLOPT_SSL_VERIFYHOST, false   );
-            curl_setopt(self::$ch, CURLOPT_SSL_VERIFYPEER, false   );
-            curl_setopt(self::$ch, CURLOPT_MAXREDIRS     , 2       );
-            curl_setopt(self::$ch, CURLOPT_HTTPHEADER    , $headers);
-            if(Registry::exists('PROXY'))
+            curl_setopt(self::$ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt(self::$ch, CURLOPT_RETURNTRANSFER, true);
+            #curl_setopt(self::$ch, CURLOPT_SSL_VERIFYHOST, false);
+            #curl_setopt(self::$ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt(self::$ch, CURLOPT_MAXREDIRS, 2);
+            curl_setopt(self::$ch, CURLOPT_HTTPHEADER, $headers);
+            if (Registry::exists('PROXY')) {
                 curl_setopt(self::$ch, CURLOPT_PROXY, Registry::get('PROXY'));
-            if(Registry::exists('PROXY_PORT'))
+            }
+            if (Registry::exists('PROXY_PORT')) {
                 curl_setopt(self::$ch, CURLOPT_PROXYPORT, Registry::get('PROXY_PORT'));
+            }
             return self::$ch;
         }   // end function reset_curl()
 
@@ -75,19 +82,19 @@ if (!class_exists('\CAT\Helper\GitHub'))
          * @access public
          * @return
          **/
-        public static function getRelease($org,$repo)
+        public static function getRelease($org, $repo)
         {
-            $releases   = self::retrieve($org,$repo,'releases');
+            $releases   = self::retrieve($org, $repo, 'releases');
             $latest     = array();
-            if(is_array($releases) && count($releases))
-            {
-                foreach($releases as $r)
-                {
-                    if($r['prerelease']==1) continue;
+            if (is_array($releases) && count($releases)) {
+                foreach ($releases as $r) {
+                    if ($r['prerelease']==1) {
+                        continue;
+                    }
                     $latest = $r;
                     break;
                 }
-                if(is_array($latest)) {
+                if (is_array($latest)) {
                     return $latest;
                 }
             }
@@ -99,12 +106,11 @@ if (!class_exists('\CAT\Helper\GitHub'))
          * @access public
          * @return
          **/
-        public static function getTags($org,$repo)
+        public static function getTags($org, $repo)
         {
-            $tags   = self::retrieve($org,$repo,'tags');
+            $tags   = self::retrieve($org, $repo, 'tags');
             $latest = array();
-            if(is_array($tags) && count($tags))
-            {
+            if (is_array($tags) && count($tags)) {
                 return $tags;
             }
             return false;
@@ -115,42 +121,44 @@ if (!class_exists('\CAT\Helper\GitHub'))
          * @access public
          * @return
          **/
-        public static function getZip($dlurl,$path,$filename)
+        public static function getZip($dlurl, $path, $filename)
         {
             $ch   = self::init_curl();
             curl_setopt($ch, CURLOPT_URL, $dlurl);
             $data = curl_exec($ch);
-            if(curl_error($ch))
-            {
+            if (curl_error($ch)) {
                 self::setError(trim(curl_error($ch)));
                 return false;
             }
-            if(curl_getinfo($ch,CURLINFO_HTTP_CODE)==302) // handle redirect
-            {
+            if (curl_getinfo($ch, CURLINFO_HTTP_CODE)==302) { // handle redirect
                 preg_match('/Location:(.*?)\n/', $data, $matches);
                 $newUrl = trim(array_pop($matches));
                 curl_setopt($ch, CURLOPT_URL, $newUrl);
                 $data  = curl_exec($ch);
-                if(curl_error($ch))
-                {
+                if (curl_error($ch)) {
                     self::setError(trim(curl_error($ch)));
                     return false;
                 }
             }
 
-            if(!$data || curl_error($ch)) {
+            if (!$data || curl_error($ch)) {
                 self::setError(trim(curl_error($ch)));
                 return false;
             }
 
-            if(!is_dir($path)) mkdir($path,0770);
+            if (!is_dir($path)) {
+                mkdir($path, 0770);
+            }
             $file = $filename.'.zip';
             $fd   = fopen($path.'/'.$file, 'w');
             fwrite($fd, $data);
             fclose($fd);
 
-            if(filesize($path.'/'.$file)) return true;
-            else                          self::setError('Filesize '.filesize($path.'/'.$file));
+            if (filesize($path.'/'.$file)) {
+                return true;
+            } else {
+                self::setError('Filesize '.filesize($path.'/'.$file));
+            }
 
             return false;
         }   // end function getZip()
@@ -166,28 +174,30 @@ if (!class_exists('\CAT\Helper\GitHub'))
          * @param  string  $url  - sub url
          * @return json
          **/
-        public static function retrieve($org,$repo,$url)
+        public static function retrieve($org, $repo, $url)
         {
             $ch   = self::reset_curl(); // fresh connection
-            $url  = sprintf('https://api.github.com/repos/%s/%s/%s',
-                    $org, $repo, $url);
+            $url  = sprintf(
+                'https://api.github.com/repos/%s/%s/%s',
+                    $org,
+                $repo,
+                $url
+            );
             try {
                 //echo "retrieve url: $url<br />";
-                curl_setopt($ch,CURLOPT_URL,$url);
+                curl_setopt($ch, CURLOPT_URL, $url);
                 $result = json_decode(curl_exec($ch), true);
-                if($result)
-                {
-                    if(isset($result['documentation_url']))
-                        self::printError( "GitHub Error: ", $result['message'], "<br />URL: $url<br />" );
+                if ($result) {
+                    if (isset($result['documentation_url'])) {
+                        self::printError("GitHub Error: ", $result['message'], "<br />URL: $url<br />");
+                    }
                     return $result;
-                }
-                else
-                {
+                } else {
                     self::setError(curl_error($ch));
                     return false;
                 }
-            } catch ( Exception $e ) {
-                self::printError( "CUrl error: ", $e->getMessage(), "<br />" );
+            } catch (Exception $e) {
+                self::printError("CUrl error: ", $e->getMessage(), "<br />");
             }
         }   // end function retrieve()
 
@@ -200,13 +210,13 @@ if (!class_exists('\CAT\Helper\GitHub'))
          **/
         public static function retrieve_remote_file_size($url)
         {
-             $ch = self::init_curl();
-             curl_setopt($ch, CURLOPT_HEADER, TRUE);
-             curl_setopt($ch, CURLOPT_NOBODY, TRUE);
-             curl_setopt($ch, CURLOPT_URL, $url);
-             $data = curl_exec($ch);
-             $size = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
-             return $size;
+            $ch = self::init_curl();
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_NOBODY, true);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            $data = curl_exec($ch);
+            $size = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+            return $size;
         }
 
         /**
@@ -226,7 +236,7 @@ if (!class_exists('\CAT\Helper\GitHub'))
          **/
         public static function resetError()
         {
-            self::$curl_error = NULL;
+            self::$curl_error = null;
         }   // end function resetError()
         
         /**
@@ -238,7 +248,5 @@ if (!class_exists('\CAT\Helper\GitHub'))
         {
             self::$curl_error = $error;
         }   // end function setError()
-        
     } // class GitHub
-
 } // if class_exists()

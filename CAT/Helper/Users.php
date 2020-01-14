@@ -17,14 +17,14 @@
 
 
 namespace CAT\Helper;
+
 use \CAT\Base as Base;
 use \CAT\Helper\Authenticate as Authenticate;
 use \CAT\Helper\Validate as Validate;
 
-if ( ! class_exists( 'Users', false ) )
-{
-	class Users extends Base
-	{
+if (! class_exists('Users', false)) {
+    class Users extends Base
+    {
 
         // log level
         #protected static $loglevel  = \Monolog\Logger::EMERGENCY;
@@ -40,8 +40,9 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public static function getInstance()
         {
-            if(!is_object(self::$instance))
+            if (!is_object(self::$instance)) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
@@ -52,12 +53,12 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public function getDefaultPage()
         {
-            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+            if (!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
                 return false;
             }
             return self::$curruser->getDefaultPage();
         }   // end function getDefaultPage()
-        
+
         /**
          *
          * @access public
@@ -65,7 +66,7 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public function getHomeFolder()
         {
-            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+            if (!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
                 return false;
             }
             return self::$curruser->getHomeFolder();
@@ -78,7 +79,7 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public function getID()
         {
-            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+            if (!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
                 return 2;
             }
             return self::$curruser->getID();
@@ -94,7 +95,7 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public function hasModulePerm($module)
         {
-            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+            if (!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
                 return false;
             }
             return self::$curruser->hasModulePerm($module);
@@ -109,10 +110,10 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public function hasPagePerm(int $pageID, string $perm)
         {
-            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+            if (!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
                 return false;
             }
-            return self::$curruser->hasPagePerm($pageID,$perm);
+            return self::$curruser->hasPagePerm($pageID, $perm);
         }   // end function hasPagePerm()
 
         /**
@@ -124,7 +125,7 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public function hasPerm(string $perm)
         {
-            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+            if (!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
                 return false;
             }
             return self::$curruser->hasPerm($perm);
@@ -140,7 +141,7 @@ if ( ! class_exists( 'Users', false ) )
         {
             self::log()->addDebug('isAuthenticated()');
 
-            if(!isset($_COOKIE) || !count($_COOKIE)) {
+            if (!isset($_COOKIE) || !count($_COOKIE)) {
                 self::log()->addDebug('no cookie = not authenticated');
                 return false;
             }
@@ -150,16 +151,21 @@ if ( ! class_exists( 'Users', false ) )
             self::session()->start();
 
             // validate session data
-            if(
+            if (
                    self::session()->get('IPaddress') != $_SERVER['REMOTE_ADDR']
                 || self::session()->get('userAgent') != $_SERVER['HTTP_USER_AGENT']
             ) {
                 self::log()->addDebug('check of IP and/or userAgent failed!');
+                self::log()->addDebug(sprintf(
+                    'session IP [%s] incoming IP [%s]',
+                    self::session()->get('IPaddress'),
+                    $_SERVER['REMOTE_ADDR']
+                ));
                 self::session()->clear(1);
                 return false;
             }
             self::$curruser = new \CAT\Objects\User(self::session()->get('user_id'));
-                return true;
+            return true;
         }   // end function isAuthenticated()
 
         /**
@@ -169,7 +175,7 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public function isOwner($page_id)
         {
-            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+            if (!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
                 return false;
             }
             return self::$curruser->isOwner($page_id);
@@ -182,7 +188,7 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public function isRoot()
         {
-            if(!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
+            if (!isset(self::$curruser) || !self::$curruser instanceof \CAT\Objects\User) {
                 return false;
             }
             return self::$curruser->isRoot();
@@ -197,11 +203,11 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public static function deleteUser($user_id)
         {
-       		self::db()->query(
+            self::db()->query(
                 "DELETE FROM `:prefix:rbac_users` WHERE `user_id`=:id",
                 array('id'=>$user_id)
             );
-            return ( self::db()->isError() ? self::db()->getError() : true );
+            return (self::db()->isError() ? self::db()->getError() : true);
         }   // end function deleteUser()
 
         /**
@@ -211,9 +217,10 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public static function exists($user_id)
         {
-            $data = self::getUsers(array('user_id'=>$user_id),true);
-            if($data && is_array($data) && count($data))
+            $data = self::getUsers(array('user_id'=>$user_id), true);
+            if ($data && is_array($data) && count($data)) {
                 return true;
+            }
             return false;
         }   // end function exists()
 
@@ -224,7 +231,7 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public static function get($key)
         {
-            if(!self::$curruser) {
+            if (!self::$curruser) {
                 return false;
             }
             return self::$curruser->get($key);
@@ -237,9 +244,10 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public static function getDetails($user_id)
         {
-            $data = self::getUsers(array('user_id'=>$user_id),true);
-            if($data && is_array($data) && count($data))
+            $data = self::getUsers(array('user_id'=>$user_id), true);
+            if ($data && is_array($data) && count($data)) {
                 return $data[0];
+            }
             return array();
         }   // end function getDetails()
 
@@ -254,16 +262,16 @@ if ( ! class_exists( 'Users', false ) )
             $data = $stmt->fetchAll();
             $list = array();
 
-            if(is_array($data) && count($data)>0) {
-                foreach($data as $i => $item) {
+            if (is_array($data) && count($data)>0) {
+                foreach ($data as $i => $item) {
                     $list[$item['user_id']] = $item;
                 }
             }
 
             return $list;
         }   // end function getUserNames()
-        
-        
+
+
         /**
          * get users from DB; has several options to define what is requested
          *
@@ -272,53 +280,47 @@ if ( ! class_exists( 'Users', false ) )
          * @param  boolean  $extended (default: false)
          * @return array
          **/
-        public static function getUsers($opt=NULL,$extended=false)
+        public static function getUsers($opt=null, $extended=false)
         {
             $q    = 'SELECT `t1`.* FROM `:prefix:rbac_users` AS `t1` ';
             $p    = array();
-            if(is_array($opt))
-            {
-                if(isset($opt['group_id']))
-                {
+            if (is_array($opt)) {
+                if (isset($opt['group_id'])) {
                     $q .= 'LEFT OUTER JOIN `:prefix:rbac_usergroups` AS `t2` '
                        .  'ON `t1`.`user_id`=`t2`.`user_id` '
                        .  'WHERE ((`t2`.`group_id`'
-                       .  ( isset($opt['not_in_group']) ? '!' : '' )
+                       .  (isset($opt['not_in_group']) ? '!' : '')
                        .  '=:id'
                        ;
                     $p['id'] = $opt['group_id'];
-                    if(isset($opt['not_in_group']))
-                    {
+                    if (isset($opt['not_in_group'])) {
                         // skip users in admin group and protected users
                         $q .= ' AND `t2`.`group_id`  != 1'
                            .  ' AND `t1`.`protected` != "Y")'
                            .  ' OR `t2`.`group_id` IS NULL )';
-                    }
-                    else
-                    {
+                    } else {
                         $q .= '))';
                     }
                 }
-                if(isset($opt['user_id']))
-                {
+                if (isset($opt['user_id'])) {
                     $q .= ' WHERE `t1`.`user_id`=:uid';
                     $p['uid'] = $opt['user_id'];
                 }
             }
-            $sth  = self::db()->query($q,$p);
+            $sth  = self::db()->query($q, $p);
             $data = $sth->fetchAll(\PDO::FETCH_ASSOC);
-            foreach($data as $i => $user) {
-                if(strlen($user['wysiwyg'])) { // resolve wysiwyg editor
-                    $data[$i]['wysiwyg'] = Addons::getDetails($user['wysiwyg'],'name');
+            foreach ($data as $i => $user) {
+                if (strlen($user['wysiwyg'])) { // resolve wysiwyg editor
+                    $data[$i]['wysiwyg'] = Addons::getDetails($user['wysiwyg'], 'name');
                 }
-                if($extended) {
+                if ($extended) {
                     $sth = self::db()->query(
                         'SELECT * FROM `:prefix:rbac_user_extend` WHERE `user_id`=?',
                         array($user['user_id'])
                     );
                     $ext = $sth->fetchAll(\PDO::FETCH_ASSOC);
                     $data[$i]['extended'] = array();
-                    foreach($ext as $item) {
+                    foreach ($ext as $item) {
                         $data[$i]['extended'][$item['option']] = $item['value'];
                     }
                 }
@@ -341,7 +343,7 @@ if ( ! class_exists( 'Users', false ) )
                . 'ON `t2`.`group_id`=`t3`.`group_id` '
                . 'WHERE `t1`.`user_id`=:id'
                ;
-            $sth = self::db()->query($q,array('id'=>$id));
+            $sth = self::db()->query($q, array('id'=>$id));
             return $sth->fetchAll(\PDO::FETCH_ASSOC);
         }   // end function getUserGroups()
 
@@ -353,26 +355,24 @@ if ( ! class_exists( 'Users', false ) )
          **/
         public static function authenticate()
         {
-            if(!isset($_REQUEST['acc']) || $_REQUEST['acc'] != 'true') {
+            if (!isset($_REQUEST['acc']) || $_REQUEST['acc'] != 'true') {
                 self::printFatalError('Authentication failed! Please accept the session cookie to proceed.');
             }
             $auth_result = self::user()->login();
             if (false!==$auth_result) {
                 // session
-                if(!self::session()->started()===true) {
+                if (!self::session()->started()===true) {
                     self::session()->start();
                 }
-                self::session()->set('user_id',self::user()->get('user_id'));
-                self::session()->set('IPaddress',$_SERVER['REMOTE_ADDR']);
-                self::session()->set('userAgent',$_SERVER['HTTP_USER_AGENT']);
+                self::session()->set('user_id', self::user()->get('user_id'));
+                self::session()->set('IPaddress', $_SERVER['REMOTE_ADDR']);
+                self::session()->set('userAgent', $_SERVER['HTTP_USER_AGENT']);
                 // debugging
                 self::log()->addDebug(sprintf(
                     'Authentication succeeded, username [%s], id [%s]',
                     self::user()->get('username'),
                     self::user()->get('user_id')
                 ));
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!!!! TODO: user specific default page !!!!!
                 // forward
                 if (self::asJSON()) {
                     self::log()->addDebug(sprintf(
@@ -432,7 +432,7 @@ if ( ! class_exists( 'Users', false ) )
 
                 // check whether the password is correct
                 $success = Authenticate::authenticate($uid, $passwd, $tfaToken);
-                if($success) {
+                if ($success) {
                     self::db()->query(
                         'UPDATE `:prefix:rbac_users` SET `login_when`=?, `login_ip`=? WHERE `user_id`=?',
                         array(time(), $_SERVER['REMOTE_ADDR'], $uid)
@@ -461,15 +461,13 @@ if ( ! class_exists( 'Users', false ) )
             // redirect to admin login
             if (!self::asJSON()) {
                 $redirect = str_ireplace('/logout/', '/login/', $_SERVER['SCRIPT_NAME']);
-                die(header('Location: '.CAT_ADMIN_URL.'/login'));
+                header('Location: '.CAT_ADMIN_URL.'/login');
             } else {
-                header('Content-type: application/json');
-                echo json_encode(array(
+                \CAT\Helper\Json::printData(array(
                     'success' => true,
                     'message' => 'ok'
                 ));
             }
         }   // end function logout()
-        
     }
 }

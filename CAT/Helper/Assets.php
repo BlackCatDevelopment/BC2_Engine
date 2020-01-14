@@ -656,6 +656,12 @@ self::log()->addDebug(print_r($files,1));
 
                 // droplets may override page title and description and/or
                 // add meta tags
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: Droplets are not yet implemented!
+#$droplets_config = \CAT\Helper\Droplet::getDropletsForHeader($page_id);
+# temporarily:
+$droplets_config = array();
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                 // check page title
                 if (isset($droplets_config['page_title'])) {

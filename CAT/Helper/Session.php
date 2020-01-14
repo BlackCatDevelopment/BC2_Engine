@@ -152,7 +152,7 @@ if (!class_exists('\CAT\Helper\Session', false))
                     return false;
             }
         }
-            return $false;
+            return false;
         }   // end function exists()
 
         /**
@@ -354,8 +354,6 @@ if (!class_exists('\CAT\Helper\Session', false))
                 // return result
                 return true;
             }
-            // should never be reached, but just in case...
-            return false;
         }   // end function start()
 
         /**

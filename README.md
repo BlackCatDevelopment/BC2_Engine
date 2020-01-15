@@ -15,6 +15,6 @@ from inside the ```vendor``` folder to get all the dependencies.
 Please note that you will need additional modules and templates to do something useful with the engine.
 
 
-
+[![Quality Gates](https://sonarcloud.io/api/project_badges/measure?project=bc2_engine&metric=alert_status)](https://sonarcloud.io/api/project_badges/measure?project=bc2_engine&metric=alert_status)[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=bc2_engine&metric=bugs)](https://sonarcloud.io/api/project_badges/measure?project=bc2_engine&metric=bugs)[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=bc2_engine&metric=vulnerabilities)](https://sonarcloud.io/api/project_badges/measure?project=bc2_engine&metric=vulnerabilities)[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=bc2_engine&metric=security_rating)](https://sonarcloud.io/api/project_badges/measure?project=bc2_engine&metric=security_rating)
 
 [1]: https://bc2.blackcat-cms.org

@@ -67,15 +67,30 @@ if (!class_exists('\CAT\Helper\Directory')) {
          *
          * @access public
          * @param  string   $path
-         * @param  string   $inside (default 'SITE')
+         * @param  string   $inside - MEDIA | SITE | TEMP | ENGINE
          * @return boolean
          **/
-        public static function checkPath(string $path, string $inside='SITE')
+        public static function checkPath(string $path, string $inside)
         {
-            $check = (strtoupper($inside) == 'SITE')
-                   ? CAT_PATH
-                   : ((strtoupper($inside) == 'MEDIA') ? self::user()->getHomeFolder() : CAT_ENGINE_PATH)
-                   ;
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: Review
+//       Rechte pruefen (nicht jeder darf in CAT_ENGINE_PATH schreiben)
+//       Notwendigkeit Parameter $inside pruefen
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            switch($inside) {
+                case 'MEDIA':
+                    $check = self::user()->getHomeFolder();
+                    break;
+                case 'SITE':
+                    $check = CAT_PATH;
+                    break;
+                case 'TEMP':
+                    $check = CAT_TEMP_FOLDER;
+                    break;
+                case 'ENGINE':
+                    $check = CAT_ENGINE_PATH;
+                    break;
+            }
             $check = self::sanitizePath($check);
             $path  = self::sanitizePath($path);
             if (substr_compare($path, $check, 0, strlen($check), true)==0) {
@@ -501,7 +516,7 @@ if (!class_exists('\CAT\Helper\Directory')) {
                 }
             }
             if ($size && $convert) {
-                $size = self::format($size);
+                $size = self::humanize($size);
             }
             return $size;
         }   // end function getSize()

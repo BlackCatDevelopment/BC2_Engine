@@ -116,8 +116,7 @@ if (!class_exists('\CAT\Page', false))
                 || !\CAT\Helper\Page::exists($page_id)    // page does not exist
                 || !\CAT\Helper\Page::isActive($page_id)  // page not active
             ) {
-                return self::print404();
-                exit;
+                return self::print404(); // will exit
             }
 
             // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -155,7 +154,7 @@ if (!class_exists('\CAT\Page', false))
                     $name    = \CAT\Helper\Addons::getDetails($module, 'name');
                     $handler = null;
                     foreach (array_values(array(str_replace(' ', '', $name),$module)) as $classname) {
-                        $filename = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$module.'/inc/class.'.$classname.'.php');
+                        $filename = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$module.'/inc/class.'.$classname.'.php');
                         if (file_exists($filename)) {
                             $handler = $filename;
                         }
@@ -163,7 +162,7 @@ if (!class_exists('\CAT\Page', false))
 
                     if ($handler) {
                         self::log()->addDebug(sprintf('found class file [%s]', $handler));
-                        Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$module.'/languages/');
+                        Base::addLangFile(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$module.'/languages/');
                         self::setTemplatePaths($module);
                         include_once $handler;
                         $classname = '\CAT\Addon\\'.$classname;
@@ -304,9 +303,9 @@ if (!class_exists('\CAT\Page', false))
             } else {
                 $variant = \CAT\Helper\Template::getVariant($this->page_id);
                 self::tpl()->setGlobals('template_options',\CAT\Helper\Template::getOptions($this->page_id));
-                if (file_exists(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/'.$variant.'/index.tpl')) {
+                if (file_exists(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/index.tpl')) {
                     $output = self::tpl()->get(
-                        \CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/'.$variant.'/index.tpl',
+                        \CAT\Registry::get('CAT_TEMPLATE_DIR').'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/index.tpl',
                         array()
                     );
                 }

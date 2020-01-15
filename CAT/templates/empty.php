@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html>
+<html lang="<?php echo \CAT\Base::lang()->getLang() ?>" xml:lang="<?php echo \CAT\Base::lang()->getLang() ?>">
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <title><?php echo \CAT\Base::lang()->t('Sorry, there is no content to show') ?></title>

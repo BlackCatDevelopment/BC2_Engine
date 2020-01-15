@@ -66,7 +66,7 @@ spl_autoload_register(function ($class) {
             if(substr_compare($class,'CAT\Addon',0,9) == 0) {
                 $temp = explode('\\',$class);
                 $dir  = $temp[2];
-                $file = CAT_ENGINE_PATH.'/modules/'.$dir.'/inc/'.pathinfo($file,PATHINFO_FILENAME).'.php';
+                $file = CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$dir.'/inc/'.pathinfo($file,PATHINFO_FILENAME).'.php';
                 if (class_exists('\CAT\Helper\Directory', false) && $class!='\CAT\Helper\Directory') {
                     $file = \CAT\Helper\Directory::sanitizePath($file);
                 }
@@ -94,6 +94,14 @@ Registry::register(
 );
 
 //******************************************************************************
+// Basic subfolders
+//******************************************************************************
+Registry::register('CAT_MODULES_FOLDER','modules',true);
+Registry::register('CAT_LANGUAGES_FOLDER','languages',true);
+Registry::register('CAT_TEMPLATES_FOLDER','templates',true);
+Registry::register('CAT_TEMP_FOLDER',Directory::sanitizePath(CAT_ENGINE_PATH.'/temp'),true);
+
+//******************************************************************************
 // Get website settings and register as globals
 //******************************************************************************
 Base::loadSettings();
@@ -104,7 +112,7 @@ if (!Registry::exists('LANGUAGE') && Registry::exists('DEFAULT_LANGUAGE')) {
 //******************************************************************************
 // Set theme
 //******************************************************************************
-Registry::register('CAT_THEME_PATH', CAT_ENGINE_PATH.'/templates/'.Registry::get('DEFAULT_THEME'), true);
+Registry::register('CAT_THEME_PATH', CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('DEFAULT_THEME'), true);
 
 //******************************************************************************
 // Set as constants for simpler use

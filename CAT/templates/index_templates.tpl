@@ -21,7 +21,7 @@ if(!$variant) {
              : 'default';
 }
 
-\CAT\Base::tpl()->setPath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/'.$variant);
-\CAT\Base::tpl()->setFallbackPath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/templates/default');
+\CAT\Base::tpl()->setPath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/'.CAT_TEMPLATES_FOLDER.'/'.$variant);
+\CAT\Base::tpl()->setFallbackPath(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/'.CAT_TEMPLATES_FOLDER.'/default');
 \CAT\Base::tpl()->output('index.tpl',$tpldata);
 \CAT\Base::tpl()->resetPath();

@@ -82,7 +82,7 @@ if (!class_exists('\CAT\Objects\User'))
             }
             if(count($perms_to_check)>0) {
                 foreach($perms_to_check as $i => $p) {
-                    if (!$his->hasPerm($p)) {
+                    if (!$this->hasPerm($p)) {
                         // fatal error always stops execution
                         self::printFatalError('You are not allowed for the requested action!');
                     }

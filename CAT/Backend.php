@@ -568,7 +568,7 @@ if (!class_exists('Backend', false)) {
                 $default_path = $base.'/default';
                 // first try: variant subfolder
                 if (file_exists($base.'/'.$variant)) {
-                        self::$tplpath = $path;
+                    self::$tplpath = $base.'/'.$variant;
                 }
                 // second: default subfolder
                 if(is_dir($default_path)) {

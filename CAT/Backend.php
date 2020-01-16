@@ -19,6 +19,7 @@ namespace CAT;
 
 use \CAT\Base as Base;
 use \CAT\Registry as Registry;
+use \CAT\Helper\Directory as Directory;
 use \CAT\Helper\HArray as HArray;
 use \CAT\Helper\Validate as Validate;
 use \CAT\Helper\FormBuilder as FormBuilder;
@@ -59,7 +60,9 @@ if (!class_exists('Backend', false)) {
          **/
         public static function dispatch()
         {
-            self::log()->addDebug('dispatch()');
+            self::log()->addDebug(sprintf(
+                'dispatch() - route [%s]',self::router()->getRoute()
+            ));
             return self::router()->dispatch('Backend');
         }   // end function dispatch()
 
@@ -133,6 +136,19 @@ if (!class_exists('Backend', false)) {
                 }
             }
 
+            if(!isset($seen['administration'])) {
+                array_unshift($bread, array(
+                    'id'          => 'administration',
+                    'name'        => 'administration',
+                    'parent'      => null,
+                    'title'       => self::lang()->t(self::humanize('administration')),
+                    'href'        => CAT_ADMIN_URL."/administration",
+                    'level'       => 0,
+                    'is_current'  => true,
+                ));
+                $bread[1]['parent'] = 'administration';
+            }
+
             return $bread;
         }   // end function getBreadcrumb()
 
@@ -148,7 +164,7 @@ if (!class_exists('Backend', false)) {
 
             self::session()->refresh();
 
-            $t = ini_get('session.gc_maxlifetime');
+            $t = self::session()->lifetime();
             $data['SESSION_TIME'] = sprintf('%02d:%02d:%02d', ($t/3600), ($t/60%60), $t%60);
 
             // =================================================================
@@ -158,7 +174,7 @@ if (!class_exists('Backend', false)) {
             $theme                 = Registry::get('DEFAULT_THEME');
             if ($theme) {
                 $classname = '\CAT\Addon\Template\\'.$theme;
-                $filename  = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.$theme.'/inc/class.'.$theme.'.php');
+                $filename  = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.$theme.'/inc/class.'.$theme.'.php');
                 if (file_exists($filename)) {
                     $handler = $filename;
                     include_once $handler;
@@ -393,12 +409,14 @@ if (!class_exists('Backend', false)) {
          * @access public
          * @return
          **/
-        public static function show(string $tpl, array $data, bool $header=true, bool $footer=true)
+        public static function show(string $tpl, array $data=array(), bool $header=true, bool $footer=true)
         {
             self::log()->addDebug(sprintf(
                 'show() - tpl [%s] print header [%s] print footer [%s]',
                 $tpl, $header, $footer
             ));
+
+            $data['areas'] = self::getMenuForScope(2);
             $header_data = self::getHeader(false);
             $tpl_data    = array_merge($data,$header_data);
             $output      = ( $header===true ? self::tpl()->get('header',$tpl_data) : '' )
@@ -420,7 +438,6 @@ if (!class_exists('Backend', false)) {
             echo $output;
             exit;
         }   // end function show()
-
 
         /**
          *
@@ -547,19 +564,18 @@ if (!class_exists('Backend', false)) {
                 if (!$variant || !strlen($variant)) {
                     $variant = 'default';
                 }
-                $paths = array( // search paths
-                    CAT_ENGINE_PATH.'/templates/'.$theme.'/templates/'.$variant,
-                    CAT_ENGINE_PATH.'/templates/'.$theme.'/templates/default',
-                    CAT_ENGINE_PATH.'/templates/'.$theme.'/templates',
-                );
-                foreach ($paths as $path) {
-                    if (file_exists($path)) {
+                $base  = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.$theme.'/'.CAT_TEMPLATES_FOLDER);
+                $default_path = $base.'/default';
+                // first try: variant subfolder
+                if (file_exists($base.'/'.$variant)) {
                         self::$tplpath = $path;
-                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        // TODO: Check if default subdir exists
-                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        self::$tplfallback = CAT_ENGINE_PATH.'/templates/'.$theme.'/templates/default';
-                    }
+                }
+                // second: default subfolder
+                if(is_dir($default_path)) {
+                    self::$tplfallback = $default_path;
+                }
+                if(empty(self::$tplpath)) {
+                    self::$tplpath = self::$tplfallback;
                 }
             }
             self::tpl()->setPath(self::$tplpath, 'backend');
@@ -591,10 +607,7 @@ if (!class_exists('Backend', false)) {
         {
             self::$scope = 'administration';
             self::show(
-                'backend_administration',
-                array(
-                    'areas' => self::getMenuForScope(2),
-                )
+                'backend_administration'
             );
         }   // end function administration()
 

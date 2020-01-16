@@ -68,6 +68,29 @@ if (!class_exists('\CAT\Objects\User'))
         }   // end function __construct()
 
         /**
+         *
+         * @access public
+         * @return
+         **/
+        public function checkPermission($perm)
+        {
+            $perms_to_check = array();
+            if(is_array($perm)) {
+                $perms_to_check = $perm;
+            } elseif (is_string($perm)) {
+                $perms_to_check[] = $perm;
+            }
+            if(count($perms_to_check)>0) {
+                foreach($perms_to_check as $i => $p) {
+                    if (!$his->hasPerm($p)) {
+                        // fatal error always stops execution
+                        self::printFatalError('You are not allowed for the requested action!');
+                    }
+                }
+            }
+        }   // end function checkPermission()
+
+        /**
          * get user attribute; returns NULL if the given attribute is not set
          *
          * @access public

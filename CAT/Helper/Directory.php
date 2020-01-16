@@ -67,34 +67,50 @@ if (!class_exists('\CAT\Helper\Directory')) {
          *
          * @access public
          * @param  string   $path
-         * @param  string   $inside - MEDIA | SITE | TEMP | ENGINE
+         * @param  string   $inside (optional) - MEDIA | SITE | TEMP | ENGINE
          * @return boolean
          **/
-        public static function checkPath(string $path, string $inside)
+        public static function checkPath(string $path, string $inside = '')
         {
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: Review
 //       Rechte pruefen (nicht jeder darf in CAT_ENGINE_PATH schreiben)
-//       Notwendigkeit Parameter $inside pruefen
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            $paths_to_check = array();
+            if(!empty($inside)) {
             switch($inside) {
                 case 'MEDIA':
-                    $check = self::user()->getHomeFolder();
+                        $paths_to_check[] = self::user()->getHomeFolder();
                     break;
                 case 'SITE':
-                    $check = CAT_PATH;
+                        $paths_to_check[] = CAT_PATH;
                     break;
                 case 'TEMP':
-                    $check = CAT_TEMP_FOLDER;
+                        $paths_to_check[] = CAT_TEMP_FOLDER;
                     break;
                 case 'ENGINE':
-                    $check = CAT_ENGINE_PATH;
+                        $paths_to_check[] = CAT_ENGINE_PATH;
                     break;
             }
-            $check = self::sanitizePath($check);
+            } else {
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: nicht bei jedem Aufruf, sondern einmal global festlegen
+//       (Rechte angemeldeter Benutzer)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                // will be sanitized within loop
+                $paths_to_check = array(
+                    CAT_TEMP_FOLDER,               // "everyone"
+                    self::user()->getHomeFolder(), // current user
+                    CAT_PATH,                      // site
+                    CAT_ENGINE_PATH                // root
+                );
+            }
+            for($i=0;$i<count($paths_to_check);$i++) {
+                $check = self::sanitizePath($paths_to_check[$i]);
             $path  = self::sanitizePath($path);
             if (substr_compare($path, $check, 0, strlen($check), true)==0) {
                 return true;
+                }
             }
             return false;
         }   // end function checkPath()

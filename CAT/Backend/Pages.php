@@ -263,7 +263,7 @@ if (!class_exists('Pages')) {
                         $section_id      = intval($section['section_id']);
                         $module          = $section['module'];
                         $directory       = Addons::getDetails($module, 'directory');
-                        $module_path     = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$module);
+                        $module_path     = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$module);
                         $options_file    = null;
                         $options_form    = null;
                         $variants        = null;
@@ -271,24 +271,24 @@ if (!class_exists('Pages')) {
                         $infofiles       = array();
 
                         if ($section['active']) {
-                            Base::addLangFile($module_path.'/languages/');
+                            Base::addLangFile($module_path.'/'.CAT_LANGUAGES_FOLDER.'/');
 
                             $variants    = Addons::getVariants($directory);
                             $variant     = \CAT\Sections::getVariant($section_id);
 
                             // check if there's an options.tpl inside the variants folder
-                            if (file_exists($module_path.'/templates/'.$variant.'/options.tpl')) {
-                                $options_file = $module_path.'/templates/'.$variant.'/options.tpl';
+                            if (file_exists($module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/options.tpl')) {
+                                $options_file = $module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/options.tpl';
                             }
 
                             // there may also be a forms.inc.php
-                            if (file_exists($module_path.'/templates/'.$variant.'/inc.forms.php')) {
-                                $form = \wblib\wbForms\Form::loadFromFile('options', 'inc.forms.php', $module_path.'/templates/'.$variant);
+                            if (file_exists($module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/inc.forms.php')) {
+                                $form = \wblib\wbForms\Form::loadFromFile('options', 'inc.forms.php', $module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$variant);
                                 if($form != false) {
-                                    $form->setAttribute('lang_path', $module_path.'/languages/');
+                                    $form->setAttribute('lang_path', $module_path.'/'.CAT_LANGUAGES_FOLDER.'/');
                                     $form->setAttribute('action', CAT_ADMIN_URL.'/section/save/'.$section_id);
-                                    if (is_dir($module_path.'/templates/'.$variant.'/languages/')) {
-                                        $form->lang()->addPath($module_path.'/templates/'.$variant.'/languages/');
+                                    if (is_dir($module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/'.CAT_LANGUAGES_FOLDER.'/')) {
+                                        $form->lang()->addPath($module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/'.CAT_LANGUAGES_FOLDER.'/');
                                     }
                                     $form->getElement('section_id')->setValue($section_id);
                                     $form->getElement('page_id')->setValue($page_id);
@@ -302,7 +302,7 @@ if (!class_exists('Pages')) {
                             // if there are variants, collect info.tpl files
                             if (count($variants)) {
                                 $files = Directory::findFiles(
-                                    $module_path.'/templates/',
+                                    $module_path.'/'.CAT_TEMPLATES_FOLDER.'/',
                                     array(
                                         'filename'      => 'info',
                                         'max_depth'     => 2,
@@ -317,10 +317,10 @@ if (!class_exists('Pages')) {
                                     }
                                     foreach ($variants as $v) {
                                         if (array_key_exists($v, $map)) {
-                                            $infofiles[$v] = $module_path.'/templates/'.$files[$map[$v]];
+                                            $infofiles[$v] = $module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$files[$map[$v]];
                                         }
-                                        if (is_dir($module_path.'/templates/'.$v.'/languages')) {
-                                            Base::addLangFile($module_path.'/templates/'.$v.'/languages');
+                                        if (is_dir($module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$v.'/'.CAT_LANGUAGES_FOLDER)) {
+                                            Base::addLangFile($module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$v.'/'.CAT_LANGUAGES_FOLDER);
                                         }
                                     }
                                 }
@@ -335,7 +335,7 @@ if (!class_exists('Pages')) {
                                 // get the module class
                                 $handler = null;
                                 foreach (array_values(array(str_replace(' ', '', $directory),$module)) as $classname) {
-                                    $filename = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$module.'/inc/class.'.$classname.'.php');
+                                    $filename = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$module.'/inc/class.'.$classname.'.php');
                                     if (file_exists($filename)) {
                                         $handler = $filename;
                                     }
@@ -413,7 +413,7 @@ if (!class_exists('Pages')) {
 
             // find javascripts in template directory
             $tpljs       = Directory::findFiles(
-                CAT_ENGINE_PATH.'/templates/'.\CAT\Helper\Template::getPageTemplate($pageID),
+                CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.\CAT\Helper\Template::getPageTemplate($pageID),
                 array(
                     'extension' => 'js',
                     'recurse' => true
@@ -422,7 +422,7 @@ if (!class_exists('Pages')) {
 
             // find css files in template directory
             $tplcss = Directory::findFiles(
-                CAT_ENGINE_PATH.'/templates/'.\CAT\Helper\Template::getPageTemplate($pageID),
+                CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.\CAT\Helper\Template::getPageTemplate($pageID),
                 array(
                     'extension' => 'css',
                     'recurse' => true,

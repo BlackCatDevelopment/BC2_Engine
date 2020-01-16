@@ -279,10 +279,10 @@ if (!class_exists('\CAT\Backend\Section')) {
             // set variant?
             if (null!=($variant=\CAT\Helper\Validate::sanitizePost('variant'))) {
                 $result = \CAT\Sections::setVariant($sectionID, $variant);
-                $module_path = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$section['module']);
-                if (file_exists($module_path.'/templates/'.$variant.'/inc.forms.php')) {
+                $module_path = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$section['module']);
+                if (file_exists($module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/inc.forms.php')) {
                     // get default form data
-                    $form = \wblib\wbForms\Form::loadFromFile('options', 'inc.forms.php', $module_path.'/templates/'.$variant);
+                    $form = \wblib\wbForms\Form::loadFromFile('options', 'inc.forms.php', $module_path.'/'.CAT_TEMPLATES_FOLDER.'/'.$variant);
                     $defaults = $form->getData();
                     if (is_array($defaults) && count($defaults)>0) {
                         foreach ($defaults as $key => $val) {
@@ -339,7 +339,7 @@ if (!class_exists('\CAT\Backend\Section')) {
                 $module          = $section['module'];
                 $directory       = \CAT\Helper\Addons::getDetails($module, 'directory');
                 foreach (array_values(array(str_replace(' ', '', $directory),$module)) as $classname) {
-                    $filename = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$module.'/inc/class.'.$classname.'.php');
+                    $filename = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$module.'/inc/class.'.$classname.'.php');
                     if (file_exists($filename)) {
                         $handler = $filename;
                     }

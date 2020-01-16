@@ -37,7 +37,8 @@ if (!class_exists('\CAT\Backend\Addons')) {
             'Library'   => 'module',
             'Template'  => 'template',
             'Tool'      => 'module',
-            'WYSIWYG'   => 'module'
+            'WYSIWYG'   => 'module',
+            'Zip'       => '',
         );
 
         /**
@@ -60,9 +61,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
          **/
         public static function index()
         {
-            if (!self::user()->hasPerm('addons_list')) {
-                self::printFatalError('You are not allowed for the requested action!');
-            }
+            self::user()->checkPermission('addons_list');
 
             // some backend themes may show all addons on one page, while
             // others (like Backstrap) use tabs. So we pick them both here.
@@ -91,6 +90,8 @@ if (!class_exists('\CAT\Backend\Addons')) {
          **/
         public static function catalog()
         {
+            self::user()->checkPermission('addons_install');
+
             if (
                    !file_exists(CAT_ENGINE_PATH."/temp/catalog.json")
                 || self::router()->getRoutePart(-1) == 'update'
@@ -117,11 +118,11 @@ if (!class_exists('\CAT\Backend\Addons')) {
                     $catalog['modules'][$i]['removable']    =
                         ($installed[$m['directory']]['removable'] == 'N' ? false : true);
                     if (isset($m['version']) && isset($installed[$m['directory']]['version'])) {
-                    $catalog['modules'][$i]['installed_version'] = $installed[$m['directory']]['version'];
-                    if (version_compare($m['version'], $installed[$m['directory']]['version'], '>')) {
-                        $catalog['modules'][$i]['upgradable'] = true;
+                        $catalog['modules'][$i]['installed_version'] = $installed[$m['directory']]['version'];
+                        if (version_compare($m['version'], $installed[$m['directory']]['version'], '>')) {
+                            $catalog['modules'][$i]['upgradable'] = true;
+                        }
                     }
-                }
                 }
                 if (!isset($catalog['modules'][$i]['type'])) {
                     $catalog['modules'][$i]['type'] = 'module';
@@ -171,9 +172,9 @@ if (!class_exists('\CAT\Backend\Addons')) {
          **/
         public static function create()
         {
-            if (!self::user()->hasPerm('addons_create')) {
-                self::printFatalError('You are not allowed for the requested action!');
-            }
+            self::user()->checkPermission('addons_create');
+
+            // !!!! häh??? !!!
             $known_types = array_combine(self::$known_types, self::$known_types);
 
             $form = FormBuilder::generateForm('be_addon_create');
@@ -218,7 +219,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
                                     Directory::createDirectory($basedir.'/css');
                                     Directory::createDirectory($basedir.'/js');
                                     Directory::createDirectory($basedir.'/templates');
-                                    Directory::createDirectory($basedir.'/templates/default');
+                                    Directory::createDirectory($basedir.'/'.CAT_TEMPLATES_FOLDER.'/default');
                                     if ($data['addon_type']=='page' || $data['addon_type']=='template') {
                                         $data['for']='frontend';
                                     } elseif ($data['addon_type']=='tool') {
@@ -271,9 +272,9 @@ if (!class_exists('\CAT\Backend\Addons')) {
             }
 
             Backend::show('backend_addons_create', array(
-                    'form'    => $form->render(true),
-                    'current' => 'create',
-                ));
+                'form'    => $form->render(true),
+                'current' => 'create',
+            ));
         }   // end function create()
         
 
@@ -284,59 +285,12 @@ if (!class_exists('\CAT\Backend\Addons')) {
          **/
         public static function install()
         {
-            if (!self::user()->hasPerm('addons_install')) {
-                self::printFatalError('You are not allowed for the requested action!');
-            }
+            self::user()->checkPermission('addons_install');
 
             $addon     = self::getItem('addon');
             $type      = self::router()->getRoutePart(-2);
 
-            // map type to path
-            $mod_type  = self::$known_types[ucfirst($type)];
-            $path      = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.$mod_type.'s/'.$addon);
-            $handler   = null;
-            $classname = null;
-
-            // already there? (uploaded via FTP)
-            if (is_dir($path)) {
-                $info = HAddons::getInfo($addon, $type);
-                $names = array($addon);
-
-                if (isset($info['name']) && $info['name']!=$addon) {
-                    $names[] = $info['name'];
-                }
-                if (isset($info['directory']) && $info['directory']!=$addon) {
-                    $names[] = $info['directory'];
-                }
-                $namespace = '\CAT\Addon';
-                if ($type=='templates') {
-                    $namespace .= '\Template';
-                }
-                foreach (array_values($names) as $name) {
-                    $filename = \CAT\Helper\Directory::sanitizePath($path.'/inc/class.'.$name.'.php');
-                    if (file_exists($filename)) {
-                        $handler = $filename;
-                        $classname = $namespace.'\\'.$name;
-                        break;
-                    }
-                }
-
-                if ($handler) {
-                    include_once $handler;
-                    $errors = $classname::install();
-                    if (!count($errors)) {
-                        self::router()->reroute(CAT_BACKEND_PATH.'/addons');
-                    } else {
-                        $tpl_data = array(
-                            'modules'      => array(),
-                            'current'      => 'notinstalled',
-                            'errors'       => $errors,
-                        );
-
-                        Backend::show('backend_addons', $tpl_data);
-                    }
-                }
-            }
+            self::handleInstall($type, $addon);
         }   // end function install()
 
         /**
@@ -346,19 +300,36 @@ if (!class_exists('\CAT\Backend\Addons')) {
          **/
         public static function notinstalled()
         {
-            if (!self::user()->hasPerm('addons_install')) {
-                self::printFatalError('You are not allowed for the requested action!');
+            self::user()->checkPermission('addons_install');
+
+            $data = HAddons::getAddons(null, 'name', false, true, true);
+            $zips = array();
+
+            // uploaded zip files
+            $zipfiles = Directory::findFiles(CAT_TEMP_FOLDER.'/uploaded_addons',array(
+                'extension' => 'zip',
+                'max_depth' => 0,
+                'remove_prefix' => true,
+            ));
+            if(is_array($zipfiles) && count($zipfiles)>0) {
+                // remove leading /
+                foreach($zipfiles as $i => $z) {
+                    $zips[] = array(
+                        'filename' => substr_replace($z,'',0,1),
+                        'size'     => Directory::getSize(CAT_TEMP_FOLDER.'/uploaded_addons'.$z,true),
+                        'date'     => Directory::getModdate(CAT_TEMP_FOLDER.'/uploaded_addons'.$z,true),
+                    );
+                }
             }
 
-            $data  = HAddons::getAddons(null, 'name', false, true, true);
-
             if (self::asJSON()) {
-                print json_encode(array('success'=>true,'modules'=>$data));
+                print json_encode(array('success'=>true,'modules'=>$data,'zips'=>$zips));
                 exit();
             }
 
             $tpl_data = array(
                 'modules'      => $data,
+                'zips'         => $zips,
                 'current'      => 'notinstalled',
             );
 
@@ -367,25 +338,155 @@ if (!class_exists('\CAT\Backend\Addons')) {
 
         /**
          *
+         * @access public
+         * @return
          **/
-        public static function getAddonName() : string
+        public static function upload()
         {
-            $name  = Validate::sanitizePost('addon', 'string');
+            self::user()->checkPermission('addons_install');
+            $tpl_data = array('current'=>'upload');
+            $result   = null;
+            // handle upload?
+            if(isset($_FILES['upload_file'])) {
+                $handle = new \Verot\Upload\Upload($_FILES['upload_file']);
+                $handle->allowed = array(
+                    'application/x-zip',
+                    'application/x-zip-compressed',
+                    'application/zip',
+                );
+                if ($handle->uploaded) {
+                    $handle->process(CAT_TEMP_FOLDER.'/uploaded_addons');
+                    if ($handle->processed) {
+                        $filename = $handle->file_dst_pathname;
+                        $handle->clean();
+                        $result = self::handleInstall('zip', $filename);
+                        if($result===true) {
+                            $tpl_data['success'] = 'Module installed';
+                            self::router()->reroute(CAT_BACKEND_PATH.'/addons');
+                        }
+                    } else {
+                        $tpl_data['error'] = $handle->error;
+                    }
+                }
+            }
+            Backend::show('backend_addons_upload',$tpl_data);
+        }   // end function upload()
 
-            if (!$name) {
-                $name  = Validate::sanitizeGet('addon', 'string');
+        /**
+         *
+         * @access private
+         * @return
+         **/
+        private static function handleInstall(string $type, string $addon)
+        {
+            // map type to path
+            $mod_type  = isset(self::$known_types[ucfirst($type)])
+                       ? self::$known_types[ucfirst($type)]
+                       : null;
+            $path      = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.$mod_type.'s/'.$addon);
+            $handler   = null;
+            $classname = null;
+            $tpl_data  = array();
+            $zippath   = null;
+            $info      = null;
+
+            self::log()->addDebug(sprintf(
+                'handleInstall() type [%s] addon [%s] path [%s]',
+                $type,$addon,$path
+            ));
+
+
+            // already there? (uploaded via FTP)
+            if (is_dir($path)) {
+                self::log()->addDebug(sprintf(
+                    'addon found in path [%s]',$path
+                ));
+                $info = HAddons::getInfo($addon, $type);
             }
 
-            if (!$name) {
-                $name = self::router()->getParam(-1);
+            // zip
+            if($type=='zip') {
+                self::log()->addDebug(sprintf(
+                    'type is zip, try to unzip and copy'
+                ));
+                $zipfile   = Directory::sanitizePath($addon);
+                $subfolder = pathinfo($zipfile,PATHINFO_FILENAME);
+                $zippath   = Directory::sanitizePath(CAT_TEMP_FOLDER.'/unzip/'.$subfolder);
+                if(file_exists($zipfile)) {
+                    self::log()->addDebug(sprintf(
+                        'found zip file [%s]', $zipfile
+                    ));
+                    $z = new \CAT\Helper\Zip($zipfile);
+                    $res = $z->adapter->unzip($zippath);
+                    if($res) {
+                        self::log()->addDebug('unzip succeeded');
+                        $info = HAddons::getInfo($zippath);
+                        if(count($info)>0) { // valid
+                            if(!isset($info['directory']) || empty($info['directory'])) {
+                                $info['directory'] = $subfolder;
+                            }
+                            $dest = HAddons::getFolderFromType($info['type'],true);
+                            self::log()->addDebug(sprintf(
+                                'create directory [%s]',$dest.'/'.$info['directory']
+                            ));
+                            Directory::createDirectory($dest.'/'.$info['directory']);
+                            self::log()->addDebug('copy recursive');
+                            Directory::copyRecursive(
+                                $zippath,
+                                $dest.'/'.$info['directory']
+                            );
+                            $path = $dest.'/'.$info['directory'];
+                        }
+                    }
+                }
             }
 
-            if (!$name) {
-                $name = self::router()->getRoutePart(-1);
+            $names = array();
+            if (isset($info['name'])) {
+                $names[] = $info['name'];
+            }
+            if (isset($info['directory'])) {
+                $names[] = $info['directory'];
+            }
+            $namespace = '\CAT\Addon';
+            if ($type=='templates') {
+                $namespace .= '\Template';
             }
 
-            return $name;
-        }   // end function getAddonName()
+            if($res===true && is_array($names) && count($names)>0) {
+                foreach (array_values($names) as $name) {
+                    $filename = \CAT\Helper\Directory::sanitizePath($path.'/inc/class.'.$name.'.php');
+                    if (file_exists($filename)) {
+                        $handler = $filename;
+                        $classname = $namespace.'\\'.$name;
+                        self::log()->addDebug(sprintf(
+                            'handler [%s] classname [%s]',$handler,$classname
+                        ));
+                        break;
+                    }
+                }
+                if ($handler) {
+                    if(!class_exists($classname,false)) {
+                        include_once $handler;
+                    }
+                    $errors = $classname::install();
+                    if (count($errors)) {
+                        return $errors;
+                    }
+                }
+            }
+
+            if($type=='zip') {
+                // remove unzipped
+                self::log()->addDebug(sprintf(
+                    'remove unzip temp dir [%s]',$zippath
+                ));
+                Directory::removeDirectory($zippath);
+            }
+
+            return true;
+        }   // end function handleInstall()
+        
         
         /**
          * get the catalog contents from catalog.json

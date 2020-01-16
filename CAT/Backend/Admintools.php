@@ -82,10 +82,10 @@ if (!class_exists('Backend\Admintools')) {
                     $count = count($tools);
                     for($n=0;$n<$count;$n++) {
                         $tool = $tools[$n];
-                        Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/languages/');
+                        Base::addLangFile(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool['directory'].'/languages/');
                         $tools[$n]['image'] = (
-                            file_exists(CAT_ENGINE_PATH.'/modules/'.$tool['directory'].'/icon.png') ?
-                            CAT_SITE_URL.'/modules/'.$tool['directory'].'/icon.png' :
+                            file_exists(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool['directory'].'/icon.png') ?
+                            CAT_SITE_URL.'/'.CAT_MODULES_FOLDER.'/'.$tool['directory'].'/icon.png' :
                             null
                         );
                     }
@@ -147,7 +147,7 @@ if (!class_exists('Backend\Admintools')) {
             $handler = null;
             foreach (array_values(array(str_replace(' ', '', $name),$tool)) as $classname) {
                 foreach (array_values(array(
-                    Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$tool.'/inc/class.'.$classname.'.php'),
+                    Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool.'/inc/class.'.$classname.'.php'),
                     Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/tool_'.$tool.'/inc/class.'.$classname.'.php'),
                 )) as $filename) {
                     if (file_exists($filename)) {
@@ -159,7 +159,7 @@ if (!class_exists('Backend\Admintools')) {
             $tpl_data = array('content'=>'Ooops, no content');
             if ($handler) {
                 self::log()->addDebug(sprintf('found class file [%s]', $handler));
-                self::addLangFile(CAT_ENGINE_PATH.'/modules/'.$tool.'/languages/');
+                self::addLangFile(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool.'/languages/');
                 self::addLangFile(CAT_ENGINE_PATH.'/modules/tool_'.$tool.'/languages/');
                 self::setTemplatePaths($tool);
                 include_once $handler;
@@ -169,7 +169,7 @@ if (!class_exists('Backend\Admintools')) {
 
                 // init forms
                 $init = Directory::sanitizePath(
-                    CAT_ENGINE_PATH.'/modules/'.$tool.'/forms.init.php'
+                    CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool.'/forms.init.php'
                 );
                 if (file_exists($init)) {
                     Backend::initForm();

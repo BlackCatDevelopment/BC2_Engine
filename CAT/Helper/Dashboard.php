@@ -235,7 +235,7 @@ if (!class_exists('Dashboard'))
 
                     foreach($subdirs as $subdir)
                     {
-                        $path = CAT_ENGINE_PATH.'/modules/'.$w['widget_module'].'/'.$subdir;
+                        $path = CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$w['widget_module'].'/'.$subdir;
                         if(file_exists($path.'/'.$w['widget_controller'].'.php'))
                         {
                             include $path.'/'.$w['widget_controller'].'.php';
@@ -244,7 +244,7 @@ if (!class_exists('Dashboard'))
                         if(isset($w['widget_module']) && strlen($w['widget_module']))
                         {
                             $funcname .= $w['widget_module'].'_';
-                            Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$w['widget_module'].'/languages/');
+                                Base::addLangFile(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$w['widget_module'].'/languages/');
                         }
                         $funcname .= $name;
                             if(function_exists($funcname)) {

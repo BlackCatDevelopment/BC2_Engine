@@ -312,14 +312,14 @@ if (!class_exists('\CAT\Helper\Assets'))
                 if (is_array($sections) && count($sections)>0) {
                     foreach ($sections as $block => $items) {
                         foreach ($items as $item) {
-                            $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module'].'/css'));
-                            $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module'].'/js'));
-                            $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module']));
+                            $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$item['module'].'/css'));
+                            $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$item['module'].'/js'));
+                            $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$item['module']));
                             if (strtolower($item['module'])=='wysiwyg') {
                                 $wysiwyg = true;
                             }
                             if ($item['variant']!='') {
-                                $variant_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$item['module'].'/templates/'.$item['variant']);
+                                $variant_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$item['module'].'/'.CAT_TEMPLATES_FOLDER.'/'.$item['variant']);
                                 if(is_dir($variant_path.'/css')) {
                                     $paths->add($variant_path.'/css');
                                 }
@@ -1079,8 +1079,8 @@ self::log()->addDebug(sprintf('adding condition for [%s] to $CSSCond',$f));
                     $paths->add(Directory::sanitizePath($tplpath.'/js/'.Registry::get('default_template_variant')));
                     $paths->add(Directory::sanitizePath($tplpath.'/js'));
                     // *.inc.php - fallback sorting; search will stop on first occurance
-                    $incpaths->add(Directory::sanitizePath($tplpath.'/templates/'.Registry::get('default_template_variant')));
-                    $incpaths->add(Directory::sanitizePath($tplpath.'/templates/default'));
+                    $incpaths->add(Directory::sanitizePath($tplpath.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_template_variant')));
+                    $incpaths->add(Directory::sanitizePath($tplpath.'/'.CAT_TEMPLATES_FOLDER.'/default'));
                     $incpaths->add(Directory::sanitizePath($tplpath.'/templates'));
                     $incpaths->add(Directory::sanitizePath($tplpath));
                     break;
@@ -1093,20 +1093,20 @@ self::log()->addDebug(sprintf('adding condition for [%s] to $CSSCond',$f));
                         $filter = 'backend_body|theme_body';
                     }
                     // CSS
-                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css/'.Registry::get('default_theme_variant')));
-                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css/default'));
-                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/css'));
+                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/css/'.Registry::get('default_theme_variant')));
+                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/css/default'));
+                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/css'));
                     // JS
-                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates/'.Registry::get('default_theme_variant')));
-                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/js/'.Registry::get('default_theme_variant')));
-                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/js'));
+                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme_variant')));
+                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/js/'.Registry::get('default_theme_variant')));
+                    $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/js'));
                     // admin tool
                     if (self::router()->match('~\/tool\/~i')) {
                         $tool = \CAT\Backend\Admintools::getTool();
                         foreach (
                             array_values(array(
-                                Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$tool.'/css'),
-                                Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$tool.'/js')
+                                Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool.'/css'),
+                                Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool.'/js')
                             )) as $p
                         ) {
                             if (is_dir($p)) {
@@ -1116,9 +1116,9 @@ self::log()->addDebug(sprintf('adding condition for [%s] to $CSSCond',$f));
                         }
                     }
                     // fallback sorting; search will stop on first occurance
-                    $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates/'.Registry::get('default_theme_variant')));
-                    $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme').'/templates'));
-                    $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.Registry::get('default_theme')));
+                    $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme_variant')));
+                    $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/templates'));
+                    $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme')));
                     break;
             }
 

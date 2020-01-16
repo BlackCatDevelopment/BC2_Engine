@@ -25,13 +25,14 @@ use \CAT\Helper\Page as HPage;
 use \CAT\Helper\Directory as Directory;
 use \CAT\Helper\Template\DriverDecorator as DriverDecorator;
 
-if (!class_exists('\CAT\Helper\Template')) {
+if (!class_exists('\CAT\Helper\Template'))
+{
     class Template extends Base
     {
         protected static $loglevel       = \Monolog\Logger::EMERGENCY;
+        protected static $template_menus = array();
         private static $_drivers       = array();
         private static $_driver        = null;
-        protected static $template_menus = array();
 
         public function __construct($compileDir=null, $cacheDir=null)
         {
@@ -62,7 +63,13 @@ if (!class_exists('\CAT\Helper\Template')) {
 
             $blocks    = array();
             $classname = '\CAT\Addon\Template\\'.$template;
-            $filename  = \CAT\Helper\Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.$template.'/inc/class.'.$template.'.php');
+            $filename  = Directory::sanitizePath(implode('/',array(
+                CAT_ENGINE_PATH,
+                CAT_TEMPLATES_FOLDER,
+                $template,
+                'inc',
+                'class.'.$template.'.php'
+            )));
 
             if (file_exists($filename)) {
                 include_once $filename;
@@ -100,27 +107,11 @@ if (!class_exists('\CAT\Helper\Template')) {
                 }
                 $defs = get_defined_constants(true);
                 foreach ($defs['user'] as $const => $value) {
-                    if (preg_match('~^DEFAULT_~', $const)) { // DEFAULT_CHARSET etc.
-                        self::$_drivers[$driver]->setGlobals($const, $value);
-                        continue;
-                    }
-                    if (preg_match('~^WEBSITE_~', $const)) { // WEBSITE_HEADER etc.
-                        self::$_drivers[$driver]->setGlobals($const, $value);
-                        continue;
-                    }
-                    if (preg_match('~^SHOW_~', $const)) { // SHOW_SEARCH etc.
-                        self::$_drivers[$driver]->setGlobals($const, $value);
-                        continue;
-                    }
-                    if (preg_match('~^FRONTEND_~', $const)) { // FRONTEND_LOGIN etc.
+                    if (preg_match('~^(DEFAULT_|WEBSITE_|SHOW_|FRONTEND_|ENABLE_)~', $const)) { // DEFAULT_CHARSET etc.
                         self::$_drivers[$driver]->setGlobals($const, $value);
                         continue;
                     }
                     if (preg_match('~_FORMAT$~', $const)) { // DATE_FORMAT etc.
-                        self::$_drivers[$driver]->setGlobals($const, $value);
-                        continue;
-                    }
-                    if (preg_match('~^ENABLE_~', $const)) { // ENABLE_HTMLPURIFIER etc.
                         self::$_drivers[$driver]->setGlobals($const, $value);
                         continue;
                     }
@@ -192,11 +183,11 @@ if (!class_exists('\CAT\Helper\Template')) {
                 $tpl = \CAT\Registry::get('default_template');
                 $var = \CAT\Registry::get('default_template_variant');
             }
-            if(file_exists(CAT_ENGINE_PATH.'/templates/'.$tpl.'/templates/'.$var.'/inc.forms.php'))
+            if(file_exists(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.$tpl.'/'.CAT_TEMPLATES_FOLDER.'/'.$var.'/inc.forms.php'))
             {
                 $form = \wblib\wbForms\Form::loadFromFile(
                     'tploptions',
-                    CAT_ENGINE_PATH.'/templates/'.$tpl.'/templates/'.$var.'/inc.forms.php'
+                    CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.$tpl.'/'.CAT_TEMPLATES_FOLDER.'/'.$var.'/inc.forms.php'
                 );
                 return $form;
             }
@@ -228,9 +219,9 @@ if (!class_exists('\CAT\Helper\Template')) {
             $tpl = self::getPageTemplate($pageID);
             if($fullpath) {
                 $var = self::getVariant($pageID);
-                return CAT_ENGINE_PATH.'/templates/'.$tpl.'/templates/'.$var;
+                return CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.$tpl.'/'.CAT_TEMPLATES_FOLDER.'/'.$var;
             }
-            return CAT_ENGINE_PATH.'/templates/'.$tpl;
+            return CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.$tpl;
         }   // end function getPath()
 
         /**
@@ -291,9 +282,17 @@ if (!class_exists('\CAT\Helper\Template')) {
             }
 
             if (is_numeric($for)) { // assume page_id
-                $tpl_path = CAT_ENGINE_PATH.'/templates/'.HPage::getPageTemplate($for).'/templates/';
+                $tpl_path = implode('/',array(
+                    CAT_ENGINE_PATH,
+                    CAT_TEMPLATES_FOLDER,
+                    HPage::getPageTemplate($for),
+                    CAT_TEMPLATES_FOLDER)).'/';
             } else {
-                $tpl_path = CAT_ENGINE_PATH.'/templates/'.$for.'/templates/';
+                $tpl_path =implode('/',array(
+                    CAT_ENGINE_PATH,
+                    CAT_TEMPLATES_FOLDER,
+                    $for,
+                    CAT_TEMPLATES_FOLDER)).'/';
             }
             $paths = Directory::findDirectories($tpl_path, array('remove_prefix'=>true));
 
@@ -328,13 +327,14 @@ if (!class_exists('\CAT\Helper\Template')) {
             if(!empty($tpl_id)) {
                 foreach($opt as $key => $value) {
                     $key = str_replace('template_option_','',$key);
-// !!!!! TODO: template_options_options brauchen wir nicht mehr
+// !!!!! TODO: template_option_options brauchen wir nicht mehr
                     if($key == 'options') {
                         continue;
                     }
                     if(empty($value)) {
                         self::db()->query(
-                            'DELETE FROM `:prefix:template_options` WHERE `tpl_id`=? AND `page_id`=? AND `opt_name`=?',
+                            'DELETE FROM `:prefix:template_options` WHERE '.
+                            '`tpl_id`=? AND `page_id`=? AND `opt_name`=?',
                             array($tpl_id,$pageID,$key)
                         );
                     } else {
@@ -348,7 +348,6 @@ if (!class_exists('\CAT\Helper\Template')) {
                 }
             }
         }   // end function saveOptions()
-        
 
         /**
          *
@@ -362,8 +361,8 @@ if (!class_exists('\CAT\Helper\Template')) {
             }
             // include info.php for template info
             $template_location = ($template != '') ?
-                CAT_ENGINE_PATH.'/templates/'.$template.'/info.php' :
-                CAT_ENGINE_PATH.'/templates/'.Registry::get('DEFAULT_TEMPLATE').'/info.php';
+                CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.$template.'/info.php' :
+                CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('DEFAULT_TEMPLATE').'/info.php';
             if (file_exists($template_location)) {
                 require $template_location;
                 $driver = self::getInstance(self::$_driver);
@@ -395,8 +394,8 @@ if (!class_exists('\CAT\Helper\Template')) {
 
             $tpl_info
                 = ($template != '')
-                ? CAT_ENGINE_PATH.'/templates/'.$template.'/info.php'
-                : CAT_ENGINE_PATH.'/templates/'.Registry::get('DEFAULT_TEMPLATE').'/info.php'
+                ? CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.$template.'/info.php'
+                : CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('DEFAULT_TEMPLATE').'/info.php'
                 ;
 
             if (file_exists($tpl_info)) {

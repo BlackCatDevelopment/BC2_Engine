@@ -45,6 +45,18 @@ if (!class_exists('Addons')) {
             '.8' => 'rc',
             '.9' => 'final'
         );
+        /**
+         * type to folder
+         **/
+        private static $typemap  = array(
+            'theme'    => CAT_TEMPLATES_FOLDER,
+            'template' => CAT_TEMPLATES_FOLDER,
+            'page'     => CAT_MODULES_FOLDER,
+            'tool'     => CAT_MODULES_FOLDER,
+            'library'  => CAT_MODULES_FOLDER,
+            'WYSIWYG'  => CAT_MODULES_FOLDER,
+            'language' => CAT_LANGUAGES_FOLDER,
+        );
 
         public function __construct()
         {
@@ -193,20 +205,22 @@ if (!class_exists('Addons')) {
                             unset($data[$i]); // not allowed
                             continue;
                         }
+
                         if (!$names_only) {
                             if ($find_icon) {
                                 $addon['icon'] = '';
                                 foreach (array_values(array('png','jpg','jpeg','gif')) as $suffix) {
-                                    $icon = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$addon['directory'].'/icon.'.$suffix);
+                                    $icon = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$addon['directory'].'/icon.'.$suffix);
                                     if (file_exists($icon)) {
-                                        $addon['icon'] = CAT_URL.'/modules/'.$addon['directory'].'/icon.'.$suffix;
+                                        $addon['icon'] = CAT_URL.'/'.CAT_MODULES_FOLDER.'/'.$addon['directory'].'/icon.'.$suffix;
                                         break;
                                     }
                                 }
                             }
+
                             if ($addon['type']!='language') {
                                 $info = self::getInfo($addon['directory']);
-                                Base::addLangFile(CAT_ENGINE_PATH.'/modules/'.$addon['directory'].'/languages/');
+                                Base::addLangFile(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$addon['directory'].'/languages');
                                 $info['description']  = (
                                       isset($info['description'])
                                     ? self::lang()->translate($info['description'])
@@ -238,9 +252,9 @@ if (!class_exists('Addons')) {
                                     if (is_array($info) && count($info) && !in_array($dir, $seen)) {
                                         $info['icon'] = '';
                                         foreach (array_values(array('png','jpg','jpeg','gif')) as $suffix) {
-                                            $icon = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$info['directory'].'/icon.'.$suffix);
+                                            $icon = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$info['directory'].'/icon.'.$suffix);
                                             if (file_exists($icon)) {
-                                                $info['icon'] = CAT_URL.'/modules/'.$info['directory'].'/icon.'.$suffix;
+                                                $info['icon'] = CAT_URL.'/'.CAT_MODULES_FOLDER.'/'.$info['directory'].'/icon.'.$suffix;
                                                 break;
                                             }
                                         }
@@ -310,7 +324,7 @@ if (!class_exists('Addons')) {
         public static function getHandler(string $directory, string $module)
         {
             foreach (array_values(array(str_replace(' ', '', $directory),$module)) as $classname) {
-                $filename = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$directory.'/inc/class.'.$classname.'.php');
+                $filename = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$directory.'/inc/class.'.$classname.'.php');
                 if (file_exists($filename)) {
                     return array($filename,$classname);
                 }
@@ -322,34 +336,54 @@ if (!class_exists('Addons')) {
          * @access public
          * @return
          **/
-        public static function getInfo($directory, $type='module')
+        public static function getInfo(string $directory, string $type='')
         {
             $info    = array();
-            $fulldir = CAT_ENGINE_PATH.'/'.$type.'s/'.$directory.'/inc';
             $namespace = '\CAT\Addon';
-            if ($type=='templates') {
-                $namespace .= '\Template';
+            $fulldir   = null;
+
+            if(!is_dir(realpath($directory))) { // relative path
+                $searchpaths = array(CAT_MODULES_FOLDER,CAT_TEMPLATES_FOLDER,CAT_LANGUAGES_FOLDER);
+                foreach($searchpaths as $i => $p) {
+                    $path = Directory::sanitizePath(implode('/',array(CAT_ENGINE_PATH,$p,$directory,'inc')));
+                    if(is_dir($path)) {
+                        $fulldir = $path;
+                        break;
+                    }
+                }
+            } else {
+                $fulldir = realpath($directory);
             }
 
             if (is_dir($fulldir)) {
                 // find class.<modulename>.php
-                $files = Directory::findFiles($fulldir, array('extension'=>'php','remove_prefix'=>true));
+                $files = Directory::findFiles($fulldir, array(
+                    'extension'     => 'php',
+                    'remove_prefix' => true,
+                    'recurse'       => true,
+                    'filter'        => 'class\..*',
+                    'max_depth'     => 2
+                ));
                 if (count($files)>0) {
                     for ($i=0;$i<count($files);$i++) {
-                        $classname = str_ireplace('class.', '', pathinfo($files[$i], PATHINFO_FILENAME));
+                        $classname = $namespace.'\\'.str_ireplace('class.', '', pathinfo($files[$i], PATHINFO_FILENAME));
                         if (!class_exists($classname, false)) {
+                            try {
                             require_once $fulldir.'/'.$files[$i];
+                            } catch ( \Exception $e ) {
+echo "FILE [",__FILE__,"] FUNC [",__FUNCTION__,"] LINE [",__LINE__,"]<br /><textarea style=\"width:100%;height:200px;color:#000;background-color:#fff;\">";
+print_r($e->getMessage());
+echo "</textarea><br />";
+                            }
                         }
                         // as there may be files not containing a class...
-                        if (class_exists($namespace.'\\'.$classname, false)) {
-                            $class = $namespace.'\\'.$classname;
-                            $info  = $class::getInfo();
+                        if (class_exists($classname, false)) {
+                            $info  = $classname::getInfo(null);
                             return $info;
                         }
                     }
                 }
             }
-
             return $info;
         }   // end function getInfo()
 
@@ -358,10 +392,27 @@ if (!class_exists('Addons')) {
          * @access public
          * @return
          **/
+        public static function getFolderFromType(string $type, bool $full=false)
+        {
+            $subfolder = isset(self::$typemap[$type]) ? self::$typemap[$type] : null;
+            if(!empty($subfolder) && $full) {
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// REVIEW: Gibt es Verzeichnisse ausserhalb CAT_ENGINE_PATH? Derzeit nicht
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                return Directory::sanitizePath(CAT_ENGINE_PATH.'/'.$subfolder);
+            }
+            return $subfolder;
+        }   // end function getFolderFromType()
+        
+        /**
+         *
+         * @access public
+         * @return
+         **/
         public static function getVariants(string $directory)
         {
             $module_variants = \CAT\Helper\Directory::findDirectories(
-                CAT_ENGINE_PATH.'/modules/'.$directory.'/templates',
+                CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$directory.'/templates',
                 array(
                     'max_depth'     => 1,
                     'remove_prefix' => true

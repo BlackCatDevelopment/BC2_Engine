@@ -77,8 +77,8 @@ if (!class_exists('\CAT\Helper\Directory')) {
 //       Rechte pruefen (nicht jeder darf in CAT_ENGINE_PATH schreiben)
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             $paths_to_check = array();
-            if(!empty($inside)) {
-            switch($inside) {
+            if (!empty($inside)) {
+                switch ($inside) {
                 case 'MEDIA':
                         $paths_to_check[] = self::user()->getHomeFolder();
                     break;
@@ -105,7 +105,7 @@ if (!class_exists('\CAT\Helper\Directory')) {
                     CAT_ENGINE_PATH                // root
                 );
             }
-            for($i=0;$i<count($paths_to_check);$i++) {
+            for ($i=0;$i<count($paths_to_check);$i++) {
                 $check = self::sanitizePath($paths_to_check[$i]);
             $path  = self::sanitizePath($path);
             if (substr_compare($path, $check, 0, strlen($check), true)==0) {
@@ -114,6 +114,36 @@ if (!class_exists('\CAT\Helper\Directory')) {
             }
             return false;
         }   // end function checkPath()
+
+        /**
+         * copy directory structure with files
+         *
+         * @access public
+         * @param  string  $dirsource
+         * @param  string  $dirdest
+         **/
+        public static function copyRecursive(string $dirsource, string $dirdest)
+        {
+            $dir_handle = null;
+            if (is_dir($dirsource)) {
+                $dir_handle = dir($dirsource);
+            }
+            if (! is_object($dir_handle)) {
+                return false;
+            }
+            while ($file = $dir_handle->read()) {
+                if ($file != "." && $file != "..") {
+                    if (!is_dir($dirsource.'/'.$file)) {
+                        copy($dirsource.'/'.$file, $dirdest.'/'.$file);
+                    } else {
+                        self::createDirectory($dirdest.'/'.$file);
+                        self::copyRecursive($dirsource.'/'.$file, $dirdest.'/'.$file);
+                    }
+                }
+            }
+            $dir_handle->close();
+            return true;
+        }   // end function copyRecursive()
 
         /**
          * Create directories recursively
@@ -271,6 +301,7 @@ if (!class_exists('\CAT\Helper\Directory')) {
         public static function findFiles($dir, $options=array())
         {
             if (!strlen($dir) || !is_dir($dir)) {
+                self::$trace[] = sprintf('[%s] is not a directory', $dir);
                 return array();
             }
 
@@ -291,7 +322,6 @@ if (!class_exists('\CAT\Helper\Directory')) {
                 'remove_suffix' => false, // suffix to remove from path
                 'as_uri'        => false, // converts paths to URLs
             ), $options);
-
 
             $options['curr_depth']++;
 
@@ -327,6 +357,7 @@ if (!class_exists('\CAT\Helper\Directory')) {
             if (self::$debug) {
                 self::$trace[] = var_export($options, true);
             }
+
             $scanned_directory = array_diff(scandir($dir), array('..', '.'));
             if (is_array($scanned_directory) && count($scanned_directory)>0) {
                 foreach ($scanned_directory as $file) {
@@ -471,7 +502,7 @@ if (!class_exists('\CAT\Helper\Directory')) {
          * @param  string  $file
          * @return string
          **/
-        public static function getModdate($file)
+        public static function getModdate(string $file, bool $humanize=false) : string
         {
             $file = self::sanitizePath($file);
             if (mb_detect_encoding($file, 'UTF-8', true)) {
@@ -487,6 +518,9 @@ if (!class_exists('\CAT\Helper\Directory')) {
             $date  = isset($stat['mtime'])
                    ? $stat['mtime']
                    : null;
+            if ($humanize && !empty($date)) {
+                return DateTime::getDateTime($date);
+            }
             return $date;
         }   // end function getModdate()
 
@@ -532,7 +566,7 @@ if (!class_exists('\CAT\Helper\Directory')) {
                 }
             }
             if ($size && $convert) {
-                $size = self::humanize($size);
+                $size = self::humanize((string)$size);
             }
             return $size;
         }   // end function getSize()
@@ -590,9 +624,9 @@ if (!class_exists('\CAT\Helper\Directory')) {
          **/
         public static function readFile(string $file, bool $asArray)
         {
-            if(file_exists($file)) {
+            if (file_exists($file)) {
                 $in   = file($file);
-                return ( $asArray ? $in : implode('',$in) );
+                return ($asArray ? $in : implode('', $in));
             }
         }   // end function readFile()
 

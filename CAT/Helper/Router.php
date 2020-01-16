@@ -141,9 +141,9 @@ if (!class_exists('Router', false)) {
             if (self::isBackend()) {
                 self::log()->addDebug('initializing backend');
                 Backend::initialize();
-                $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.\CAT\Registry::get('DEFAULT_THEME').'/languages');
+                $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.\CAT\Registry::get('DEFAULT_THEME').'/languages');
             } else {
-                $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/templates/'.\CAT\Registry::get('DEFAULT_TEMPLATE').'/languages');
+                $lang_path = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.\CAT\Registry::get('DEFAULT_TEMPLATE').'/languages');
             }
             if (is_dir($lang_path)) {
                 self::log()->addDebug(sprintf('adding lang path [%s]', $lang_path));

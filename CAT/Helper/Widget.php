@@ -69,7 +69,7 @@ Array
          **/
         public static function execute($widget,$dashboard_id)
         {
-            $path = CAT_ENGINE_PATH.'/modules/'.$widget['widget_module'];
+            $path = CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$widget['widget_module'];
 
             // load widget language file
             $lang = strtoupper(self::lang()->getLang());
@@ -165,7 +165,7 @@ Array
         {
             foreach(self::$subdirs as $subdir)
             {
-                $path = CAT_ENGINE_PATH.'/modules/'.$widget['widget_module'].'/'.$subdir;
+                $path = CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$widget['widget_module'].'/'.$subdir;
                 if(file_exists($path.'/'.$widget['widget_controller'].'.php'))
                 {
                     $id = isset($widget['id'])

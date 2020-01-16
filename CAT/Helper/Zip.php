@@ -169,7 +169,7 @@ if (!class_exists('\CAT\Helper\Zip')) {
             8 => 'Containing zip archive was closed',
             9 => 'No such file',
             10 => 'File already exists',
-            11 => 'Can\'t open file',
+            11 => 'Cannot open file',
             12 => 'Failure to create temporary file',
             13 => 'Zlib error',
             14 => 'Malloc failure',
@@ -180,7 +180,7 @@ if (!class_exists('\CAT\Helper\Zip')) {
             19 => 'Not a zip archive',
             20 => 'Internal error',
             21 => 'Zip archive inconsistent',
-            22 => 'Can\'t remove file',
+            22 => 'Cannot remove file',
             23 => 'Entry has been deleted',
         );
 
@@ -256,10 +256,13 @@ if (!class_exists('\CAT\Helper\Zip')) {
             }
             $open_result = $this->zip->open($this->zipfile);
             if ($open_result === true) {
+                if(!is_dir($folder)) {
+                    mkdir($folder,0777,true);
+                }
                 if ($this->zip->extractTo($folder) === true) {
                     $status = $this->zip->getStatusString();
                     $this->zip->close();
-                    return ( $status == 'No Error' );
+                    return ( $status == 'No error' );
                 }
             } else {
                 throw new \RuntimeException(sprintf(

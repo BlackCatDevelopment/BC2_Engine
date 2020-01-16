@@ -16,6 +16,7 @@
 */
 
 namespace CAT\Helper;
+
 use \CAT\Base as Base;
 
 if (!class_exists('Json'))
@@ -30,12 +31,15 @@ if (!class_exists('Json'))
          * @param  boolean $exit - wether to exit() (default) or not
          * @return void
          **/
-        public static function printData($data,$exit=true)
+        public static function printData($data, $exit=true)
         {
-            if(!headers_sent())
+            if (!headers_sent()) {
                 header('Content-type: application/json');
-            echo json_encode($data,true);
-            if($exit) exit();
+            }
+            echo json_encode($data, true);
+            if ($exit) {
+                exit();
+            }
         }   // end function printData()
 
         /**
@@ -46,9 +50,9 @@ if (!class_exists('Json'))
          * @param  boolean $exit
          * @return JSON
          **/
-        public static function printError($message,$exit=true)
+        public static function printError($message, $exit=true)
         {
-            self::printResult(false,$message,$exit);
+            self::printResult(false, $message, $exit);
         }   // end function printError()
 
         /**
@@ -59,9 +63,9 @@ if (!class_exists('Json'))
          * @param  boolean $exit
          * @return JSON
          **/
-        public static function printSuccess($message,$exit=true)
+        public static function printSuccess($message, $exit=true)
         {
-            self::printResult(true,$message,$exit);
+            self::printResult(true, $message, $exit);
         }   // end function printSuccess()
 
         /**
@@ -80,10 +84,11 @@ if (!class_exists('Json'))
          * @param  boolean $exit    - wether to exit() (default) or not
          * @return void
          **/
-        public static function printResult($success,$message,$exit=true)
+        public static function printResult($success, $message, $exit=true)
         {
-            if(!headers_sent())
+            if (!headers_sent()) {
                 header('Content-type: application/json');
+            }
             $field = (
                 is_scalar($message)
                 ? 'message'
@@ -98,7 +103,9 @@ if (!class_exists('Json'))
                 'success' => $success,
                 $field    => $content
             ));
-            if($exit) exit();
+            if ($exit) {
+                exit();
+            }
         }   // end function printResult()
     }
 }

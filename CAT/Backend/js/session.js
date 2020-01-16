@@ -25,7 +25,7 @@ function CATSessionSetTimer(sesstime,callback,elementid,warnclass)
     var origcolor = timer.css("color");
 
     timer.text(CATSecondsToTimeString(sesstime));
-    timerId = setInterval(function() {
+    let timerId = setInterval(function() {
         var secs = CATTimeStringToSecs(timer.text())-1;
         if(secs <= warntime) { timer.parent().addClass(warnclass); }
         if(secs == 30)       { timer.addClass(warnclass); }

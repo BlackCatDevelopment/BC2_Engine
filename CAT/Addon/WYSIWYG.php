@@ -40,7 +40,7 @@ if(!class_exists('\CAT\Addon\WYSIWYG',false))
             $variant  = \CAT\Sections::getVariant($section['section_id']);
 
             // add to template search path
-            self::tpl()->setPath(CAT_ENGINE_PATH.'/modules/wysiwyg/templates/'.$variant);
+            self::tpl()->setPath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/wysiwyg/'.CAT_TEMPLATES_FOLDER.'/'.$variant);
 
             // render template
             $output  = self::tpl()->get(

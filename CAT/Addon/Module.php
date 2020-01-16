@@ -74,9 +74,9 @@ if (!class_exists('\CAT\Addon\Module', false)) {
             if (!empty($section) && isset($section['module'])) {
                 $module    = $section['module'];
                 $variant = isset($section['variant']) ? $section['variant'] : 'default';
-                $basepath  = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.$module.'/templates/');
+                $basepath  = Directory::sanitizePath(implode('/',array(CAT_ENGINE_PATH,CAT_MODULES_FOLDER,$module,CAT_TEMPLATES_FOLDER)));
                 $tpl_path  = $basepath.$variant;
-                $lang_path = $basepath.$variant.'/languages';
+                $lang_path = $basepath.$variant.'/'.CAT_LANGUAGES_FOLDER;
                 if (is_dir($tpl_path)) {
                     self::tpl()->setPath($tpl_path);
                 }
@@ -113,7 +113,9 @@ if (!class_exists('\CAT\Addon\Module', false)) {
                 return $errors;
             }
             
-            $sqlfile = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.static::$directory.'/inc/install.sql');
+            $sqlfile = Directory::sanitizePath(implode('/',array(
+                CAT_ENGINE_PATH,CAT_MODULES_FOLDER,static::$directory,'inc','install.sql'
+            )));
             if (file_exists($sqlfile)) {
                 self::db()->sqlImport(\CAT\Helper\Directory::readFile($sqlfile,false),'cat_',self::db()->prefix());
             }
@@ -134,7 +136,9 @@ if (!class_exists('\CAT\Addon\Module', false)) {
         public static function uninstall()
         {
             $errors  = array();
-            $sqlfile = Directory::sanitizePath(CAT_ENGINE_PATH.'/modules/'.static::$directory.'/inc/uninstall.sql');
+            $sqlfile = Directory::sanitizePath(implode('/',array(
+                CAT_ENGINE_PATH,CAT_MODULES_FOLDER,static::$directory,'inc','uninstall.sql'
+            )));
             if (file_exists($sqlfile)) {
                 $errors	= self::sqlProcess();
             }

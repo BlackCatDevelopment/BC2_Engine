@@ -164,7 +164,7 @@ if (!class_exists('Base', false)) {
                 //\wblib\wbForms\Form::$wblang = self::lang();
                 Base::$objects['formbuilder'] = new \wblib\wbForms\Form();
                 $init = Directory::sanitizePath(
-                    CAT_ENGINE_PATH.'/templates/'.Registry::get(
+                    CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get(
                         (Backend::isBackend() ? 'DEFAULT_THEME' : 'DEFAULT_TEMPLATE')
                     ).'/forms.init.php'
                 );
@@ -955,7 +955,7 @@ ORDER BY
             // internal error content in backend or if no template object
             if (!$tplh || self::router()->isBackend() ) {
                 //if (!is_object(Base::$objects['tpl']) || ( !Backend::isBackend() && !defined('CAT_PAGE_CONTENT_DONE')) )
-                require dirname(__FILE__).'/templates/error_content.php';
+                require dirname(__FILE__).'/'.CAT_TEMPLATES_FOLDER.'/error_content.php';
             } else {
                 
             }
@@ -1051,7 +1051,7 @@ ORDER BY
          **/
         private static function err_page_footer()
         {
-            require dirname(__FILE__).'/templates/error_footer.php';
+            require dirname(__FILE__).'/'.CAT_TEMPLATES_FOLDER.'/error_footer.php';
             return;
         }   // end function err_page_footer()
 
@@ -1067,7 +1067,7 @@ ORDER BY
             header('HTTP/1.1 '.self::$errorstate.' '.self::$state[self::$errorstate]);
             header('Status: '.self::$errorstate.' '.self::$state[self::$errorstate]);
             $_SERVER['REDIRECT_STATUS'] = self::$errorstate;
-            require dirname(__FILE__).'/templates/error_header.php';
+            require dirname(__FILE__).'/'.CAT_TEMPLATES_FOLDER.'/error_header.php';
             return;
         }   // end function err_page_header()
         

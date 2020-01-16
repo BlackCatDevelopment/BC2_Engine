@@ -15,7 +15,7 @@
 
    Usage:
 
-   Example: Zip the templates subfolder
+        #Example: Zip the templates subfolder
         $z = new \CAT\Helper\Zip(CAT_TEMP_FOLDER.'/templates.zip');
         $z->adapter->zip(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER,CAT_TEMP_FOLDER);
 
@@ -29,13 +29,20 @@ use \CAT\Helper\Directory as Directory;
 if (!class_exists('\CAT\Helper\Zip')) {
     interface ZipInterface
     {
+        public function listContent() : array;
         public function zip(string $sourceFolder, string $folder);
         public function unzip(string $folder);
     }
     class Zip extends Base
     {
         protected static $loglevel    = \Monolog\Logger::EMERGENCY;
+        /**
+         * @var currently used adapter
+         **/
         public $adapter     = null;
+        /**
+         * @var path to zip file
+         **/
         protected $zipfile     = null;
 
         /**
@@ -58,7 +65,7 @@ if (!class_exists('\CAT\Helper\Zip')) {
                 define('PCLZIP_TEMPORARY_DIR', CAT_TEMP_FOLDER);
                 // PclZip does not take any action here, so it is safe enough
                 // to pass the file name here
-                $this->adapter = new PclZipAdapter(new PclZip($this->zipfile));
+                $this->adapter = new PclZipAdapter(new \PclZip($this->zipfile));
             }
         }   // end function __construct()
     } // class Zip
@@ -66,10 +73,23 @@ if (!class_exists('\CAT\Helper\Zip')) {
     class PclZipAdapter implements ZipInterface
     {
         protected $zip;
-        public function __construct(Zip $zip)
+        protected $zipfile     = null;
+
+        public function __construct(\PclZip $zip)
         {
             $this->zip = $zip;
+            $this->zipfile = $zip->zipname;
         }
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public function listContent() : array
+        {
+            return $this->zip->listContent();
+        }   // end function listContent()
 
         /**
          *
@@ -78,6 +98,19 @@ if (!class_exists('\CAT\Helper\Zip')) {
          **/
         public function unzip(string $folder)
         {
+            if (empty($this->zipfile)) {
+                throw new \RuntimeException('missing zip file');
+            }
+            $folder = strtolower(Directory::sanitizePath($folder));
+            if (!Directory::checkPath($folder)) {
+                throw new \RuntimeException('zip path outside allowed folders');
+            }
+
+            $list = $this->zip->extract(
+                PCLZIP_OPT_PATH, $folder
+            );
+
+            return count($list)>0;
         }   // end function unzip()
 
         /**
@@ -89,30 +122,23 @@ if (!class_exists('\CAT\Helper\Zip')) {
         {
         }   // end function zip()
 
-        /*
-        $list = $archive->extract(
-            PCLZIP_OPT_PATH, 'folder',
-            PCLZIP_CB_PRE_EXTRACT, 'myPreExtractCallBack'
-        );
-        */
-
         /**
          *
          * @access public
          * @return
          **/
-        public function preCheckPath($p_event, &$p_header)
+        public static function preCheckPath($p_event, &$p_header)
         {
             $info = pathinfo(Directory::sanitizePath($p_header['filename']));
             $path = strtolower($info['dirname']);
-            // allowed paths:
-            // 1. engine
-            // 2. site
-            // 3. media
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // TODO: weiter einschränken, wenn also z.B. ein Zip in media hochgeladen
+// allowed paths:
+// 1. engine
+// 2. site
+// 3. media
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: weiter einschränken, wenn also z.B. ein Zip in media hochgeladen
 //       wird, auch nur media erlauben
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             if (substr_compare($path, strtolower(CAT_ENGINE_PATH), 0, strlen(CAT_ENGINE_PATH), true)==0) {
                 return 1;
             }
@@ -131,6 +157,32 @@ if (!class_exists('\CAT\Helper\Zip')) {
     {
         protected $zip;
         protected $zipfile     = null;
+        protected $errcodes    = array(
+            0 => 'OK',
+            1 => 'Multi-disk zip archives not supported',
+            2 => 'Renaming temporary file failed',
+            3 => 'Closing zip archive failed',
+            4 => 'Seek error',
+            5 => 'Read error',
+            6 => 'Write error',
+            7 => 'CRC error',
+            8 => 'Containing zip archive was closed',
+            9 => 'No such file',
+            10 => 'File already exists',
+            11 => 'Can\'t open file',
+            12 => 'Failure to create temporary file',
+            13 => 'Zlib error',
+            14 => 'Malloc failure',
+            15 => 'Entry has been changed',
+            16 => 'Compression method not supported',
+            17 => 'Premature EOF',
+            18 => 'Invalid argument',
+            19 => 'Not a zip archive',
+            20 => 'Internal error',
+            21 => 'Zip archive inconsistent',
+            22 => 'Can\'t remove file',
+            23 => 'Entry has been deleted',
+        );
 
         public function __construct(\ZipArchive $zip)
         {
@@ -154,60 +206,43 @@ if (!class_exists('\CAT\Helper\Zip')) {
          **/
         public function resolveErrCode($code)
         {
-            switch ($code) {
-                case 0:
-                    return 'OK';
-                case 1:
-                    return 'Multi-disk zip archives not supported';
-                case 2:
-                    return 'Renaming temporary file failed';
-                case 3:
-                    return 'Closing zip archive failed';
-                case 4:
-                    return 'Seek error';
-                case 5:
-                    return 'Read error';
-                case 6:
-                    return 'Write error';
-                case 7:
-                    return 'CRC error';
-                case 8:
-                    return 'Containing zip archive was closed';
-                case 9:
-                    return 'No such file';
-                case 10:
-                    return 'File already exists';
-                case 11:
-                    return 'Can\'t open file';
-                case 12:
-                    return 'Failure to create temporary file';
-                case 13:
-                    return 'Zlib error';
-                case 14:
-                    return 'Malloc failure';
-                case 15:
-                    return 'Entry has been changed';
-                case 16:
-                    return 'Compression method not supported';
-                case 17:
-                    return 'Premature EOF';
-                case 18:
-                    return 'Invalid argument';
-                case 19:
-                    return 'Not a zip archive';
-                case 20:
-                    return 'Internal error';
-                case 21:
-                    return 'Zip archive inconsistent';
-                case 22:
-                    return 'Can\'t remove file';
-                case 23:
-                    return 'Entry has been deleted';
-                default:
-                    return 'An unknown error has occurred('.intval($code).')';
-            }
+            return isset($this->errcodes[$code])
+                ? $this->errcodes[$code]
+                : 'Unknown error code '.intval($code);
         }   // end function resolveErrCode()
         
+        /**
+         * creates a list of the zip content which is compatible with
+         * PclZip listContent()
+         *
+         * @access public
+         * @return array
+         **/
+        public function listContent() : array
+        {
+            $open_result = $this->zip->open($this->zipfile);
+            $list = array();
+            if ($open_result === true) {
+                for($i = 0; $i < $this->zip->numFiles; $i++) {
+                    $item = $this->zip->statIndex($i);
+                    $list[] = array(
+                        'filename'        => $item['name'],
+                        'stored_filename' => $item['name'],
+                        'size'            => $item['size'],
+                        'compressed_size' => $item['comp_size'],
+                        'mtime'           => $item['mtime'],
+                        'comment'         => $this->zip->getCommentIndex($i),
+                        // ZipArchive does not have folder entries, so we check
+                        // for trailing /
+                        'folder'          => (substr($item['name'],-1,1)=='/'),
+                        // no status info in ZipArchive
+                        'status'          => 'ok',
+                        'crc'             => $item['crc'],
+                    );
+                }
+            }
+            return $list;
+        }   // end function listContent()
 
         /**
          *
@@ -216,15 +251,7 @@ if (!class_exists('\CAT\Helper\Zip')) {
          **/
         public function unzip(string $folder)
         {
-            if (empty($this->zipfile)) {
-                throw new \RuntimeException('missing zip file');
-            }
-            $folder = strtolower(Directory::sanitizePath($folder));
-            if (
-                   !Directory::checkPath($folder, 'SITE')
-                && !Directory::checkPath($folder, 'MEDIA')
-                && !Directory::checkPath($folder, 'TEMP')
-            ) {
+            if (!Directory::checkPath($folder)) {
                 throw new \RuntimeException('zip path outside allowed folders');
             }
             $open_result = $this->zip->open($this->zipfile);
@@ -254,21 +281,13 @@ if (!class_exists('\CAT\Helper\Zip')) {
             }
             // check output path
             $folder = strtolower(Directory::sanitizePath($folder));
-            if (
-                   !Directory::checkPath($folder, 'SITE')
-                && !Directory::checkPath($folder, 'MEDIA')
-                && !Directory::checkPath($folder, 'TEMP')
-            ) {
-                throw new \RuntimeException('zip path outside allowed folders');
+            if (!Directory::checkPath($folder)) {
+                throw new \RuntimeException('target zip path outside allowed folders');
             }
             // check path to zip
-            $folder = strtolower(Directory::sanitizePath($sourceFolder));
-            if (
-                   !Directory::checkPath($sourceFolder, 'SITE')
-                && !Directory::checkPath($sourceFolder, 'MEDIA')
-                && !Directory::checkPath($sourceFolder, 'TEMP')
-            ) {
-                throw new \RuntimeException('zip path outside allowed folders');
+            $sourceFolder = strtolower(Directory::sanitizePath($sourceFolder));
+            if (!Directory::checkPath($sourceFolder)) {
+                throw new \RuntimeException('source zip path outside allowed folders');
             }
 
             $open_result = $this->zip->open($this->zipfile,\ZipArchive::CREATE);
@@ -287,6 +306,7 @@ if (!class_exists('\CAT\Helper\Zip')) {
         }   // end function zip()
 
         /**
+         * recursive function to iterate the folder to be zipped
          *
          * @access private
          * @return
@@ -297,6 +317,8 @@ if (!class_exists('\CAT\Helper\Zip')) {
             while (false !== $f = readdir($handle)) {
                 if ($f != '.' && $f != '..') {
                     $filePath = "$folder/$f";
+                    // check path
+                    if(Directory::checkPath($filePath)===true) {
                     // Remove prefix from file path
                     $localPath = substr($filePath, $removeLength);
                     if (is_file($filePath)) {
@@ -315,6 +337,7 @@ if (!class_exists('\CAT\Helper\Zip')) {
                         }
                         // recursion
                         $this->zipFolder($filePath, $zipFile, $removeLength);
+                        }
                     }
                 }
             }

@@ -59,7 +59,7 @@ if (!class_exists('Frontend', false)) {
                 ob_start();
                 $empty_page_bg = Assets::serve('images', 'CAT/templates/empty_page_bg.jpg', true);
                 ob_end_clean();
-                require dirname(__FILE__).'/templates/empty.php';
+                require dirname(__FILE__).'/'.CAT_TEMPLATES_FOLDER.'/empty.php';
                 exit;
             }
             // get page handler

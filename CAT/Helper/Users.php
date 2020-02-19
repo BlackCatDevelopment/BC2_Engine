@@ -47,6 +47,57 @@ if (! class_exists('Users', false)) {
         }   // end function getInstance()
 
         /**
+         * handle user authentication
+         *
+         * @access public
+         * @return mixed
+         **/
+        public static function authenticate()
+        {
+            if (!isset($_REQUEST['acc']) || $_REQUEST['acc'] != 'true') {
+                self::printFatalError('Authentication failed! Please accept the session cookie to proceed.');
+            }
+            $auth_result = self::user()->login();
+            if (false!==$auth_result) {
+                // session
+                self::session()->set('user_id', self::user()->get('user_id'));
+                self::session()->set('IPaddress', $_SERVER['REMOTE_ADDR']);
+                self::session()->set('userAgent', $_SERVER['HTTP_USER_AGENT']);
+                // debugging
+                self::log()->addDebug(sprintf(
+                    'Authentication succeeded, username [%s], id [%s]',
+                    self::user()->get('username'),
+                    self::user()->get('user_id')
+                ));
+                // forward
+                if (self::asJSON()) {
+                    self::log()->addDebug(sprintf(
+                        'sending json result, forward to URL [%s]',
+                        CAT_ADMIN_URL.'/'.self::user()->getDefaultPage()
+                    ));
+                    Json::printData(array(
+                        'success' => true,
+                        'url'     => CAT_ADMIN_URL.'/'.self::user()->getDefaultPage(),
+                    ));
+                } else {
+                    self::log()->addDebug(sprintf(
+                        'forwarding to URL [%s]',
+                        CAT_ADMIN_URL.'/'.self::user()->getDefaultPage()
+                    ));
+                    header('Location: '.CAT_ADMIN_URL.'/'.self::user()->getDefaultPage());
+                }
+            } else {
+                self::log()->addDebug('Authentication failed!');
+                if (self::asJSON()) {
+                    Json::printError('Authentication failed!');
+                } else {
+                    self::printFatalError('Authentication failed!');
+                }
+            }
+            exit;
+        }   // end function authenticate()
+
+        /**
          *
          * @access public
          * @return string
@@ -146,9 +197,19 @@ if (! class_exists('Users', false)) {
                 return false;
             }
 
-            // first call of self::session() will generate a unique session
-            // name
-            self::session()->start();
+            // invalidate stale session
+            if (
+                  (time()-self::session()->getMetadataBag()->getLastUsed())
+                > (time()+ini_get('session.gc_maxlifetime'))
+            ) {
+                self::session()->invalidate();
+                self::log()->addDebug(sprintf(
+                    'invalidated stale session: [%s] > [%s]',
+                    (time()-self::session()->getMetadataBag()->getLastUsed()),
+                    (time()+ini_get('session.gc_maxlifetime'))
+                ));
+                return false;
+            }
 
             // validate session data
             if (
@@ -161,7 +222,7 @@ if (! class_exists('Users', false)) {
                     self::session()->get('IPaddress'),
                     $_SERVER['REMOTE_ADDR']
                 ));
-                self::session()->clear(1);
+                self::session()->invalidate();
                 return false;
             }
             self::$curruser = new \CAT\Objects\User(self::session()->get('user_id'));
@@ -346,60 +407,6 @@ if (! class_exists('Users', false)) {
             $sth = self::db()->query($q, array('id'=>$id));
             return $sth->fetchAll(\PDO::FETCH_ASSOC);
         }   // end function getUserGroups()
-
-        /**
-         * handle user authentication
-         *
-         * @access public
-         * @return mixed
-         **/
-        public static function authenticate()
-        {
-            if (!isset($_REQUEST['acc']) || $_REQUEST['acc'] != 'true') {
-                self::printFatalError('Authentication failed! Please accept the session cookie to proceed.');
-            }
-            $auth_result = self::user()->login();
-            if (false!==$auth_result) {
-                // session
-                if (!self::session()->started()===true) {
-                    self::session()->start();
-                }
-                self::session()->set('user_id', self::user()->get('user_id'));
-                self::session()->set('IPaddress', $_SERVER['REMOTE_ADDR']);
-                self::session()->set('userAgent', $_SERVER['HTTP_USER_AGENT']);
-                // debugging
-                self::log()->addDebug(sprintf(
-                    'Authentication succeeded, username [%s], id [%s]',
-                    self::user()->get('username'),
-                    self::user()->get('user_id')
-                ));
-                // forward
-                if (self::asJSON()) {
-                    self::log()->addDebug(sprintf(
-                        'sending json result, forward to URL [%s]',
-                        CAT_ADMIN_URL.'/'.self::user()->getDefaultPage()
-                    ));
-                    Json::printData(array(
-                        'success' => true,
-                        'url'     => CAT_ADMIN_URL.'/'.self::user()->getDefaultPage(),
-                    ));
-                } else {
-                    self::log()->addDebug(sprintf(
-                        'forwarding to URL [%s]',
-                        CAT_ADMIN_URL.'/'.self::user()->getDefaultPage()
-                    ));
-                    header('Location: '.CAT_ADMIN_URL.'/'.self::user()->getDefaultPage());
-                }
-            } else {
-                self::log()->addDebug('Authentication failed!');
-                if (self::asJSON()) {
-                    Json::printError('Authentication failed!');
-                } else {
-                    self::printFatalError('Authentication failed!');
-                }
-            }
-            exit;
-        }   // end function authenticate()
 
         /**
          * authenticate user

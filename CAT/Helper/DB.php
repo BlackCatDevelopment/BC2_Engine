@@ -680,7 +680,9 @@ class CPDOExceptionHandler
             $trace = $exception->getTrace();
 
             foreach ($trace as $key => $stackPoint) {
+                if(isset($trace[$key]['args'])) {
                 $trace[$key]['args'] = array_map('gettype', $trace[$key]['args']);
+            }
             }
             // build tracelines
             $result = array();
@@ -691,7 +693,7 @@ class CPDOExceptionHandler
                     (isset($stackPoint['file']) ? $stackPoint['file'] : '-'),
                     (isset($stackPoint['line']) ? $stackPoint['line'] : '-'),
                     $stackPoint['function'],
-                    implode(', ', $stackPoint['args'])
+                    ( isset($stackPoint['args']) ? implode(', ', $stackPoint['args']) : '' )
                 );
             }
             // trace always ends with {main}

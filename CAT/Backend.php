@@ -162,9 +162,10 @@ if (!class_exists('Backend', false)) {
             $data = array();
             self::initPaths();
 
-            self::session()->refresh();
+            // regenerate session
+            self::session()->migrate();
 
-            $t = self::session()->lifetime();
+            $t = self::session()->getMetadataBag()->getLifetime();
             $data['SESSION_TIME'] = sprintf('%02d:%02d:%02d', ($t/3600), ($t/60%60), $t%60);
 
             // =================================================================
@@ -422,7 +423,6 @@ if (!class_exists('Backend', false)) {
             $output      = ( $header===true ? self::tpl()->get('header',$tpl_data) : '' )
                          . self::tpl()->get($tpl,$tpl_data)
                          . ( $footer===true ? self::getFooter() : '');
-
             $headers = \CAT\Helper\Assets::renderAssets('header',null,false,false);
             $output = str_replace('<!-- pageheader 0 -->', $headers, $output);
 

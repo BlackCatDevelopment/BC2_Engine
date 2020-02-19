@@ -72,6 +72,7 @@ if (!class_exists('\CAT\Helper\Assets'))
         protected static $JSSet        = array('header'=>null,'footer'=>null);
         protected static $JSCond       = array('header'=>null,'footer'=>null);
         protected static $code         = array('header'=>null,'footer'=>null);
+        protected static $incpaths     = array('header'=>null,'footer'=>null);
         protected static $CSSMap;
         protected static $CSSCond;
         protected static $Meta;
@@ -136,6 +137,18 @@ if (!class_exists('\CAT\Helper\Assets'))
             self::log()->addDebug(sprintf('adding [%s] to $CSSMap, media [%s]',$file,$media));
             self::$CSSMap->put($file,($media!=''?$media:self::$defaultmedia));
         }   // end function addCSS()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function addInc(string $file, string $pos='header')
+        {
+            if(file_exists($file)) {
+                self::$incpaths[$pos][] = $file;
+            }
+        }   // end function addInc()
 
         /**
          *
@@ -398,8 +411,8 @@ if (!class_exists('\CAT\Helper\Assets'))
                             . self::renderJS($pos);
                     break;
                 case 'footer':
-                    $output = self::renderJS($pos)
-                            . self::getCode($pos);
+                    $output = self::renderJS($pos);
+#                            . self::getCode($pos);
                     break;
             }
 
@@ -846,6 +859,11 @@ $droplets_config = array();
             // make sure collections are initialized
             self::init();
 
+            // add global includes
+            if(isset(self::$incpaths[$pos])) {
+                $incpaths = array_merge(self::$incpaths[$pos],$incpaths);
+            }
+
             foreach ($incpaths as $path) {
                 $temp = Directory::findFiles(
                     $path,
@@ -870,6 +888,7 @@ $droplets_config = array();
                     $coll->count(), $pos
                 ));
                 $incfiles = $coll->toArray();
+
                 foreach ($incfiles as $file) {
                     try {
                         self::log()->addDebug(sprintf(
@@ -970,29 +989,29 @@ self::log()->addDebug(sprintf('adding condition for [%s] to $CSSCond',$f));
             }
 
             // prefer minimized
-            $minitem = pathinfo($item, PATHINFO_FILENAME).'.min.js';
+            $pathinfo = pathinfo($item);
+            $minitem  = $pathinfo['filename'].'.min.js';
             $file    = Directory::sanitizePath($plugin_path.'/'.$minitem);
+            $dir      = $pathinfo['filename'];
+            $paths    = array(
+                $plugin_path,
+                Directory::sanitizePath($plugin_path.'/'.$dir),
+                Directory::sanitizePath($plugin_path.'/js'),
+            );
 
-            // just there? --> minimized
+            // just there? --> minimized preferred
             if (!file_exists($file)) {
-                // without .min.
-                $file = Directory::sanitizePath($plugin_path.'/'.$item);
-                if (!file_exists($file)) {
-                    $dir = pathinfo($item, PATHINFO_FILENAME);
-                    // prefer minimized
-                    $minitem = pathinfo($item, PATHINFO_FILENAME).'.min.js';
-                    $file    = Directory::sanitizePath($plugin_path.'/'.$dir.'/'.$minitem);
-                    if (!file_exists($file)) {
-                        $file = Directory::sanitizePath($plugin_path.'/'.$dir.'/'.$item);
-                        if (!file_exists($file)) {
-                            // give up
-                            return false;
+                foreach($paths as $path) {
+                    foreach(array($minitem,$item) as $fn) {
+                        $file = $path.'/'.$fn;
+                        if(file_exists($file)) {
+                            return str_ireplace(Directory::sanitizePath(CAT_ENGINE_PATH), '', $file);
                         }
                     }
                 }
             }
 
-            return str_ireplace(Directory::sanitizePath(CAT_ENGINE_PATH), '', $file);
+            return false;
         }   // end function findJQueryPlugin()
 
         /**
@@ -1102,7 +1121,8 @@ self::log()->addDebug(sprintf('adding condition for [%s] to $CSSCond',$f));
                     $paths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_TEMPLATES_FOLDER.'/'.Registry::get('default_theme').'/js'));
                     // admin tool
                     if (self::router()->match('~\/tool\/~i')) {
-                        $tool = \CAT\Backend\Admintools::getTool();
+                        $tool = \CAT\Backend\Admintools::getItem('tool');
+                        $incpaths->add(Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool));
                         foreach (
                             array_values(array(
                                 Directory::sanitizePath(CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$tool.'/css'),

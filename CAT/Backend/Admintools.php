@@ -136,13 +136,14 @@ if (!class_exists('Backend\Admintools')) {
             if (!self::user()->hasPerm('tools_list')) {
                 self::printFatalError('You are not allowed for the requested action!');
             }
-            $tool    = self::getTool();
+            $tool    = self::getItem('tool');
 
             // kind of dirty hack...
             if (!$tool || $tool=='admintools') {
                 self::router()->reroute(CAT_BACKEND_PATH.'/admintools');
                 return;
             }
+
             $name    = Addons::getDetails($tool, 'name');
             $handler = null;
             foreach (array_values(array(str_replace(' ', '', $name),$tool)) as $classname) {
@@ -196,35 +197,5 @@ if (!class_exists('Backend\Admintools')) {
             Backend::show('backend_admintool', $tpl_data);
         }   // end function tool()
         
-        /**
-         * tries to retrieve 'tool' by checking (in this order):
-         *
-         *    - $_POST['tool']
-         *    - $_GET['tool']
-         *    - Route param
-         *
-         * also checks for numeric value
-         *
-         * @access private
-         * @return integer
-         **/
-        public static function getTool()
-        {
-            $tool  = Validate::sanitizePost('tool', 'scalar');
-
-            if (!$tool) {
-                $tool  = Validate::sanitizeGet('tool', 'scalar');
-            }
-            if (!$tool) {
-                $tool = self::router()->getParam(-1);
-            }
-            if (!$tool) {
-                $route = self::router()->getRoute();
-                $route = str_ireplace('admintools/tool/', '', $route);
-                $tool  = explode('/', $route)[0];
-            }
-
-            return $tool;
-        }   // end function getTool()
     } // class \CAT\Helper\Admintools
 } // if class_exists()

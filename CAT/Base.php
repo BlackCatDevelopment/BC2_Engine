@@ -26,6 +26,10 @@ use CAT\Helper\Router    as Router;
 use CAT\Helper\Addons    as Addons;
 use \CAT\Helper\Json     as Json;
 
+use Symfony\Component\HttpFoundation\Session\Session As Session;
+use Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler As PdoSessionHandler;
+use Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage As NativeSessionStorage;
+
 if (!class_exists('Base', false)) {
     class Base
     {
@@ -368,7 +372,7 @@ if (!class_exists('Base', false)) {
             if (
                    !isset(Base::$objects['session'])
                 || !is_object(Base::$objects['session'])
-                || !Base::$objects['session'] instanceof \CAT\Helper\Session
+#                || !Base::$objects['session'] instanceof \CAT\SessionProxy
             ) {
                 // make sure we have an unique session name for each site
                 $session_name = self::getSetting('session_name');
@@ -385,8 +389,33 @@ if (!class_exists('Base', false)) {
                         CAT_SITE_ID,$session_name
                     ));
                 }
+                $parse  = parse_url(CAT_SITE_URL);
+                $session_domain = ( isset($parse['host']) ? $parse['host'] : CAT_SITE_URL );
+                $session_path   = ( isset($parse['path']) ? $parse['path'] : '/' );
                 // create session handler
-                self::storeObject('session', new \CAT\Helper\Session(\CAT\Registry::get('use_encrypted_sessions')));
+                $crypt = self::getSetting('use_encrypted_sessions');
+                self::log()->debug('creating session handler, crypt is '.($crypt===true ? 'en' : 'dis').'abled');
+                $sessionStorage = new NativeSessionStorage(
+                    array(
+                        'name'            => $session_name,
+                        'cookie_lifetime' => time()+ini_get('session.gc_maxlifetime'),
+                        'cookie_domain'   => $session_domain,
+                        'cookie_httponly' => true,
+                        'cookie_path'     => $session_path,
+                        'cookie_secure'   => isset($_SERVER['HTTPS']),
+                        'cookie_samesite' => 'Lax',
+                    ),
+                    new \CAT\SessionProxy(
+                        new PdoSessionHandler(
+                            \CAT\Helper\DB::conn()->getWrappedConnection(),
+                            array(
+                                'db_table'=>\CAT\Helper\DB::prefix().'sessions'
+                            )
+                        ),
+                        bin2hex(random_bytes(8))
+                    )
+                );
+                self::storeObject('session', new Session($sessionStorage));
             }
             return Base::$objects['session'];
         }   // end function session()

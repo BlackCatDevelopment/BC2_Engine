@@ -1,6 +1,7 @@
 {
-    "name": "BlackCatDevelopment/BC2_Engine",
-    "type": "application",
+    "name": "bc2-project/bc2_engine",
+    "type": "cat-engine",
+    "version": "0.1",
     "description": "BC2 Engine",
     "homepage": "https://blackcat-cms.de",
     "authors": [
@@ -12,12 +13,32 @@
         }
     ],
     "require": {
-        "php": "^7.2"
-    },
-    "repositories": [
-		{
-			"type": "vcs",
-			"url": "https://github.com/BlackCatDevelopment/BC2_Engine"
-		}
-	]
+        "php": "^7.2",
+        "ext-PDO": "*",
+		"ext-json": "*",
+		"lib-pcre": "*",
+		"ext-session": "*",
+        "chillerlan/php-qrcode": "dev-master",
+        "ckeditor/ckeditor": "dev-standard/latest",
+        "components/jquery": "*",
+        "components/jqueryui": "*",
+        "doctrine/common": "*",
+		"doctrine/dbal": "*",
+        "dwoo/dwoo": "dev-master",
+        "ezyang/htmlpurifier": "*",
+        "fortawesome/font-awesome": ">=5.8.1",
+        "james-heinrich/getid3": "*",
+        "matthiasmullie/minify": ">=1.2.41",
+        "monolog/monolog": ">=1.20.0 <2.0",
+        "mrclay/minify": "2.*",
+        "pclzip/pclzip": ">=2.8",
+        "php-ds/php-ds": "^1.2.0",
+        "robthree/twofactorauth": "^1.5",
+        "swiftmailer/swiftmailer": "^6.0",
+        "symfony/http-foundation": "*",
+        "twbs/bootstrap": "^4.1",
+        "verot/class.upload.php": "dev-master",
+        "webbird/assetic": "dev-master",
+		"webbird/wblib3": "dev-master"
+    }
 }

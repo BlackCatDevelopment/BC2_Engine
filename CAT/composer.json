@@ -1,7 +1,18 @@
 {
-    "name": "BlackCatDevelopment/bc2_engine",
+    "name": "bc2-project/bc2_engine",
+    "repositories": [
+        {
+			"type": "vcs",
+			"url": "https://github.com/webbird/assetic"
+		}
+	],
     "require": {
         "php": "^7.2",
+        "ext-PDO": "*",
+		"ext-json": "*",
+		"lib-pcre": "*",
+		"ext-session": "*",
+        "ext-ds": "*",
         "chillerlan/php-qrcode": "dev-master",
         "ckeditor/ckeditor": "dev-standard/latest",
         "components/jquery": "*",
@@ -17,22 +28,22 @@
         "mrclay/minify": "2.*",
         "pclzip/pclzip": ">=2.8",
         "php-ds/php-ds": "^1.2.0",
-        "roave/security-advisories": "dev-master",
         "robthree/twofactorauth": "^1.5",
         "swiftmailer/swiftmailer": "^6.0",
         "symfony/http-foundation": "*",
-        "twbs/bootstrap": ">=4.1.3",
+        "twbs/bootstrap": "^4.1",
         "verot/class.upload.php": "dev-master",
-        "vimeo/psalm": "^0",
         "webbird/assetic": "dev-master",
 		"webbird/wblib3": "dev-master"
     },
-	"repositories": [
-        {
-			"type": "vcs",
-			"url": "https://github.com/webbird/assetic"
-		}
-	],
+    "require-dev": {
+        "roave/security-advisories": "dev-master",
+        "vimeo/psalm": "^0"
+    },
+    "suggest": {
+		"lib-openssl": "OpenSSL is required for sending SMTP mails over an encrypted channel endpoint",
+		"ext-zip": "ZIP extension is needed for module installation from ZIP files"
+	},
     "authors": [
         {
             "name": "BlackCat Development",

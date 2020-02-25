@@ -42,7 +42,8 @@
     },
     "suggest": {
 		"lib-openssl": "OpenSSL is required for sending SMTP mails over an encrypted channel endpoint",
-		"ext-zip": "ZIP extension is needed for module installation from ZIP files"
+		"ext-zip": "ZIP extension is needed for module installation from ZIP files",
+        "ext-ds": "*",
 	},
     "authors": [
         {

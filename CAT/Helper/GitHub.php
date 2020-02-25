@@ -34,7 +34,7 @@ if (!class_exists('\CAT\Helper\GitHub')) {
          * @param  string  $url - optional
          * @return object  curl connection
          **/
-        public static function init_curl($url=null)
+        public static function init_curl(?string $url=null)
         {
             if (self::$ch) {
                 return self::$ch;
@@ -82,7 +82,46 @@ if (!class_exists('\CAT\Helper\GitHub')) {
          * @access public
          * @return
          **/
-        public static function getRelease($org, $repo)
+        public static function downloadMaster(string $org, string $repo, string $path)
+        {
+            $dlurl = sprintf(
+                'https://github.com/%s/%s/archive/master.zip',
+                $org, $repo
+            );
+            return self::getZip($dlurl, $path, $org.'_'.$repo);
+        }   // end function downloadMaster()
+        
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function downloadRelease(string $org, string $repo, string $path)
+        {
+            // get release
+            $release_info = self::getRelease($org,$repo);
+            if (!is_array($release_info) || !count($release_info)) {
+                // no release found, search for tags
+                $tags = self::getTags($org,$repo);
+                if (!is_array($tags) || !count($tags)) {
+                    return false;
+                } else {
+                    $dlurl = $tags[0]['zipball_url'];
+                }
+            } else {
+                $dlurl = $release_info['zipball_url'];
+            }
+            // try download
+            return self::getZip($dlurl, $path, $org.'_'.$repo);
+        }   // end function downloadRelease()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function getRelease(string $org, string $repo)
         {
             $releases   = self::retrieve($org, $repo, 'releases');
             $latest     = array();
@@ -106,7 +145,7 @@ if (!class_exists('\CAT\Helper\GitHub')) {
          * @access public
          * @return
          **/
-        public static function getTags($org, $repo)
+        public static function getTags(string $org, string $repo)
         {
             $tags   = self::retrieve($org, $repo, 'tags');
             $latest = array();
@@ -121,7 +160,7 @@ if (!class_exists('\CAT\Helper\GitHub')) {
          * @access public
          * @return
          **/
-        public static function getZip($dlurl, $path, $filename)
+        public static function getZip(string $dlurl, string $path, string $filename)
         {
             $ch   = self::init_curl();
             curl_setopt($ch, CURLOPT_URL, $dlurl);
@@ -174,7 +213,7 @@ if (!class_exists('\CAT\Helper\GitHub')) {
          * @param  string  $url  - sub url
          * @return json
          **/
-        public static function retrieve($org, $repo, $url)
+        public static function retrieve(string $org, string $repo, string $url)
         {
             $ch   = self::reset_curl(); // fresh connection
             $url  = sprintf(
@@ -208,7 +247,7 @@ if (!class_exists('\CAT\Helper\GitHub')) {
          * @param  string  $url
          * @return string
          **/
-        public static function retrieve_remote_file_size($url)
+        public static function retrieve_remote_file_size(string $url)
         {
             $ch = self::init_curl();
             curl_setopt($ch, CURLOPT_HEADER, true);
@@ -244,7 +283,7 @@ if (!class_exists('\CAT\Helper\GitHub')) {
          * @access public
          * @return
          **/
-        public static function setError($error)
+        public static function setError(string $error)
         {
             self::$curl_error = $error;
         }   // end function setError()

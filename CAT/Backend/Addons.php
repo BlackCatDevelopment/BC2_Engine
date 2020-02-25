@@ -290,7 +290,7 @@ if (!class_exists('\CAT\Backend\Addons')) {
             $addon     = self::getItem('addon');
             $type      = self::router()->getRoutePart(-2);
 
-            self::handleInstall($type, $addon);
+            HAddons::handleInstall($type, $addon);
         }   // end function install()
 
         /**
@@ -372,122 +372,6 @@ if (!class_exists('\CAT\Backend\Addons')) {
             Backend::show('backend_addons_upload',$tpl_data);
         }   // end function upload()
 
-        /**
-         *
-         * @access private
-         * @return
-         **/
-        private static function handleInstall(string $type, string $addon)
-        {
-            // map type to path
-            $mod_type  = isset(self::$known_types[ucfirst($type)])
-                       ? self::$known_types[ucfirst($type)]
-                       : null;
-            $path      = Directory::sanitizePath(CAT_ENGINE_PATH.'/'.$mod_type.'s/'.$addon);
-            $handler   = null;
-            $classname = null;
-            $tpl_data  = array();
-            $zippath   = null;
-            $info      = null;
-
-            self::log()->addDebug(sprintf(
-                'handleInstall() type [%s] addon [%s] path [%s]',
-                $type,$addon,$path
-            ));
-
-
-            // already there? (uploaded via FTP)
-            if (is_dir($path)) {
-                self::log()->addDebug(sprintf(
-                    'addon found in path [%s]',$path
-                ));
-                $info = HAddons::getInfo($addon, $type);
-            }
-
-            // zip
-            if($type=='zip') {
-                self::log()->addDebug(sprintf(
-                    'type is zip, try to unzip and copy'
-                ));
-                $zipfile   = Directory::sanitizePath($addon);
-                $subfolder = pathinfo($zipfile,PATHINFO_FILENAME);
-                $zippath   = Directory::sanitizePath(CAT_TEMP_FOLDER.'/unzip/'.$subfolder);
-                if(file_exists($zipfile)) {
-                    self::log()->addDebug(sprintf(
-                        'found zip file [%s]', $zipfile
-                    ));
-                    $z = new \CAT\Helper\Zip($zipfile);
-                    $res = $z->adapter->unzip($zippath);
-                    if($res) {
-                        self::log()->addDebug('unzip succeeded');
-                        $info = HAddons::getInfo($zippath);
-                        if(count($info)>0) { // valid
-                            if(!isset($info['directory']) || empty($info['directory'])) {
-                                $info['directory'] = $subfolder;
-                            }
-                            $dest = HAddons::getFolderFromType($info['type'],true);
-                            self::log()->addDebug(sprintf(
-                                'create directory [%s]',$dest.'/'.$info['directory']
-                            ));
-                            Directory::createDirectory($dest.'/'.$info['directory']);
-                            self::log()->addDebug('copy recursive');
-                            Directory::copyRecursive(
-                                $zippath,
-                                $dest.'/'.$info['directory']
-                            );
-                            $path = $dest.'/'.$info['directory'];
-                        }
-                    }
-                }
-            }
-
-            $names = array();
-            if (isset($info['name'])) {
-                $names[] = $info['name'];
-            }
-            if (isset($info['directory'])) {
-                $names[] = $info['directory'];
-            }
-            $namespace = '\CAT\Addon';
-            if ($type=='templates') {
-                $namespace .= '\Template';
-            }
-
-            if($res===true && is_array($names) && count($names)>0) {
-                foreach (array_values($names) as $name) {
-                    $filename = \CAT\Helper\Directory::sanitizePath($path.'/inc/class.'.$name.'.php');
-                    if (file_exists($filename)) {
-                        $handler = $filename;
-                        $classname = $namespace.'\\'.$name;
-                        self::log()->addDebug(sprintf(
-                            'handler [%s] classname [%s]',$handler,$classname
-                        ));
-                        break;
-                    }
-                }
-                if ($handler) {
-                    if(!class_exists($classname,false)) {
-                        include_once $handler;
-                    }
-                    $errors = $classname::install();
-                    if (count($errors)) {
-                        return $errors;
-                    }
-                }
-            }
-
-            if($type=='zip') {
-                // remove unzipped
-                self::log()->addDebug(sprintf(
-                    'remove unzip temp dir [%s]',$zippath
-                ));
-                Directory::removeDirectory($zippath);
-            }
-
-            return true;
-        }   // end function handleInstall()
-        
-        
         /**
          * get the catalog contents from catalog.json
          *

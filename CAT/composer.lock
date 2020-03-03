@@ -2334,12 +2334,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/webbird/assetic.git",
-                "reference": "48fc9ce8446833af43e5da9a44b461e9281b5c2b"
+                "reference": "b37948da58163da6470e59e0e3b10a77ccac9d97"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webbird/assetic/zipball/48fc9ce8446833af43e5da9a44b461e9281b5c2b",
-                "reference": "48fc9ce8446833af43e5da9a44b461e9281b5c2b",
+                "url": "https://api.github.com/repos/webbird/assetic/zipball/b37948da58163da6470e59e0e3b10a77ccac9d97",
+                "reference": "b37948da58163da6470e59e0e3b10a77ccac9d97",
                 "shasum": ""
             },
             "require": {
@@ -2405,7 +2405,7 @@
             "support": {
                 "source": "https://github.com/webbird/assetic/tree/master"
             },
-            "time": "2020-02-17T09:43:40+00:00"
+            "time": "2020-02-24T11:02:54+00:00"
         },
         {
             "name": "webbird/wblib3",
@@ -2413,12 +2413,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/webbird/wblib3.git",
-                "reference": "b226fb03a7ff86addd1d8c3df2ea5ed5de761160"
+                "reference": "da80cb152d6e7fb95a1a8006e06c19d6da8185e7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webbird/wblib3/zipball/b226fb03a7ff86addd1d8c3df2ea5ed5de761160",
-                "reference": "b226fb03a7ff86addd1d8c3df2ea5ed5de761160",
+                "url": "https://api.github.com/repos/webbird/wblib3/zipball/da80cb152d6e7fb95a1a8006e06c19d6da8185e7",
+                "reference": "da80cb152d6e7fb95a1a8006e06c19d6da8185e7",
                 "shasum": ""
             },
             "require": {
@@ -2444,7 +2444,7 @@
             ],
             "description": "PHP libraries bundle including FormBuilder, ListBuilder, Calendar, and more",
             "homepage": "https://github.com/webbird/wblib3",
-            "time": "2019-10-30T08:07:47+00:00"
+            "time": "2020-02-25T14:24:50+00:00"
         }
     ],
     "packages-dev": [

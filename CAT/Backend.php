@@ -61,7 +61,8 @@ if (!class_exists('Backend', false)) {
         public static function dispatch()
         {
             self::log()->addDebug(sprintf(
-                'dispatch() - route [%s]',self::router()->getRoute()
+                'dispatch() - route [%s]',
+                self::router()->getRoute()
             ));
             return self::router()->dispatch('Backend');
         }   // end function dispatch()
@@ -76,7 +77,8 @@ if (!class_exists('Backend', false)) {
         {
             $route = self::router()->getRoute();
             self::log()->addDebug(sprintf(
-                'getArea() - route [%s]', $route
+                'getArea() - route [%s]',
+                $route
             ));
             // example route: backend/pages/edit/1
             $parts = explode('/', $route);
@@ -136,7 +138,7 @@ if (!class_exists('Backend', false)) {
                 }
             }
 
-            if(!isset($seen['administration'])) {
+            if (!isset($seen['administration'])) {
                 array_unshift($bread, array(
                     'id'          => 'administration',
                     'name'        => 'administration',
@@ -216,36 +218,23 @@ if (!class_exists('Backend', false)) {
             // init template search paths
             self::initPaths();
 
-            if($with_menu) {
+            if ($with_menu) {
                 $menu     = self::getMainMenu();
 
-                if(!self::showPageTree()) {
-                    self::tpl()->setGlobals('pageTree',false);
+                if (!self::showPageTree()) {
+                    self::tpl()->setGlobals('pageTree', false);
                 }
 
                 // the original list, ordered by parent -> children (if the
                 // templates renders the HTML output)
-                $lb = Base::lb();
-                $lb->set('id', 'id');
-                $lb->set('title', 'title');
-
-                $tpl_data['MAIN_MENU'] = $lb->sort($menu, 0);
+                $lb = new \wblib\wblist\Tree(
+                    $menu,
+                    array('value'=>'title','linkKey'=>'href','root_id'=>0)
+                );
+                #$tpl_data['MAIN_MENU'] = $lb->flattened();
 
                 // recursive list
-                $tpl_data['MAIN_MENU_RECURSIVE'] = $lb->buildRecursion($menu);
-
-                // render list (ul)
-                $lb->set(array(
-                    'top_ul_class'     => 'nav',
-                    'ul_class'         => 'nav',
-                    'current_li_class' => 'active',
-                    'space'            => '',
-                ));
-                $tpl_data['MAIN_MENU_UL'] = $lb->buildList($menu);
-
-                // reset listbuilder
-                $lb->set('id', 'page_id');
-                $lb->set('title', 'menu_title');
+                #$tpl_data['MAIN_MENU_RECURSIVE'] = $lb->flattened();
             }
 
             // set the page title
@@ -279,9 +268,10 @@ if (!class_exists('Backend', false)) {
                 $menu = HArray::filter($menu, 'parent', $parent);
                 return $menu;
             }
-            if(!isset(self::$menu[$scope])) {
+            if (!isset(self::$menu[$scope])) {
                 self::log()->addError(sprintf(
-                    'no menu for scope: %s',$scope
+                    'no menu for scope: %s',
+                    $scope
                 ));
             } else {
                 self::log()->addDebug(
@@ -300,8 +290,8 @@ if (!class_exists('Backend', false)) {
          **/
         public static function getMenuForScope(string $scope)
         {
-            self::log()->addDebug(sprintf('getMenuForScope(%s)',$scope));
-            if(!is_numeric($scope)) {
+            self::log()->addDebug(sprintf('getMenuForScope(%s)', $scope));
+            if (!is_numeric($scope)) {
                 $scope = self::getScope($scope);
             }
             self::getMenuItems();
@@ -326,7 +316,7 @@ if (!class_exists('Backend', false)) {
                 );
                 $scopes = $r->fetchAll(\PDO::FETCH_ASSOC);
 
-                foreach($scopes as $s) {
+                foreach ($scopes as $s) {
                     $scope = $s['scope_id'];
                     $r = self::db()->query(
                         'SELECT * FROM `:prefix:backend_areas` '.
@@ -338,8 +328,8 @@ if (!class_exists('Backend', false)) {
                     self::log()->addDebug('main menu items from DB: '.print_r(self::$menu[$scope], 1));
 
                     // remove menu items not accessible to current user
-                    for($i=count(self::$menu[$scope])-1;$i>=0;$i--) {
-                        if(!self::user()->hasPerm(self::$menu[$scope][$i]['name'])) {
+                    for ($i=count(self::$menu[$scope])-1;$i>=0;$i--) {
+                        if (!self::user()->hasPerm(self::$menu[$scope][$i]['name'])) {
                             self::log()->addDebug(sprintf(
                                 'removing item [%s] (missing permission)',
                                 self::$menu[$scope][$i]['name']
@@ -374,11 +364,11 @@ if (!class_exists('Backend', false)) {
                     $path    = HArray::search('settings', self::$menu[$scope], 'name');
 
                     // if parent is not visible, don't show child
-                    if(isset($path[0])) {
+                    if (isset($path[0])) {
                         $id = 1000;
                         $set_parent = self::$menu[$scope][$path[0]];
                         foreach ($regions as $region) {
-                            if(self::user()->hasPerm($region['region'])) {
+                            if (self::user()->hasPerm($region['region'])) {
                                 self::$menu[$scope][] = array(
                                     'id'          => $id,
                                     'name'        => $region['region'],
@@ -414,17 +404,19 @@ if (!class_exists('Backend', false)) {
         {
             self::log()->addDebug(sprintf(
                 'show() - tpl [%s] print header [%s] print footer [%s]',
-                $tpl, $header, $footer
+                $tpl,
+                $header,
+                $footer
             ));
 
             $data['areas'] = self::getMenuForScope(2);
             $header_data = self::getHeader(false);
-            $tpl_data    = array_merge($data,$header_data);
-            $output      = ( $header===true ? self::tpl()->get('header',$tpl_data) : '' )
-                         . self::tpl()->get($tpl,$tpl_data)
-                         . ( $footer===true ? self::getFooter() : '');
-            $headers = \CAT\Helper\Assets::renderAssets('header',null,false,false);
-            $output = str_replace('<!-- pageheader 0 -->', $headers, $output);
+            $tpl_data    = array_merge($data, $header_data);
+            $output      = ($header===true ? self::tpl()->get('header', $tpl_data) : '')
+                         . self::tpl()->get($tpl, $tpl_data)
+                         . ($footer===true ? self::getFooter() : '');
+            $headers     = \CAT\Helper\Assets::renderAssets('header', null, false, false);
+            $output      = str_replace('<!-- pageheader 0 -->', $headers, $output);
 
             // ======================================
             // ! make sure to flush the output buffer
@@ -456,7 +448,7 @@ if (!class_exists('Backend', false)) {
                 array('area'=>$name)
             );
             $result = $r->fetchAll(\PDO::FETCH_ASSOC);
-            if(isset($result[0]) && isset($result[0]['scope_id'])) {
+            if (isset($result[0]) && isset($result[0]['scope_id'])) {
                 return $result[0]['scope_id'];
             }
 
@@ -467,7 +459,7 @@ if (!class_exists('Backend', false)) {
                 array('scope'=>$name)
             );
             $result = $r->fetchAll(\PDO::FETCH_ASSOC);
-            if(isset($result[0]) && isset($result[0]['scope_id'])) {
+            if (isset($result[0]) && isset($result[0]['scope_id'])) {
                 return $result[0]['scope_id'];
             }
 
@@ -491,7 +483,7 @@ if (!class_exists('Backend', false)) {
             );
             $result = $r->fetchAll(\PDO::FETCH_ASSOC);
 
-            if(isset($result[0]) && isset($result[0]['page_tree'])) {
+            if (isset($result[0]) && isset($result[0]['page_tree'])) {
                 return ($result[0]['page_tree']=='Y')
                     ? true
                     : false;
@@ -506,7 +498,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function index()
         {
-            self::log()->addDebug(sprintf('index() - forward to [%s]',self::user()->getDefaultPage()));
+            self::log()->addDebug(sprintf('index() - forward to [%s]', self::user()->getDefaultPage()));
             header('Location: '.CAT_ADMIN_URL.'/'.self::user()->getDefaultPage());
         }   // end function index()
 
@@ -531,10 +523,10 @@ if (!class_exists('Backend', false)) {
                     'area'               => self::getArea(),
                 ));
                 if (!self::asJSON() && self::user()->hasPerm('pages_list')) {
-                    self::tpl()->setGlobals('pages', \CAT\Backend\Pages::tree());
-                    self::tpl()->setGlobals('pagelist', \CAT\Helper\Page::getPages(1));
-                    self::tpl()->setGlobals('sections', Sections::getSections());
-                    self::tpl()->setGlobals('pageTree',true);
+                    self::tpl()->setGlobals('pages'   , \CAT\Backend\Pages::tree());
+                    #self::tpl()->setGlobals('pagelist', \CAT\Helper\Page::getPages(1));
+                    #self::tpl()->setGlobals('sections', Sections::getSections());
+                    self::tpl()->setGlobals('pageTree', true);
                 }
             }
         }   // end function initialize()
@@ -571,10 +563,10 @@ if (!class_exists('Backend', false)) {
                     self::$tplpath = $base.'/'.$variant;
                 }
                 // second: default subfolder
-                if(is_dir($default_path)) {
+                if (is_dir($default_path)) {
                     self::$tplfallback = $default_path;
                 }
-                if(empty(self::$tplpath)) {
+                if (empty(self::$tplpath)) {
                     self::$tplpath = self::$tplfallback;
                 }
             }
@@ -614,10 +606,10 @@ if (!class_exists('Backend', false)) {
         public static function content()
         {
             self::$scope = 'content';
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!!!! TODO: Passenden Default-Bereich ermitteln, nicht jeder Admin darf auf
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // !!!!! TODO: Passenden Default-Bereich ermitteln, nicht jeder Admin darf auf
 //             auf jeden Bereich zugreifen
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             self::router()->reroute(CAT_BACKEND_PATH.'/pages');
         }   // end function administration()
 
@@ -660,7 +652,7 @@ if (!class_exists('Backend', false)) {
          **/
         public static function login($msg=null)
         {
-            self::log()->addDebug(sprintf('login() - msg [%s]',$msg));
+            self::log()->addDebug(sprintf('login() - msg [%s]', $msg));
             self::initPaths();
             // we need this twice, so we use a var here
             $username_fieldname = Validate::createFieldname('username_');

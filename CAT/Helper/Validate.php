@@ -20,11 +20,10 @@ namespace CAT\Helper;
 use CAT\Base as Base;
 use \CAT\Helper\Directory as Directory;
 
-if (!class_exists('Validate'))
-{
+if (!class_exists('Validate')) {
     class Validate extends Base
     {
-        private   static $instance = NULL;
+        private static $instance = null;
         protected static $loglevel = \Monolog\Logger::EMERGENCY;
         #protected static $loglevel = \Monolog\Logger::DEBUG;
 
@@ -36,17 +35,20 @@ if (!class_exists('Validate'))
          **/
         public static function getInstance()
         {
-            if (!self::$instance)
+            if (!self::$instance) {
                 self::$instance = new self();
+            }
             return self::$instance;
         }   // end function getInstance()
 
         public function __call($method, $args)
         {
-            if ( ! isset($this) || ! is_object($this) )
+            if (! isset($this) || ! is_object($this)) {
                 return false;
-            if ( method_exists( $this, $method ) )
+            }
+            if (method_exists($this, $method)) {
                 return call_user_func_array(array($this, $method), $args);
+            }
         }
 
         /**
@@ -57,13 +59,15 @@ if (!class_exists('Validate'))
          * @param  string $as
          * @return mixed
          **/
-        public static function check($value,$as)
+        public static function check($value, $as)
         {
             $func = 'is_'.$as;
-            if (!function_exists($func))
+            if (!function_exists($func)) {
                 Base::printFatalError('No such validation method: '.$as);
-            if (!$func($value))
+            }
+            if (!$func($value)) {
                 return false;
+            }
             return $value;
         }   // end function check()
 
@@ -90,32 +94,30 @@ if (!class_exists('Validate'))
          * @param  string  $global  - name of the superglobal (f.e. _REQUEST)
          * @return mixed
          **/
-        public static function get(string $key, string $require=NULL, bool $escape=false, string $global=null)
+        public static function get(string $key, string $require=null, bool $escape=false, string $global=null)
         {
-            if(is_null($global)) {
+            if (is_null($global)) {
                 $global = '_REQUEST';
             }
             self::log()->addDebug(sprintf(
-                'Get key [%s] from global var [_REQUEST]',$key
+                'Get key [%s] from global var [_REQUEST]',
+                $key
             ));
 
             $glob = array();
-            if ( isset($GLOBALS[$global]) )
-            {
+            if (isset($GLOBALS[$global])) {
                 $glob =& $GLOBALS[$global];
             }
             $value = isset($glob[$key]) ? $glob[$key] : '';
-            if ( $value && $require )
-            {
-                self::log()->addDebug(sprintf('validate as [%s]',$require));
-                $value = self::check($value,$require);
+            if ($value && $require) {
+                self::log()->addDebug(sprintf('validate as [%s]', $require));
+                $value = self::check($value, $require);
             }
-            if ( $value && $escape )
-            {
+            if ($value && $escape) {
                 self::log()->addDebug('add slashes');
                 $value = self::add_slashes($value);
             }
-            self::log()->addDebug('returning value [{value}]',array('value'=>$value));
+            self::log()->addDebug('returning value [{value}]', array('value'=>$value));
             return $value;
         }   // end function get()
 
@@ -128,8 +130,9 @@ if (!class_exists('Validate'))
          **/
         public static function add_slashes($input)
         {
-            if (get_magic_quotes_gpc() || (!is_string($input)))
+            if (get_magic_quotes_gpc() || (!is_string($input))) {
                 return $input;
+            }
             $output = addslashes($input);
             return $output;
         }   // end function add_slashes()
@@ -143,8 +146,9 @@ if (!class_exists('Validate'))
          **/
         public static function strip_slashes($input)
         {
-            if (!get_magic_quotes_gpc() || (!is_string($input)))
+            if (!get_magic_quotes_gpc() || (!is_string($input))) {
                 return $input;
+            }
             $output = stripslashes($input);
             return $output;
         }   // end function strip_slashes()
@@ -156,17 +160,21 @@ if (!class_exists('Validate'))
          * @param  prefix - static prefix, i.e. 'username_'
          * @param
          **/
-        public static function createFieldname($prefix,$offset=NULL,$length=12)
+        public static function createFieldname($prefix, $offset=null, $length=12)
         {
-            if (substr($prefix,-1,1) != '_')
+            if (substr($prefix, -1, 1) != '_') {
                 $prefix .= '_';
-            $salt      = strtolower(md5(uniqid(rand(),true)));
-            $offset    = ( $offset === NULL ) ? rand(1,12) : $offset;
+            }
+            $salt      = strtolower(md5(uniqid(rand(), true)));
+            $offset    = ($offset === null) ? rand(1, 12) : $offset;
             self::log()->addDebug(sprintf(
                 'createFieldname prefix [%s] offset [%s] length [%s] salt [%s]',
-                $prefix, $offset, $length, $salt
+                $prefix,
+                $offset,
+                $length,
+                $salt
             ));
-            $fieldname = $prefix.substr($salt,$offset,$length);
+            $fieldname = $prefix.substr($salt, $offset, $length);
             return $fieldname;
         }   // end function createFieldname()
 
@@ -176,7 +184,8 @@ if (!class_exists('Validate'))
          * @access public
          * @return void
          **/
-        public function dump() {
+        public function dump()
+        {
             echo "<h2>Validate DUMP</h2>",
                  "<h3>\$_GET Array</h3>";
             var_dump($_GET);
@@ -238,8 +247,9 @@ if (!class_exists('Validate'))
         public static function getURI($url)
         {
             $rel_parsed = parse_url($url);
-            if(!array_key_exists('scheme',$rel_parsed ) || $rel_parsed['scheme']=='')
+            if (!array_key_exists('scheme', $rel_parsed) || $rel_parsed['scheme']=='') {
                 $url = (isset($_SERVER['HTTPS']) ? 'https:' : 'http:') . $url;
+            }
             return $url;
         }   // end function getURI()
 
@@ -264,12 +274,15 @@ if (!class_exists('Validate'))
          * @param  boolean $escape  - use add_slashes(); default: false
          * @return mixed
          **/
-        public static function sanitizePost(string $field,string $require=NULL,bool $escape=false )
+        public static function sanitizePost(string $field, string $require=null, bool $escape=false)
         {
             self::log()->addDebug(sprintf(
-                'get field [%s] from $_POST, require type [%s], escape [%s]',$field,$require,$escape
+                'get field [%s] from $_POST, require type [%s], escape [%s]',
+                $field,
+                $require,
+                $escape
             ));
-            return self::get($field,$require,$escape);
+            return self::get($field, $require, $escape);
         }   // end function sanitizePost()
 
         /**
@@ -282,20 +295,23 @@ if (!class_exists('Validate'))
          * @param  string  $require - value type (scalar, numeric, array)
          * @return mixed
          **/
-        public static function sanitizeGet(string $field,string $require=NULL,bool $escape=false)
+        public static function sanitizeGet(string $field, string $require=null, bool $escape=false)
         {
             self::log()->addDebug(sprintf(
-                'get field [%s] from $_GET, require type [%s], escape [%s]',$field,$require,$escape
+                'get field [%s] from $_GET, require type [%s], escape [%s]',
+                $field,
+                $require,
+                $escape
             ));
-            return self::get($field,$require,$escape,'_GET');
+            return self::get($field, $require, $escape, '_GET');
         }   // end function sanitizeGet()
 
         /**
          * convenience function to meet the names of the other ones
          **/
-        public static function sanitizeSession(string $field,string $require=NULL,bool $escape=false) : string
+        public static function sanitizeSession(string $field, string $require=null, bool $escape=false) : string
         {
-            return self::get($field,$require,$escape,'_SESSION');
+            return self::get($field, $require, $escape, '_SESSION');
         }   // end function sanitizeSession()
 
         /**
@@ -306,9 +322,9 @@ if (!class_exists('Validate'))
          * @param  string  $require - value type (scalar, numeric, array)
          * @return mixed
          **/
-        public static function fromSession(string $field,string $require=NULL,bool $escape=false) : string
+        public static function fromSession(string $field, string $require=null, bool $escape=false) : string
         {
-            return self::get($field,$require,$escape,'_SESSION');
+            return self::get($field, $require, $escape, '_SESSION');
         }   // end function fromSession()
 
         /**
@@ -319,9 +335,9 @@ if (!class_exists('Validate'))
          * @param  string  $require - value type (scalar, numeric, array)
          * @return mixed
          **/
-        public static function sanitizeServer(string $field,string $require=NULL,bool $escape=false) : string
+        public static function sanitizeServer(string $field, string $require=null, bool $escape=false) : string
         {
-            return self::get($field,$require,$escape,'_SERVER');
+            return self::get($field, $require, $escape, '_SERVER');
         }   // end function sanitizeServer()
 
         /**
@@ -331,7 +347,8 @@ if (!class_exists('Validate'))
          * @param  string  $md5
          * @return boolean
          **/
-        public static function isValidMD5($md5 ='') {
+        public static function isValidMD5($md5 ='')
+        {
             return strlen($md5) == 32 && ctype_xdigit($md5);
         }   // end function isValidMD5()
 
@@ -358,41 +375,54 @@ if (!class_exists('Validate'))
          * @param  boolean $use_filter - default false
          * @return string
          **/
-        public static function sanitize_url($address,$use_filter=false)
+        public static function sanitize_url(string $address,?bool $use_filter=false)
         {
-            if($use_filter)
+            if ($use_filter) {
                 $address = filter_var($address, FILTER_SANITIZE_URL);
+            }
             // fix for protocol relative URLs
-            if (substr($address, 0, 2) == "//") 
+            if (substr($address, 0, 2) == "//") {
                 $address = (isset($_SERVER['HTTPS']) ? 'https:' : 'http:')
                          . $address;
+            }
             // href="http://..." ==> href isn't relative
             $rel_parsed = parse_url($address);
-            if(!isset($rel_parsed['path']) || $rel_parsed['path'] == '') return '';
+            if (!isset($rel_parsed['path']) || $rel_parsed['path'] == '') {
+                return '';
+            }
             $path       = $rel_parsed['path'];
             $path       = preg_replace('~/\./~', '/', $path); // bla/./bloo ==> bla/bloo
             // remove trailing /
-            $path       = preg_replace('~\/+$~','',$path);
-            if(!isset($rel_parsed['host']) ) $rel_parsed['host'] = CAT_SITE_URL;
+            $path       = preg_replace('~\/+$~', '', $path);
+
+            if (!isset($rel_parsed['host'])) {
+                $rel_parsed['host'] = $_SERVER['HTTP_HOST'];
+            }
             // resolve /../
             // loop through all the parts, popping whenever there's a .., pushing otherwise.
             $parts      = array();
-            foreach ( explode('/', preg_replace('~/+~', '/', $path)) as $part )
-                if ($part === ".." || $part == '')
+            foreach (explode('/', preg_replace('~/+~', '/', $path)) as $part) {
+                if ($part === ".." || $part == '') {
                     array_pop($parts);
-                elseif ($part!="")
+                } elseif ($part!="") {
                     $parts[] = $part;
-            if( !is_array($rel_parsed) || !array_key_exists('scheme',$rel_parsed) )
+                }
+            }
+            if (!is_array($rel_parsed) || !array_key_exists('scheme', $rel_parsed)) {
                 $rel_parsed['scheme'] =  (isset($_SERVER['HTTPS']) ? 'https' : 'http');
+            }
+
+            // Array ( [path] => /site1/backend/pages/list [query] => flattened=true [host] => //localhost:444/site1 [scheme] => http
             $url = $rel_parsed['scheme'] . '://'
                  . $rel_parsed['host']
-                 . ( isset($rel_parsed['port']) ? ':'.$rel_parsed['port'] : NULL )
-                 . "/" . implode("/", $parts);
+                 . (isset($rel_parsed['port']) ? ':'.$rel_parsed['port'] : null)
+                 . "/" . implode("/", $parts)
+                 . (isset($rel_parsed['query']) ? '?'.$rel_parsed['query'] : null);
 
-#echo "<textarea style=\"width:100%;height:200px;color:#000;background-color:#fff;\">";
-#print_r( array($url, utf8_decode($url)) );
-#echo "</textarea>";
-return utf8_decode($url);
+            #echo "<textarea style=\"width:100%;height:200px;color:#000;background-color:#fff;\">";
+            #print_r( array($url, utf8_decode($url)) );
+            #echo "</textarea>";
+            return utf8_decode($url);
             return $url;
         }   // end function sanitize_url()
 

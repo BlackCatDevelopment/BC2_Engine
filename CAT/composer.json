@@ -12,7 +12,6 @@
 		"ext-json": "*",
 		"lib-pcre": "*",
 		"ext-session": "*",
-        "ext-ds": "*",
         "chillerlan/php-qrcode": "dev-master",
         "ckeditor/ckeditor": "dev-standard/latest",
         "components/jquery": "*",
@@ -43,7 +42,7 @@
     "suggest": {
 		"lib-openssl": "OpenSSL is required for sending SMTP mails over an encrypted channel endpoint",
 		"ext-zip": "ZIP extension is needed for module installation from ZIP files",
-        "ext-ds": "*",
+        "ext-ds": "*"
 	},
     "authors": [
         {

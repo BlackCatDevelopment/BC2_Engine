@@ -189,18 +189,19 @@ if (!class_exists('Base', false)) {
          * @access public
          * @return object - instanceof \wblib\wbLang
          **/
-        public static function lang() : \wblib\wbLang
+        public static function lang() : \wblib\wbLang\I18n
         {
             if (
                    !isset(Base::$objects['lang'])
                 || !is_object(Base::$objects['lang'])
-                || !Base::$objects['lang'] instanceof \wblib\wbLang
+                || !Base::$objects['lang'] instanceof \wblib\wbLang\I18n
             ) {
-                \wblib\wbLang::addPath(CAT_ENGINE_PATH.'/languages');
-                \wblib\wbLang::addPath(CAT_ENGINE_PATH.'/CAT/Backend/languages');
                 $obj = null;
                 try {
-                    $obj = \wblib\wbLang::getInstance(Registry::get('LANGUAGE', null, null));
+                    $obj = new \wblib\wbLang\I18n(Registry::get('LANGUAGE', null, null));
+                    // default paths
+                    $obj->addPath(CAT_ENGINE_PATH.'/languages');
+                    $obj->addPath(CAT_ENGINE_PATH.'/CAT/Backend/languages');
                 } catch ( Exception $e ) {
 
                 } finally {
@@ -220,22 +221,23 @@ if (!class_exists('Base', false)) {
          * @access public
          * @return object
          **/
-        public static function lb()
+        public static function lb() : \wblib\wbList\Tree
         {
             if (
                    !isset(Base::$objects['list'])
                 || !is_object(Base::$objects['list'])
-                || !Base::$objects['list'] instanceof \wblib\wbList
+                || !Base::$objects['list'] instanceof \wblib\wbList\Tree
             ) {
-                self::storeObject('list', new \wblib\wbList(array(
-                    'id'    => 'page_id',
-                    'title' => 'menu_title',
-                    // for page selects
-                    'value' => 'page_id',
-                )));
+                self::storeObject('list', new \wblib\wbList\Tree(
+                    array(),
+                    array(
+                        'id'    => 'page_id',
+                        'value' => 'menu_title',
+                    ))
+                );
             }
             return Base::$objects['list'];
-        }   // end function list()
+        }   // end function lb()
 
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -500,7 +502,7 @@ if (!class_exists('Base', false)) {
             foreach (array_values(array($lang, strtoupper($lang), strtolower($lang))) as $l) {
                 $langfile = Directory::sanitizePath($path.'/'.$l.'.php');
                 // load language file (if exists and is valid)
-                if (file_exists($langfile) && self::lang()->checkFile($langfile, 'LANG', true)) {
+                if (file_exists($langfile)) { // && self::lang()->checkFile($langfile, 'LANG', true)) {
                     self::lang()->addFile($l.'.php', $path);
                 }
             }

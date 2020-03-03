@@ -26,6 +26,8 @@ if (!class_exists('\CAT\Helper\GitHub')) {
         protected static $loglevel = \Monolog\Logger::EMERGENCY;
         private static $ch         = null;
         private static $curl_error = null;
+        private static $proxy_host = null;
+        private static $proxy_port = null;
 
         /**
          * initializes CUrl
@@ -39,7 +41,6 @@ if (!class_exists('\CAT\Helper\GitHub')) {
             if (self::$ch) {
                 return self::$ch;
             }
-            self::$ch = curl_init();
             self::reset_curl();
             if ($url) {
                 curl_setopt(self::$ch, CURLOPT_URL, $url);
@@ -68,11 +69,13 @@ if (!class_exists('\CAT\Helper\GitHub')) {
             #curl_setopt(self::$ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt(self::$ch, CURLOPT_MAXREDIRS, 2);
             curl_setopt(self::$ch, CURLOPT_HTTPHEADER, $headers);
-            if (Registry::exists('PROXY')) {
-                curl_setopt(self::$ch, CURLOPT_PROXY, Registry::get('PROXY'));
+
+            if (!empty(self::$proxy_host)) {
+                curl_setopt(self::$ch, CURLOPT_PROXY, self::$proxy_host);
             }
-            if (Registry::exists('PROXY_PORT')) {
-                curl_setopt(self::$ch, CURLOPT_PROXYPORT, Registry::get('PROXY_PORT'));
+
+            if (!empty(self::$proxy_port)) {
+                curl_setopt(self::$ch, CURLOPT_PROXYPORT, self::$proxy_port);
             }
             return self::$ch;
         }   // end function reset_curl()
@@ -287,5 +290,19 @@ if (!class_exists('\CAT\Helper\GitHub')) {
         {
             self::$curl_error = $error;
         }   // end function setError()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function setProxy(string $host, ?string $port=null)
+        {
+            self::$proxy_host = $host;
+            if(!empty($port)) {
+                self::$proxy_port = $port;
+            }
+        }   // end function setProxy()
+
     } // class GitHub
 } // if class_exists()

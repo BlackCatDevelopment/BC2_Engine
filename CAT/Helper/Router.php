@@ -513,11 +513,11 @@ if (!class_exists('Router', false)) {
                         $key,$_SERVER[$key]
                     ));
                     // Remove all illegal characters from url
-                    $url = filter_var($_SERVER[$key], FILTER_SANITIZE_URL);
-                    $url = parse_url($url, PHP_URL_PATH);
+                    $url = \CAT\Helper\Validate::sanitize_url($_SERVER[$key],true);
+                    $url_path = parse_url($url, PHP_URL_PATH);
                     // Validate website url
-                    if(!empty($url)) {
-                        $route = $url;
+                    if(!empty($url_path)) {
+                        $route = $url_path;
                         self::log()->addDebug(sprintf(
                             'route [%s]',
                             $route
@@ -526,7 +526,7 @@ if (!class_exists('Router', false)) {
                     // Validate website url for query string
                     if(filter_var($url, FILTER_VALIDATE_URL, FILTER_FLAG_QUERY_REQUIRED)){
                         $q = filter_input(INPUT_SERVER, 'QUERY_STRING', FILTER_SANITIZE_STRING);
-                        if(!$q && !empty($q)) {
+                        if(!empty($q)) {
                             $this->query = $q;
                             self::log()->addDebug(sprintf(
                                 'query string [%s]',

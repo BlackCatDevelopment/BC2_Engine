@@ -508,13 +508,13 @@ if (!class_exists('Pages')) {
          **/
         public static function index()
         {
-            if(!Base::user()->hasPerm('pages_list'))
-                self::printFatalError('You are not allowed for the requested action!');
+            self::user()->checkPermission('pages_list');
 
             \CAT\Helper\Page::setTitle('BlackCat CMS Backend / Pages');
 
             $pages      = \CAT\Helper\Page::getPages(true);
-            $pages_list = self::lb()->buildRecursion($pages);
+            #$pages_list = self::lb()->buildRecursion($pages);
+            $pages_list = self::tree();
 
             \CAT\Backend::show('backend_pages',array('pages'=>$pages_list));
 
@@ -528,13 +528,10 @@ if (!class_exists('Pages')) {
          **/
         public static function list($as_array=false,$flattened=false)
         {
-            if (!self::user()->hasPerm('pages_list')) {
-                Json::printError('You are not allowed for the requested action!');
-            }
+            self::user()->checkPermission('pages_list');
 
             $pages = HPage::getPages(true);
             $flattened = self::router()->getQueryParam('flattened');
-
             if($flattened) {
                 $options = array('id'=>'page_id','value'=>'menu_title','linkKey'=>'href','sort'=>true);
                 $tree = new \wblib\wbList\Tree($pages,$options);
@@ -931,19 +928,19 @@ if (!class_exists('Pages')) {
          **/
         public static function tree()
         {
-            if (!self::user()->hasPerm('pages_list')) {
-                Json::printError('You are not allowed for the requested action!');
-            }
+            self::user()->checkPermission('pages_list');
 
             $pages = HPage::getPages(true);
-            $pages = self::lb()->buildRecursion($pages);
+            $options = array('id'=>'page_id','value'=>'menu_title','linkKey'=>'href');
+            $tree    = new \wblib\wbList\Tree($pages,$options);
+            #$pages   = $tree->flattened(true);
 
             if (self::asJSON()) {
-                Json::printData($pages);
+                Json::printData($tree->sortByParent());
                 return;
             }
 
-            return $pages;
+            return $tree->sortByParent();
         }   // end function tree()
 
         /**

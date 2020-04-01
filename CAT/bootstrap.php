@@ -65,12 +65,14 @@ spl_autoload_register(function ($class) {
             // it may be a module class
             if(substr_compare($class,'CAT\Addon',0,9) == 0) {
                 $temp = explode('\\',$class);
-                $dir  = $temp[2];
-                $file = CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$dir.'/inc/'.pathinfo($file,PATHINFO_FILENAME).'.php';
+                $dir  = $temp[array_key_last($temp)];
+                $file = CAT_ENGINE_PATH.'/'.CAT_MODULES_FOLDER.'/'.$dir.'/inc/class.'.pathinfo($file,PATHINFO_FILENAME).'.php';
+#echo "MODULE FILE: $file<br />";
                 if (class_exists('\CAT\Helper\Directory', false) && $class!='\CAT\Helper\Directory') {
                     $file = \CAT\Helper\Directory::sanitizePath($file);
                 }
                 if (file_exists($file)) {
+#echo "require module file [$file]<br />";
                     require_once $file;
                 }
             }

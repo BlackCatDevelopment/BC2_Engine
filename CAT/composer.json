@@ -12,7 +12,6 @@
 		"ext-json": "*",
 		"lib-pcre": "*",
 		"ext-session": "*",
-        "chillerlan/php-qrcode": "dev-master",
         "ckeditor/ckeditor": "dev-standard/latest",
         "components/jquery": "*",
         "components/jqueryui": "*",

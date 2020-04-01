@@ -338,6 +338,10 @@ if (!class_exists('Addons')) {
          **/
         public static function getInfo(string $directory, string $type='')
         {
+            self::log()->addDebug(sprintf(
+                'getInfo - directory [%s] type [%s]',$directory,$type
+            ));
+
             $info    = array();
             $namespace = '\CAT\Addon';
             $fulldir   = null;
@@ -355,6 +359,8 @@ if (!class_exists('Addons')) {
                 $fulldir = realpath($directory);
             }
 
+            self::log()->addDebug(sprintf('fulldir: %s',$fulldir));
+
             if (is_dir($fulldir)) {
                 // find class.<modulename>.php
                 $files = Directory::findFiles($fulldir, array(
@@ -362,28 +368,38 @@ if (!class_exists('Addons')) {
                     'remove_prefix' => true,
                     'recurse'       => true,
                     'filter'        => 'class\..*',
-                    'max_depth'     => 2
+                    'max_depth'     => 3
                 ));
                 if (count($files)>0) {
                     for ($i=0;$i<count($files);$i++) {
-                        $classname = $namespace.'\\'.str_ireplace('class.', '', pathinfo($files[$i], PATHINFO_FILENAME));
-                        if (!class_exists($classname, false)) {
+                        // try to require the file
                             try {
                             require_once $fulldir.'/'.$files[$i];
                             } catch ( \Exception $e ) {
-echo "FILE [",__FILE__,"] FUNC [",__FUNCTION__,"] LINE [",__LINE__,"]<br /><textarea style=\"width:100%;height:200px;color:#000;background-color:#fff;\">";
-print_r($e->getMessage());
-echo "</textarea><br />";
-                            }
-                        }
+                            self::log()->addError('require failed! ' . $e->getMessage() );
+                        } finally {
+                            // work out which class was defined
+                            foreach(array('Module','Template') as $t) {
+                                $classname = $namespace.'\\'.$t.'\\'.str_ireplace('class.', '', pathinfo($files[$i], PATHINFO_FILENAME));
                         // as there may be files not containing a class...
-                        if (class_exists($classname, false)) {
+                                if(class_exists($classname, false)) {
                             $info  = $classname::getInfo(null);
+                                    $info['__infofilepath__'] = pathinfo($files[$i],PATHINFO_DIRNAME);
+                                    $info['__infofilename__'] = pathinfo($files[$i],PATHINFO_FILENAME);
+                                    $info['__basedir__']      = $fulldir;
+                                    self::log()->addDebug(sprintf(
+                                        'classname [%s]', $classname
+                                    )."\n".print_r($info,1));
                             return $info;
                         }
                     }
                 }
             }
+                } else {
+                    self::log()->addDebug('no files');
+                }
+            }
+            self::log()->addDebug('info: '.print_r($info,1));
             return $info;
         }   // end function getInfo()
 
@@ -526,12 +542,21 @@ echo "</textarea><br />";
                                 'create directory [%s]',$dest.'/'.$info['directory']
                             ));
                             Directory::createDirectory($dest.'/'.$info['directory']);
-                            self::log()->addDebug('copy recursive');
+                            $source = $zippath.'/'.pathinfo($info['__infofilepath__'],PATHINFO_DIRNAME);
+                            self::log()->addDebug(sprintf(
+                                'copy recursive from [%s] to [%s]',
+                                $source, $dest.'/'.$info['directory']
+                            ));
+                            // [__infofilepath__] => /bc2_backstraptheme-master/inc
+                            // [__infofilename__] => class.backstrap
+                            // [__basedir__] => P:\bc2inst\cat_engine\temp\unzip\bc2-project_bc2_backstraptheme
                             Directory::copyRecursive(
-                                $zippath,
+                                $source,
                                 $dest.'/'.$info['directory']
                             );
                             $path = $dest.'/'.$info['directory'];
+                        } else {
+                            self::log()->addDebug('invalid info, unable to install');
                         }
                     }
                 }

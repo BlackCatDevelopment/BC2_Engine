@@ -24,7 +24,8 @@ use \CAT\Backend\Page as BPage;
 use \CAT\Helper\Page as HPage;
 use \CAT\Sections as Sections;
 
-if (!class_exists('Router', false)) {
+if (!class_exists('\CAT\Helper\Router', false))
+{
     class Router extends Base
     {
         // log level
@@ -84,6 +85,8 @@ if (!class_exists('Router', false)) {
         public function dispatch()
         {
             self::log()->addDebug('>>>>> dispatch() <<<<<');
+
+            \CAT\Hook::executeHook('router.before.dispatch');
 
             if (!$this->route) {
                 $this->route = 'index';
@@ -228,7 +231,6 @@ if (!class_exists('Router', false)) {
             self::log()->addDebug('!!!!! Forwarding to 404 !!!!!');
             \CAT\Page::print404();
         }   // end function dispatch()
-        
 
         /**
          * accessor to private controller name

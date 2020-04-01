@@ -313,6 +313,23 @@ if (!class_exists('Base', false)) {
         }   // end function log ()
 
         /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function mail()
+        {
+            if (
+                   !isset(Base::$objects['mailer'])
+                || !is_object(Base::$objects['mailer'])
+                || !Base::$objects['mailer'] instanceof \CAT\Helper\Mail
+            ) {
+                self::storeObject('mailer', \CAT\Helper\Mail::getInstance());
+            }
+            return Base::$objects['mailer'];
+        }   // end function mail()
+
+        /**
          * accessor to permissions
          *
          * @access public
@@ -725,6 +742,59 @@ if (!class_exists('Base', false)) {
             }
             return false;
         }   // end function getStateID()
+
+        /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function getVisitorIP()
+        {
+            $ip_keys = array(
+                'HTTP_CF_CONNECTING_IP',
+                'HTTP_CLIENT_IP',
+                'HTTP_X_FORWARDED_FOR',
+                'HTTP_X_FORWARDED',
+                'HTTP_X_CLUSTER_CLIENT_IP',
+                'HTTP_X_REAL_IP',
+                'HTTP_X_COMING_FROM',
+                'HTTP_PROXY_CONNECTION',
+                'HTTP_FORWARDED_FOR',
+                'HTTP_FORWARDED',
+                'HTTP_COMING_FROM',
+                'HTTP_VIA',
+                'REMOTE_ADDR'
+            );
+            foreach ($ip_keys as $key) {
+                if (array_key_exists($key, $_SERVER) === true) {
+                    foreach (explode(',', $_SERVER[$key]) as $ip) {
+                        // remove port
+                        if (strpos($ip, ':') !== false && substr_count($ip, '.') == 3 && strpos($ip, '[') === false) {
+                    		// IPv4 with port (e.g., 123.123.123:80)
+                    		$ip = explode(':', $ip);
+                    		$ip = $ip[0];
+                    	} else {
+                    		// IPv6 with port (e.g., [::1]:80)
+                    		$ip = explode(']', $ip);
+                    		$ip = ltrim($ip[0], '[');
+                    	}
+                        // validate
+                        $options  = FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE;
+                        $filtered = filter_var($ip, FILTER_VALIDATE_IP, $options);
+                        if (!$filtered || empty($filtered)) {
+                            if (preg_match("/^(([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/", $ip)) {
+                                return $ip; // IPv4
+                            } elseif (preg_match("/^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$/", $ip)) {
+                                return $ip; // IPv6
+                            }
+                            return false;
+                        }
+                        return $filtered;
+                    }
+                }
+            }
+        }   // end function getVisitorIP()
+        
 
         /**
          * converts variable names like "default_template_variant" into human

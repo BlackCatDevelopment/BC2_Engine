@@ -203,6 +203,21 @@ if (!class_exists('\CAT\Page', false))
         }   // end function print404()
 
         /**
+         *
+         * @access public
+         * @return
+         **/
+        public static function printEmpty()
+        {
+            ob_start();
+                $empty_page_bg = \CAT\Helper\Assets::serve('images', 'CAT/templates/empty_page_bg.jpg', true);
+            ob_end_clean();
+            require dirname(__FILE__).'/'.CAT_TEMPLATES_FOLDER.'/empty.php';
+            exit;
+        }   // end function printEmpty()
+        
+
+        /**
          * Figure out which template to use
          *
          * @access public
@@ -228,9 +243,11 @@ if (!class_exists('\CAT\Page', false))
          **/
         public function show()
         {
+            self::log()->addDebug('show()');
+
             // send appropriate header
             if (\CAT\Frontend::isMaintenance() || \CAT\Registry::get('maintenance_page') == $this->page_id) {
-                $this->log()->addDebug('Maintenance mode is enabled');
+                self::log()->addDebug('Maintenance mode is enabled, returning status 503');
                 header('HTTP/1.1 503 Service Temporarily Unavailable');
                 header('Status: 503 Service Temporarily Unavailable');
                 header('Retry-After: 7200'); // in seconds
@@ -239,6 +256,7 @@ if (!class_exists('\CAT\Page', false))
 
             // check if user is allowed to see this page
             if (!self::user()->isRoot()) {
+                self::log()->addDebug('current user is not root, check page permissions');
                 // global perm
                 if (!HPage::isVisible($this->page_id)) {
                     self::log()->addError(sprintf(
@@ -271,6 +289,7 @@ if (!class_exists('\CAT\Page', false))
 
             // cookie consent
             if(self::getSetting('cc_enabled') == "true") {
+                self::log()->addDebug('adding cookie consent');
                 // defaults
                 $cc_default_settings = array(
                     'type' => 'info',
@@ -292,23 +311,45 @@ if (!class_exists('\CAT\Page', false))
                 \CAT\Helper\Assets::addCode($code,'header');
             }
 
+            $output = '';
+
             // including the template; it may calls different functions
             // like page_content() etc.
-            $this->log()->addDebug('including template');
+            $this->log()->addDebug(sprintf(
+                'including template from path [%s]',
+                \CAT\Registry::get('CAT_TEMPLATE_DIR')
+            ));
+
+            // for error handling
+            $tpl_found = false;
+
+            // there *may* be an index.php
             if (file_exists(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/index.php')) {
+                $tpl_found = true;
                 ob_start();
                 require \CAT\Registry::get('CAT_TEMPLATE_DIR').'/index.php';
                 $output = ob_get_contents();
                 ob_clean();
+            // no index.php, find index.tpl instead
             } else {
                 $variant = \CAT\Helper\Template::getVariant($this->page_id);
                 self::tpl()->setGlobals('template_options',\CAT\Helper\Template::getOptions($this->page_id));
                 if (file_exists(\CAT\Registry::get('CAT_TEMPLATE_DIR').'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/index.tpl')) {
+                    $tpl_found = true;
                     $output = self::tpl()->get(
                         \CAT\Registry::get('CAT_TEMPLATE_DIR').'/'.CAT_TEMPLATES_FOLDER.'/'.$variant.'/index.tpl',
                         array()
                     );
                 }
+            }
+
+            if(!$tpl_found) {
+                self::log()->addEmergency('Template not found!');
+            }
+
+            // empty page
+            if(empty($output)) {
+                return self::printEmpty();
             }
 
             // replace headers placeholder
@@ -328,14 +369,7 @@ if (!class_exists('\CAT\Page', false))
         protected static function track($pageID)
         {
             // get the IP to create 'unique' identifier; it is not stored!
-            $ip = null;
-            if (isset($_SERVER['HTTP_CLIENT_IP'])) {
-                $ip = $_SERVER['HTTP_CLIENT_IP'];
-            } elseif (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-                $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-            } elseif (isset($_SERVER['REMOTE_ADDR'])) {
-                $ip = $_SERVER['REMOTE_ADDR'];
-            }
+            $ip = self::getVisitorIP();
 
             // remove outdated entries (1 Minute)
             $ts = time() - 60; //(60*60);

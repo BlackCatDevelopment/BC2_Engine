@@ -56,11 +56,7 @@ if (!class_exists('Frontend', false)) {
             $page_id = \CAT\Page::getID();
             // no page found
             if (!$page_id) {
-                ob_start();
-                $empty_page_bg = Assets::serve('images', 'CAT/templates/empty_page_bg.jpg', true);
-                ob_end_clean();
-                require dirname(__FILE__).'/'.CAT_TEMPLATES_FOLDER.'/empty.php';
-                exit;
+                \CAT\Page::printEmpty();
             }
             // get page handler
             $page   = \CAT\Page::getInstance($page_id);

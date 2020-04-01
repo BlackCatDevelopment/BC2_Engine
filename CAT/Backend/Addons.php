@@ -291,6 +291,8 @@ if (!class_exists('\CAT\Backend\Addons')) {
             $type      = self::router()->getRoutePart(-2);
 
             HAddons::handleInstall($type, $addon);
+
+            return self::index();
         }   // end function install()
 
         /**
